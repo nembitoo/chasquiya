@@ -33,6 +33,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/registro", "/auth/login", "/ping", "/actuator/health", "/error").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/maestros/**").hasRole("MAESTRO")
                         .anyRequest().authenticated())
                 // Sin token válido en una ruta protegida -> 401 (no 403).

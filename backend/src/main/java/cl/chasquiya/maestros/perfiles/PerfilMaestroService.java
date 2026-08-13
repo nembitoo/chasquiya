@@ -1,5 +1,7 @@
 package cl.chasquiya.maestros.perfiles;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,6 +38,20 @@ public class PerfilMaestroService {
         perfil.setLatitud(req.latitud());
         perfil.setLongitud(req.longitud());
 
+        perfiles.save(perfil);
+        return aResponse(perfil);
+    }
+
+    // --- Acciones de administrador ---
+
+    public List<PerfilMaestro> listarPorEstado(EstadoVerificacion estado) {
+        return perfiles.findByEstadoVerificacion(estado);
+    }
+
+    public PerfilMaestroResponse cambiarEstado(Long usuarioId, EstadoVerificacion nuevoEstado) {
+        PerfilMaestro perfil = perfiles.findByUsuarioId(usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El maestro no tiene perfil"));
+        perfil.setEstadoVerificacion(nuevoEstado);
         perfiles.save(perfil);
         return aResponse(perfil);
     }

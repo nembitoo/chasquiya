@@ -60,4 +60,22 @@ class PerfilMaestroServiceTest {
         when(perfiles.findByUsuarioId(99L)).thenReturn(Optional.empty());
         assertThrows(ResponseStatusException.class, () -> servicio.obtenerPorUsuario(99L));
     }
+
+    @Test
+    void aprobarCambiaEstadoAAprobado() {
+        PerfilMaestro pendiente = new PerfilMaestro(10L);
+        when(perfiles.findByUsuarioId(10L)).thenReturn(Optional.of(pendiente));
+
+        PerfilMaestroResponse resp = servicio.cambiarEstado(10L, EstadoVerificacion.APROBADO);
+
+        assertEquals(EstadoVerificacion.APROBADO, resp.estadoVerificacion());
+        verify(perfiles).save(pendiente);
+    }
+
+    @Test
+    void cambiarEstadoSinPerfilLanza404() {
+        when(perfiles.findByUsuarioId(50L)).thenReturn(Optional.empty());
+        assertThrows(ResponseStatusException.class,
+                () -> servicio.cambiarEstado(50L, EstadoVerificacion.APROBADO));
+    }
 }

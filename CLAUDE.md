@@ -9,7 +9,7 @@ Marketplace móvil (Chile) que conecta **clientes** con **maestros** de oficios
 Proyecto individual, media jornada, en aprendizaje. **Costo cero en desarrollo.**
 
 ## Stack
-- **App:** React Native + Expo (SDK 57) + TypeScript → carpeta `app/`
+- **App:** React Native + Expo (SDK 54) + TypeScript → carpeta `app/`
 - **Backend:** Spring Boot 4 (Java 21) + Maven → carpeta `backend/`
 - **BD:** PostgreSQL 16 + PostGIS (geolocalización) en Docker
 - **Entorno local:** Docker Compose (Postgres+PostGIS, MinIO, Mailpit)

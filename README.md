@@ -8,7 +8,7 @@ descubrimiento, confianza y transacción, y cobra una comisión.
 > Plan maestro completo en [`docs/blueprint.md`](docs/blueprint.md).
 
 ## Stack
-- **App:** React Native + Expo (SDK 57) + TypeScript — `app/`
+- **App:** React Native + Expo (SDK 54) + TypeScript — `app/`
 - **Backend:** Spring Boot 4 (Java 21) + Maven — `backend/`
 - **Base de datos:** PostgreSQL 16 + PostGIS (geolocalización)
 - **Entorno local:** Docker Compose (Postgres+PostGIS, MinIO, Mailpit)

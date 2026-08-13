@@ -22,7 +22,7 @@ export function InicioScreen({ navigation }: Props) {
       ? 'Completa tu perfil profesional para que un administrador te apruebe y aparezcas ante los clientes.'
       : rol === 'ADMIN'
         ? 'Revisa y aprueba los maestros que se registran en la plataforma.'
-        : 'Las pantallas principales (búsqueda, mapa, solicitudes…) llegan en los próximos hitos.';
+        : 'Busca maestros de confianza cerca de ti.';
 
   return (
     <SafeAreaView style={styles.contenedor}>
@@ -35,6 +35,12 @@ export function InicioScreen({ navigation }: Props) {
       </View>
 
       <View>
+        {rol === 'CLIENTE' && (
+          <>
+            <Boton titulo="Buscar maestros" onPress={() => navigation.navigate('Buscar')} />
+            <View style={{ height: espacio.sm }} />
+          </>
+        )}
         {rol === 'MAESTRO' && (
           <>
             <Boton titulo="Mi perfil profesional" onPress={() => navigation.navigate('PerfilMaestro')} />

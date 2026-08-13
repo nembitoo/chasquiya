@@ -82,6 +82,30 @@ export type DocumentoResponse = {
   fechaCreacion: string;
 };
 
+/** Tarjeta de un maestro cercano en la búsqueda. */
+export type MaestroCercano = {
+  usuarioId: number;
+  nombre: string;
+  apellido: string;
+  oficios: Oficio[];
+  zonaCobertura: string | null;
+  aniosExperiencia: number;
+  tarifaReferencial: number | null;
+  distanciaKm: number;
+};
+
+/** Perfil público de un maestro (lo que ve un cliente). */
+export type MaestroPublico = {
+  usuarioId: number;
+  nombre: string;
+  apellido: string;
+  oficios: Oficio[];
+  descripcion: string | null;
+  aniosExperiencia: number;
+  tarifaReferencial: number | null;
+  zonaCobertura: string | null;
+};
+
 /** Vista que el admin ve de un maestro (para aprobar/rechazar). */
 export type MaestroAdmin = {
   usuarioId: number;

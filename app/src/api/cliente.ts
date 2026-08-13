@@ -4,6 +4,9 @@ import {
   DocumentoResponse,
   LoginData,
   MaestroAdmin,
+  MaestroCercano,
+  MaestroPublico,
+  Oficio,
   PerfilMaestroData,
   PerfilMaestroResponse,
   RegistroData,
@@ -129,6 +132,17 @@ export const api = {
       pedir<PerfilMaestroResponse>(`/admin/maestros/${usuarioId}/rechazar`, { method: 'POST' }, token),
     documentosDe: (token: string, usuarioId: number) =>
       pedir<DocumentoResponse[]>(`/admin/maestros/${usuarioId}/documentos`, {}, token),
+  },
+
+  descubrimiento: {
+    buscar: (token: string, lat: number, lon: number, oficio?: Oficio, radioKm?: number) => {
+      const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+      if (oficio) params.append('oficio', oficio);
+      if (radioKm) params.append('radioKm', String(radioKm));
+      return pedir<MaestroCercano[]>(`/descubrimiento/maestros?${params.toString()}`, {}, token);
+    },
+    maestro: (token: string, usuarioId: number) =>
+      pedir<MaestroPublico>(`/descubrimiento/maestros/${usuarioId}`, {}, token),
   },
 
   documentos: {

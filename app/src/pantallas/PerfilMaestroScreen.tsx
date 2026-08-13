@@ -1,7 +1,9 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { EstadoVerificacion, Oficio } from '../api/tipos';
+import { DocumentoResponse, EstadoVerificacion, Oficio } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { COMUNAS } from '../datos/comunas';
@@ -46,6 +48,10 @@ export function PerfilMaestroScreen({ navigation }: Props) {
   const [tarifa, setTarifa] = useState('');
   const [comuna, setComuna] = useState<string | null>(null);
 
+  const [documentos, setDocumentos] = useState<DocumentoResponse[]>([]);
+  const [subiendoDoc, setSubiendoDoc] = useState(false);
+  const [errorDoc, setErrorDoc] = useState('');
+
   useEffect(() => {
     (async () => {
       try {
@@ -58,6 +64,7 @@ export function PerfilMaestroScreen({ navigation }: Props) {
           setComuna(p.zonaCobertura);
           setEstado(p.estadoVerificacion);
         }
+        setDocumentos(await api.documentos.mios(token));
       } catch (e) {
         setError(e instanceof Error ? e.message : 'No se pudo cargar el perfil.');
       } finally {
@@ -99,6 +106,37 @@ export function PerfilMaestroScreen({ navigation }: Props) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar el perfil.');
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function agregarDocumento() {
+    setErrorDoc('');
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      setErrorDoc('Necesito permiso para acceder a tus fotos.');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+    });
+    if (res.canceled) {
+      return;
+    }
+    const asset = res.assets[0];
+    try {
+      setSubiendoDoc(true);
+      await api.documentos.subir(
+        token,
+        asset.uri,
+        asset.fileName ?? 'documento.jpg',
+        asset.mimeType ?? 'image/jpeg',
+      );
+      setDocumentos(await api.documentos.mios(token));
+    } catch (e) {
+      setErrorDoc(e instanceof Error ? e.message : 'No se pudo subir el documento.');
+    } finally {
+      setSubiendoDoc(false);
     }
   }
 
@@ -180,6 +218,29 @@ export function PerfilMaestroScreen({ navigation }: Props) {
           {!!exito && <Text style={styles.exito}>{exito}</Text>}
 
           <Boton titulo="Guardar perfil" onPress={guardar} cargando={guardando} />
+
+          <Text style={[styles.etiqueta, { marginTop: espacio.xl }]}>Documentos de verificación</Text>
+          <Text style={styles.ayuda}>
+            Sube una foto de tu cédula o certificados. El administrador los revisa para aprobarte.
+          </Text>
+          {documentos.length > 0 && (
+            <View style={styles.docs}>
+              {documentos.map((d) => (
+                <Image
+                  key={d.id}
+                  source={{ uri: api.documentos.urlMio(d.id), headers: { Authorization: `Bearer ${token}` } }}
+                  style={styles.thumb}
+                />
+              ))}
+            </View>
+          )}
+          {!!errorDoc && <Text style={styles.error}>{errorDoc}</Text>}
+          <Boton
+            titulo="Agregar documento (foto)"
+            variante="secundario"
+            onPress={agregarDocumento}
+            cargando={subiendoDoc}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -206,7 +267,12 @@ const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   centro: { justifyContent: 'center', alignItems: 'center' },
   header: { paddingHorizontal: espacio.lg, paddingTop: espacio.sm, paddingBottom: espacio.sm },
-  volver: { color: colores.primario, fontSize: tipografia.cuerpo, fontWeight: '600', marginBottom: espacio.xs },
+  volver: {
+    color: colores.primario,
+    fontSize: tipografia.cuerpo,
+    fontWeight: '600',
+    marginBottom: espacio.xs,
+  },
   titulo: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
   scroll: { paddingHorizontal: espacio.lg, paddingBottom: espacio.xl },
   estado: {
@@ -223,6 +289,7 @@ const styles = StyleSheet.create({
     marginBottom: espacio.sm,
     marginTop: espacio.sm,
   },
+  ayuda: { color: colores.textoSuave, fontSize: tipografia.pequeno, marginBottom: espacio.md },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm, marginBottom: espacio.md },
   pildora: {
     borderRadius: radio.completo,
@@ -236,6 +303,8 @@ const styles = StyleSheet.create({
   pildoraTexto: { color: colores.textoSuave, fontWeight: '600' },
   pildoraTextoActivo: { color: colores.primario },
   multilinea: { height: 100, paddingTop: espacio.sm, textAlignVertical: 'top' },
+  docs: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm, marginBottom: espacio.md },
+  thumb: { width: 80, height: 80, borderRadius: radio.sm, backgroundColor: colores.borde },
   error: { color: colores.error, marginBottom: espacio.md, fontSize: tipografia.cuerpo },
   exito: { color: colores.exito, marginBottom: espacio.md, fontSize: tipografia.cuerpo, fontWeight: '600' },
 });

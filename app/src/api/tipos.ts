@@ -74,6 +74,14 @@ export type PerfilMaestroResponse = {
   estadoVerificacion: EstadoVerificacion;
 };
 
+/** Metadatos de un documento de verificación (el archivo vive en el backend/MinIO). */
+export type DocumentoResponse = {
+  id: number;
+  nombreArchivo: string;
+  tipoContenido: string;
+  fechaCreacion: string;
+};
+
 /** Vista que el admin ve de un maestro (para aprobar/rechazar). */
 export type MaestroAdmin = {
   usuarioId: number;

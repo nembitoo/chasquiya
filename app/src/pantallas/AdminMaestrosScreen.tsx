@@ -1,10 +1,10 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { MaestroAdmin } from '../api/tipos';
+import { DocumentoResponse, MaestroAdmin } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
@@ -91,6 +91,7 @@ export function AdminMaestrosScreen({ navigation }: Props) {
                 <Text style={styles.dato}>
                   {(m.zonaCobertura ?? 'Sin comuna') + ' · ' + m.aniosExperiencia + ' años exp.'}
                 </Text>
+                <DocumentosMaestro usuarioId={m.usuarioId} token={token} />
                 <View style={styles.acciones}>
                   <View style={{ flex: 1 }}>
                     <Boton
@@ -121,8 +122,47 @@ export function AdminMaestrosScreen({ navigation }: Props) {
   );
 }
 
+/** Miniaturas de los documentos de un maestro (se cargan bajo demanda por tarjeta). */
+function DocumentosMaestro({ usuarioId, token }: { usuarioId: number; token: string }) {
+  const [docs, setDocs] = useState<DocumentoResponse[]>([]);
+
+  useEffect(() => {
+    let activo = true;
+    api.admin
+      .documentosDe(token, usuarioId)
+      .then((d) => {
+        if (activo) setDocs(d);
+      })
+      .catch(() => {});
+    return () => {
+      activo = false;
+    };
+  }, [usuarioId, token]);
+
+  if (docs.length === 0) {
+    return <Text style={styles.sinDocs}>Sin documentos adjuntos</Text>;
+  }
+  return (
+    <View style={styles.docsRow}>
+      {docs.map((d) => (
+        <Image
+          key={d.id}
+          source={{
+            uri: api.documentos.urlAdmin(usuarioId, d.id),
+            headers: { Authorization: `Bearer ${token}` },
+          }}
+          style={styles.thumbAdmin}
+        />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
+  docsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm, marginTop: espacio.sm },
+  thumbAdmin: { width: 64, height: 64, borderRadius: radio.sm, backgroundColor: colores.borde },
+  sinDocs: { color: colores.textoSuave, fontSize: tipografia.pequeno, marginTop: espacio.sm, fontStyle: 'italic' },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { paddingHorizontal: espacio.lg, paddingTop: espacio.sm, paddingBottom: espacio.sm },
   volver: {

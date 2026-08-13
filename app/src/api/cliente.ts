@@ -1,6 +1,7 @@
 import { API_URL } from './config';
 import {
   AuthResponse,
+  DocumentoResponse,
   LoginData,
   MaestroAdmin,
   PerfilMaestroData,
@@ -61,6 +62,40 @@ async function pedir<T>(ruta: string, opciones: RequestInit = {}, token?: string
   return (texto ? JSON.parse(texto) : null) as T;
 }
 
+/** Sube un archivo (multipart). NO fija Content-Type: React Native pone el boundary. */
+async function subirArchivo<T>(
+  ruta: string,
+  token: string,
+  uri: string,
+  nombre: string,
+  tipo: string,
+): Promise<T> {
+  const form = new FormData();
+  // En React Native, un archivo se adjunta como { uri, name, type }.
+  form.append('archivo', { uri, name: nombre, type: tipo } as unknown as Blob);
+
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), 30000);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${ruta}`, {
+      method: 'POST',
+      signal: controlador.signal,
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+  } catch {
+    throw new ApiError('No se pudo subir el archivo. Revisa tu conexión.', 0);
+  } finally {
+    clearTimeout(temporizador);
+  }
+  if (!res.ok) {
+    throw new ApiError('No se pudo subir el archivo.', res.status);
+  }
+  const texto = await res.text();
+  return (texto ? JSON.parse(texto) : null) as T;
+}
+
 export const api = {
   registro: (datos: RegistroData) =>
     pedir<AuthResponse>('/auth/registro', { method: 'POST', body: JSON.stringify(datos) }),
@@ -92,5 +127,17 @@ export const api = {
       pedir<PerfilMaestroResponse>(`/admin/maestros/${usuarioId}/aprobar`, { method: 'POST' }, token),
     rechazar: (token: string, usuarioId: number) =>
       pedir<PerfilMaestroResponse>(`/admin/maestros/${usuarioId}/rechazar`, { method: 'POST' }, token),
+    documentosDe: (token: string, usuarioId: number) =>
+      pedir<DocumentoResponse[]>(`/admin/maestros/${usuarioId}/documentos`, {}, token),
+  },
+
+  documentos: {
+    mios: (token: string) => pedir<DocumentoResponse[]>('/maestros/mi-perfil/documentos', {}, token),
+    subir: (token: string, uri: string, nombre: string, tipo: string) =>
+      subirArchivo<DocumentoResponse>('/maestros/mi-perfil/documentos', token, uri, nombre, tipo),
+    // URLs para mostrar la imagen (con encabezado Authorization en el <Image>).
+    urlMio: (id: number) => `${API_URL}/maestros/mi-perfil/documentos/${id}/contenido`,
+    urlAdmin: (usuarioId: number, id: number) =>
+      `${API_URL}/admin/maestros/${usuarioId}/documentos/${id}/contenido`,
   },
 };

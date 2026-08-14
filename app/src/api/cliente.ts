@@ -5,6 +5,7 @@ import {
   CalificarData,
   CrearSolicitudData,
   DocumentoResponse,
+  FiltrosBusqueda,
   Ingresos,
   LoginData,
   MaestroAdmin,
@@ -158,10 +159,13 @@ export const api = {
   },
 
   descubrimiento: {
-    buscar: (token: string, lat: number, lon: number, oficio?: Oficio, radioKm?: number) => {
+    buscar: (token: string, lat: number, lon: number, filtros: FiltrosBusqueda = {}) => {
       const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
-      if (oficio) params.append('oficio', oficio);
-      if (radioKm) params.append('radioKm', String(radioKm));
+      if (filtros.oficio) params.append('oficio', filtros.oficio);
+      if (filtros.radioKm) params.append('radioKm', String(filtros.radioKm));
+      if (filtros.precioMaximo) params.append('precioMaximo', String(filtros.precioMaximo));
+      if (filtros.calificacionMinima) params.append('calificacionMinima', String(filtros.calificacionMinima));
+      if (filtros.orden) params.append('orden', filtros.orden);
       return pedir<MaestroCercano[]>(`/descubrimiento/maestros?${params.toString()}`, {}, token);
     },
     maestro: (token: string, usuarioId: number) =>
@@ -196,6 +200,13 @@ export const api = {
         { method: 'POST', body: JSON.stringify({ motivo }) },
         token,
       ),
+  },
+
+  favoritos: {
+    mios: (token: string) => pedir<MaestroCercano[]>('/favoritos', {}, token),
+    /** Guarda o quita el maestro; devuelve si quedó guardado. */
+    alternar: (token: string, maestroId: number) =>
+      pedir<{ esFavorito: boolean }>(`/favoritos/${maestroId}`, { method: 'POST' }, token),
   },
 
   calificaciones: {

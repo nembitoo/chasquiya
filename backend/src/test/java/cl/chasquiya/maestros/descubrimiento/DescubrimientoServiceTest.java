@@ -18,6 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.calificaciones.CalificacionService;
+import cl.chasquiya.maestros.favoritos.FavoritoRepository;
 import cl.chasquiya.maestros.calificaciones.dto.ReputacionResponse;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
@@ -34,8 +35,9 @@ class DescubrimientoServiceTest {
     private final PerfilMaestroRepository perfiles = mock(PerfilMaestroRepository.class);
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
     private final CalificacionService calificaciones = mock(CalificacionService.class);
+    private final FavoritoRepository favoritos = mock(FavoritoRepository.class);
     private final DescubrimientoService servicio =
-            new DescubrimientoService(perfiles, usuarios, calificaciones);
+            new DescubrimientoService(perfiles, usuarios, calificaciones, favoritos);
 
     private MaestroCercanoProjection proj(long id, double metros) {
         MaestroCercanoProjection p = mock(MaestroCercanoProjection.class);
@@ -66,10 +68,11 @@ class DescubrimientoServiceTest {
         when(perfiles.findByUsuarioIdIn(any())).thenReturn(List.of(perfilAprobado(1L), perfilAprobado(2L)));
         when(usuarios.findAllById(any())).thenReturn(List.of(usuario(1L, "Ana"), usuario(2L, "Luis")));
         // Ana tiene reputación; Luis todavía no.
+        when(favoritos.findByClienteIdOrderByFechaCreacionDesc(any())).thenReturn(List.of());
         when(calificaciones.reputacionesDe(any()))
                 .thenReturn(Map.of(1L, new ReputacionResponse(4.7, 3)));
 
-        List<MaestroCercanoResponse> res = servicio.buscar(-33.4, -70.6, 25.0, null);
+        List<MaestroCercanoResponse> res = servicio.buscar(-33.4, -70.6, 25.0, null, null, null, null, null);
 
         assertEquals(2, res.size());
         assertEquals(1L, res.get(0).usuarioId());
@@ -85,7 +88,7 @@ class DescubrimientoServiceTest {
     void buscarSinResultadosDevuelveListaVacia() {
         when(perfiles.buscarCercanos(anyDouble(), anyDouble(), anyDouble())).thenReturn(List.of());
 
-        assertTrue(servicio.buscar(-33.4, -70.6, null, null).isEmpty());
+        assertTrue(servicio.buscar(-33.4, -70.6, null, null, null, null, null, null).isEmpty());
     }
 
     @Test
@@ -93,6 +96,6 @@ class DescubrimientoServiceTest {
         // Perfil recién creado: estado PENDIENTE por defecto.
         when(perfiles.findByUsuarioId(7L)).thenReturn(Optional.of(new PerfilMaestro(7L)));
 
-        assertThrows(ResponseStatusException.class, () -> servicio.obtenerPublico(7L));
+        assertThrows(ResponseStatusException.class, () -> servicio.obtenerPublico(7L, null));
     }
 }

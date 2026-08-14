@@ -15,5 +15,6 @@ public record MaestroPublicoResponse(
         Integer tarifaReferencial,
         String zonaCobertura,
         double calificacionPromedio,
-        long cantidadCalificaciones) {
+        long cantidadCalificaciones,
+        boolean esFavorito) {
 }

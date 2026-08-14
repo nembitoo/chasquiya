@@ -7,6 +7,7 @@ import { api } from '../api/cliente';
 import { Calificacion, MaestroPublico } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { Estrellas } from '../componentes/Estrellas';
+import { Icono } from '../componentes/base/Icono';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
@@ -46,6 +47,17 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
     })();
   }, [token, usuarioId]);
 
+  /** Guarda o quita al maestro de favoritos. */
+  async function alternarFavorito() {
+    if (!maestro) return;
+    setMaestro({ ...maestro, esFavorito: !maestro.esFavorito });
+    try {
+      await api.favoritos.alternar(token, maestro.usuarioId);
+    } catch {
+      setMaestro({ ...maestro });
+    }
+  }
+
   if (cargando) {
     return (
       <SafeAreaView style={[styles.contenedor, styles.centro]}>
@@ -66,9 +78,18 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
         <Text style={styles.error}>{error || 'Maestro no disponible.'}</Text>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.nombre}>
-            {maestro.nombre} {maestro.apellido}
-          </Text>
+          <View style={styles.filaNombre}>
+            <Text style={[styles.nombre, { flex: 1 }]}>
+              {maestro.nombre} {maestro.apellido}
+            </Text>
+            <Pressable onPress={alternarFavorito} hitSlop={10} accessibilityRole="button">
+              <Icono
+                nombre={maestro.esFavorito ? 'heart' : 'heart-outline'}
+                tamano="xl"
+                color={maestro.esFavorito ? colores.primario : colores.textoTenue}
+              />
+            </Pressable>
+          </View>
           <View style={styles.filaEstrellas}>
             <Estrellas
               valor={maestro.calificacionPromedio}
@@ -128,7 +149,9 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
             <Boton
               titulo="Enviar mensaje"
               variante="secundario"
-              onPress={() => setAviso('El chat llega en un hito más adelante. 💬')}
+              onPress={() =>
+                setAviso('El chat se abre cuando tengas un servicio con este maestro. Solicítalo primero.')
+              }
             />
           </View>
         </ScrollView>
@@ -153,6 +176,7 @@ const styles = StyleSheet.create({
   volver: { color: colores.primario, fontSize: tipografia.cuerpo, fontWeight: '600' },
   scroll: { padding: espacio.lg },
   nombre: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
+  filaNombre: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm },
   oficios: { color: colores.primario, fontWeight: '600', fontSize: tipografia.cuerpo, marginTop: espacio.xs },
   filaDatos: {
     flexDirection: 'row',

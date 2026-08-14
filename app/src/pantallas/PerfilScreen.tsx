@@ -29,7 +29,7 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
       : []),
     { icono: 'person-outline', titulo: 'Mis datos', proximamente: true },
     { icono: 'location-outline', titulo: 'Mis direcciones', proximamente: true },
-    { icono: 'heart-outline', titulo: 'Favoritos', proximamente: true },
+    { icono: 'heart-outline', titulo: 'Mis maestros', onPress: () => navigation.navigate('Favoritos') },
     { icono: 'notifications-outline', titulo: 'Notificaciones', proximamente: true },
     { icono: 'help-circle-outline', titulo: 'Ayuda', proximamente: true },
     { icono: 'document-text-outline', titulo: 'Términos y privacidad', proximamente: true },

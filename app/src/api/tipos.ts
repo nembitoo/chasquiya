@@ -206,6 +206,16 @@ export type MaestroCercano = {
   distanciaKm: number;
   calificacionPromedio: number;
   cantidadCalificaciones: number;
+  esFavorito: boolean;
+};
+
+/** Filtros opcionales de la búsqueda de maestros. */
+export type FiltrosBusqueda = {
+  oficio?: Oficio;
+  radioKm?: number;
+  precioMaximo?: number;
+  calificacionMinima?: number;
+  orden?: 'distancia' | 'calificacion' | 'precio';
 };
 
 /** Perfil público de un maestro (lo que ve un cliente). */
@@ -220,6 +230,7 @@ export type MaestroPublico = {
   zonaCobertura: string | null;
   calificacionPromedio: number;
   cantidadCalificaciones: number;
+  esFavorito: boolean;
 };
 
 /** Vista que el admin ve de un maestro (para aprobar/rechazar). */

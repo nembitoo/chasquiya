@@ -1,8 +1,11 @@
 package cl.chasquiya.maestros.descubrimiento;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -14,6 +17,8 @@ import cl.chasquiya.maestros.calificaciones.CalificacionService;
 import cl.chasquiya.maestros.calificaciones.dto.ReputacionResponse;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroPublicoResponse;
+import cl.chasquiya.maestros.favoritos.Favorito;
+import cl.chasquiya.maestros.favoritos.FavoritoRepository;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.MaestroCercanoProjection;
 import cl.chasquiya.maestros.perfiles.Oficio;
@@ -31,15 +36,24 @@ public class DescubrimientoService {
     private final PerfilMaestroRepository perfiles;
     private final UsuarioRepository usuarios;
     private final CalificacionService calificaciones;
+    private final FavoritoRepository favoritos;
 
     public DescubrimientoService(PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
-                                 CalificacionService calificaciones) {
+                                 CalificacionService calificaciones, FavoritoRepository favoritos) {
         this.perfiles = perfiles;
         this.usuarios = usuarios;
         this.calificaciones = calificaciones;
+        this.favoritos = favoritos;
     }
 
-    public List<MaestroCercanoResponse> buscar(double lat, double lon, Double radioKm, Oficio oficio) {
+    /**
+     * Maestros aprobados cerca de (lat, lon), con filtros opcionales.
+     *
+     * @param clienteId quién busca, para marcar sus favoritos (puede ser null)
+     */
+    public List<MaestroCercanoResponse> buscar(double lat, double lon, Double radioKm, Oficio oficio,
+                                               Long clienteId, Integer precioMaximo,
+                                               Double calificacionMinima, String orden) {
         double radioM = (radioKm != null ? radioKm : RADIO_KM_POR_DEFECTO) * 1000.0;
 
         List<MaestroCercanoProjection> ranking = (oficio == null)
@@ -50,39 +64,86 @@ public class DescubrimientoService {
         }
 
         List<Long> ids = ranking.stream().map(MaestroCercanoProjection::getUsuarioId).toList();
-        Map<Long, PerfilMaestro> perfilPorUsuario = perfiles.findByUsuarioIdIn(ids).stream()
-                .collect(Collectors.toMap(PerfilMaestro::getUsuarioId, Function.identity()));
-        Map<Long, Usuario> usuarioPorId = usuarios.findAllById(ids).stream()
-                .collect(Collectors.toMap(Usuario::getId, Function.identity()));
+        Map<Long, Double> distancias = ranking.stream().collect(Collectors.toMap(
+                MaestroCercanoProjection::getUsuarioId, r -> aKilometros(r.getDistanciaM()), (a, b) -> a));
 
-        Map<Long, ReputacionResponse> reputaciones = calificaciones.reputacionesDe(ids);
+        List<MaestroCercanoResponse> salida = new ArrayList<>(fichasDe(ids, clienteId, distancias));
 
-        List<MaestroCercanoResponse> salida = new ArrayList<>();
-        for (MaestroCercanoProjection r : ranking) {
-            PerfilMaestro p = perfilPorUsuario.get(r.getUsuarioId());
-            Usuario u = usuarioPorId.get(r.getUsuarioId());
-            if (p == null || u == null) {
-                continue;
-            }
-            ReputacionResponse rep = reputaciones.getOrDefault(u.getId(), ReputacionResponse.vacia());
-            salida.add(new MaestroCercanoResponse(
-                    u.getId(), u.getNombre(), u.getApellido(), p.getOficios(),
-                    p.getZonaCobertura(), p.getAniosExperiencia(), p.getTarifaReferencial(),
-                    aKilometros(r.getDistanciaM()), rep.promedio(), rep.cantidad()));
+        // --- Filtros que se aplican sobre la ficha ya construida ---
+        if (precioMaximo != null) {
+            salida.removeIf(m -> m.tarifaReferencial() != null && m.tarifaReferencial() > precioMaximo);
+        }
+        if (calificacionMinima != null) {
+            salida.removeIf(m -> m.calificacionPromedio() < calificacionMinima);
+        }
+
+        // --- Orden ---
+        if ("calificacion".equals(orden)) {
+            salida.sort((a, b) -> Double.compare(b.calificacionPromedio(), a.calificacionPromedio()));
+        } else if ("precio".equals(orden)) {
+            salida.sort((a, b) -> Integer.compare(
+                    a.tarifaReferencial() == null ? Integer.MAX_VALUE : a.tarifaReferencial(),
+                    b.tarifaReferencial() == null ? Integer.MAX_VALUE : b.tarifaReferencial()));
+        } else {
+            salida.sort((a, b) -> Double.compare(a.distanciaKm(), b.distanciaKm()));
         }
         return salida;
     }
 
-    public MaestroPublicoResponse obtenerPublico(Long usuarioId) {
+    /**
+     * Construye las fichas de varios maestros. Lo usa la búsqueda y también
+     * la lista de favoritos, para no duplicar el armado de la tarjeta.
+     */
+    public List<MaestroCercanoResponse> fichasDe(Collection<Long> usuarioIds, Long clienteId,
+                                                 Map<Long, Double> distanciasKm) {
+        if (usuarioIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, PerfilMaestro> perfilPorUsuario = perfiles.findByUsuarioIdIn(usuarioIds).stream()
+                .collect(Collectors.toMap(PerfilMaestro::getUsuarioId, Function.identity()));
+        Map<Long, Usuario> usuarioPorId = usuarios.findAllById(usuarioIds).stream()
+                .collect(Collectors.toMap(Usuario::getId, Function.identity()));
+        Map<Long, ReputacionResponse> reputaciones = calificaciones.reputacionesDe(usuarioIds);
+        Set<Long> favoritosDelCliente = favoritosDe(clienteId);
+
+        List<MaestroCercanoResponse> salida = new ArrayList<>();
+        for (Long id : usuarioIds) {
+            PerfilMaestro p = perfilPorUsuario.get(id);
+            Usuario u = usuarioPorId.get(id);
+            if (p == null || u == null) {
+                continue;
+            }
+            ReputacionResponse rep = reputaciones.getOrDefault(id, ReputacionResponse.vacia());
+            salida.add(new MaestroCercanoResponse(
+                    u.getId(), u.getNombre(), u.getApellido(), p.getOficios(),
+                    p.getZonaCobertura(), p.getAniosExperiencia(), p.getTarifaReferencial(),
+                    distanciasKm.getOrDefault(id, 0.0), rep.promedio(), rep.cantidad(),
+                    favoritosDelCliente.contains(id)));
+        }
+        return salida;
+    }
+
+    public MaestroPublicoResponse obtenerPublico(Long usuarioId, Long clienteId) {
         PerfilMaestro p = perfiles.findByUsuarioId(usuarioId)
                 .filter(perfil -> perfil.getEstadoVerificacion() == EstadoVerificacion.APROBADO)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Maestro no disponible"));
         Usuario u = usuarios.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Maestro no disponible"));
         ReputacionResponse rep = calificaciones.reputacionDe(usuarioId);
+        boolean esFavorito = clienteId != null && favoritos.existsByClienteIdAndMaestroId(clienteId, usuarioId);
+
         return new MaestroPublicoResponse(u.getId(), u.getNombre(), u.getApellido(),
                 p.getOficios(), p.getDescripcion(), p.getAniosExperiencia(), p.getTarifaReferencial(),
-                p.getZonaCobertura(), rep.promedio(), rep.cantidad());
+                p.getZonaCobertura(), rep.promedio(), rep.cantidad(), esFavorito);
+    }
+
+    private Set<Long> favoritosDe(Long clienteId) {
+        if (clienteId == null) {
+            return Set.of();
+        }
+        return favoritos.findByClienteIdOrderByFechaCreacionDesc(clienteId).stream()
+                .map(Favorito::getMaestroId)
+                .collect(Collectors.toCollection(HashSet::new));
     }
 
     /** Metros -> kilómetros con 1 decimal. */

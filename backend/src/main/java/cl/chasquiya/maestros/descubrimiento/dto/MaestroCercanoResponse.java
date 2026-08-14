@@ -15,5 +15,7 @@ public record MaestroCercanoResponse(
         Integer tarifaReferencial,
         double distanciaKm,
         double calificacionPromedio,
-        long cantidadCalificaciones) {
+        long cantidadCalificaciones,
+        /** Si quien consulta lo tiene guardado en sus favoritos. */
+        boolean esFavorito) {
 }

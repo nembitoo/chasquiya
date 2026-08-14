@@ -18,6 +18,7 @@ import { BuscarScreen } from '../pantallas/BuscarScreen';
 import { CalificarScreen } from '../pantallas/CalificarScreen';
 import { ChatScreen } from '../pantallas/ChatScreen';
 import { ChatsScreen } from '../pantallas/ChatsScreen';
+import { FavoritosScreen } from '../pantallas/FavoritosScreen';
 import { IngresosScreen } from '../pantallas/IngresosScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
@@ -44,6 +45,7 @@ export type RootStackParamList = {
   Pago: { solicitudId: number };
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
   PerfilMaestro: undefined;
+  Favoritos: undefined;
 };
 
 /** Pestañas inferiores. Cada rol ve un subconjunto. */
@@ -185,6 +187,7 @@ export function Navegacion() {
             <Stack.Screen name="Pago" component={PagoScreen} />
             <Stack.Screen name="Calificar" component={CalificarScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
+            <Stack.Screen name="Favoritos" component={FavoritosScreen} />
           </>
         ) : (
           <>

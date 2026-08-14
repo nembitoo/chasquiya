@@ -41,6 +41,13 @@ Una por solicitud. `id`, `solicitud_id` (FK único), `monto` (CLP), `mensaje`, `
 cancelar solo antes de `EN_CURSO` (el maestro puede declinar sin castigo — Ley 21.431);
 la disputa solo desde trabajo iniciado. `PAGADO`/`CALIFICADO` se habilitan en los Hitos 6 y 7.
 
+## mensajes (Hito 5)
+Chat ligado a una solicitud (mantiene contexto y privacidad: solo sus dos partes acceden).
+- `id`, `solicitud_id` (FK), `autor_id` (FK), `texto`, `leido`, `fecha_creacion`
+- Entrega en tiempo real por **WebSocket/STOMP** (`/topic/solicitudes/{id}`); el envío va por
+  REST para reusar validación y persistencia. El JWT se valida en el CONNECT de STOMP y los
+  permisos del chat en el SUBSCRIBE (ver `ChatAuthInterceptor`).
+
 ## Relaciones
 ```
 usuarios (1) ──< perfiles_maestro (0..1, solo rol MAESTRO)
@@ -48,4 +55,5 @@ perfiles_maestro (1) ──< perfil_maestro_oficios (N)
 usuarios (1) ──< documentos_maestro (N)
 usuarios (cliente) (1) ──< solicitudes (N) >── (1) usuarios (maestro)
 solicitudes (1) ──< cotizaciones (0..1)
+solicitudes (1) ──< mensajes (N)
 ```

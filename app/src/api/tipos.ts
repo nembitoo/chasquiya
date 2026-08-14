@@ -123,6 +123,17 @@ export type Solicitud = {
   fechaCreacion: string;
 };
 
+/** Mensaje del chat de una solicitud. */
+export type Mensaje = {
+  id: number;
+  solicitudId: number;
+  autorId: number;
+  autorNombre: string;
+  texto: string;
+  leido: boolean;
+  fechaCreacion: string;
+};
+
 /** Tarjeta de un maestro cercano en la búsqueda. */
 export type MaestroCercano = {
   usuarioId: number;

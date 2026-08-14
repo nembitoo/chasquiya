@@ -32,7 +32,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/registro", "/auth/login", "/ping", "/actuator/health", "/error").permitAll()
+                        // El handshake del chat pasa; el JWT se valida en el CONNECT de STOMP.
+                        .requestMatchers("/auth/registro", "/auth/login", "/ping", "/actuator/health", "/error", "/ws/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/maestros/**").hasRole("MAESTRO")
                         .anyRequest().authenticated())

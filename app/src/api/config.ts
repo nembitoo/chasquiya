@@ -6,3 +6,6 @@
 //
 // Para averiguar tu IP en Windows: ejecuta  ipconfig  y mira "IPv4".
 export const API_URL = 'http://192.168.1.97:8080';
+
+/** Mismo servidor, pero por WebSocket (chat en tiempo real). */
+export const WS_URL = API_URL.replace(/^http/, 'ws') + '/ws';

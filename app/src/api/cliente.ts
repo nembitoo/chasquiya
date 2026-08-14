@@ -7,6 +7,7 @@ import {
   MaestroAdmin,
   MaestroCercano,
   MaestroPublico,
+  Mensaje,
   Oficio,
   PerfilMaestroData,
   PerfilMaestroResponse,
@@ -175,6 +176,21 @@ export const api = {
         { method: 'POST', body: JSON.stringify({ motivo }) },
         token,
       ),
+  },
+
+  mensajes: {
+    listar: (token: string, solicitudId: number) =>
+      pedir<Mensaje[]>(`/solicitudes/${solicitudId}/mensajes`, {}, token),
+    enviar: (token: string, solicitudId: number, texto: string) =>
+      pedir<Mensaje>(
+        `/solicitudes/${solicitudId}/mensajes`,
+        { method: 'POST', body: JSON.stringify({ texto }) },
+        token,
+      ),
+    marcarLeidos: (token: string, solicitudId: number) =>
+      pedir<null>(`/solicitudes/${solicitudId}/mensajes/leidos`, { method: 'POST' }, token),
+    /** { solicitudId: cantidad } para los badges de las listas. */
+    noLeidos: (token: string) => pedir<Record<string, number>>('/mensajes/no-leidos', {}, token),
   },
 
   documentos: {

@@ -8,6 +8,7 @@ import { Oficio } from '../api/tipos';
 import { AdminMaestrosScreen } from '../pantallas/AdminMaestrosScreen';
 import { BienvenidaScreen } from '../pantallas/BienvenidaScreen';
 import { BuscarScreen } from '../pantallas/BuscarScreen';
+import { ChatScreen } from '../pantallas/ChatScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   NuevaSolicitud: { maestroId: number; maestroNombre: string; oficios: Oficio[] };
   MisSolicitudes: undefined;
   SolicitudesRecibidas: undefined;
+  Chat: { solicitudId: number; contraparteNombre: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -56,6 +58,7 @@ export function Navegacion() {
             <Stack.Screen name="NuevaSolicitud" component={NuevaSolicitudScreen} />
             <Stack.Screen name="MisSolicitudes" component={MisSolicitudesScreen} />
             <Stack.Screen name="SolicitudesRecibidas" component={SolicitudesRecibidasScreen} />
+            <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="Admin" component={AdminMaestrosScreen} />
           </>

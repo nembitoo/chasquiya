@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/cliente';
 import { Solicitud } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
+import { BotonChat } from '../componentes/BotonChat';
 import { EstadoBadge } from '../componentes/EstadoBadge';
 import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
@@ -25,6 +26,7 @@ export function MisSolicitudesScreen({ navigation }: Props) {
   const token = sesion?.token ?? '';
 
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [noLeidos, setNoLeidos] = useState<Record<string, number>>({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [procesando, setProcesando] = useState<number | null>(null);
@@ -32,7 +34,12 @@ export function MisSolicitudesScreen({ navigation }: Props) {
   const cargar = useCallback(async () => {
     setError('');
     try {
-      setSolicitudes(await api.solicitudes.mias(token));
+      const [lista, pendientes] = await Promise.all([
+        api.solicitudes.mias(token),
+        api.mensajes.noLeidos(token).catch(() => ({})),
+      ]);
+      setSolicitudes(lista);
+      setNoLeidos(pendientes);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron cargar tus solicitudes.');
     } finally {
@@ -106,6 +113,13 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                 )}
 
                 {!!s.motivoCancelacion && <Text style={styles.motivo}>{s.motivoCancelacion}</Text>}
+
+                <BotonChat
+                  noLeidos={noLeidos[String(s.id)] ?? 0}
+                  onPress={() =>
+                    navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: s.maestroNombre })
+                  }
+                />
 
                 {/* Acciones según el estado (la máquina de estados manda) */}
                 {s.estado === 'COTIZADO' && (

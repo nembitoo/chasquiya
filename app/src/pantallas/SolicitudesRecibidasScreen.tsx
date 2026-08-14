@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/cliente';
 import { Solicitud } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
+import { BotonChat } from '../componentes/BotonChat';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { EstadoBadge } from '../componentes/EstadoBadge';
 import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
@@ -26,6 +27,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   const token = sesion?.token ?? '';
 
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [noLeidos, setNoLeidos] = useState<Record<string, number>>({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [procesando, setProcesando] = useState<number | null>(null);
@@ -37,7 +39,12 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   const cargar = useCallback(async () => {
     setError('');
     try {
-      setSolicitudes(await api.solicitudes.recibidas(token));
+      const [lista, pendientes] = await Promise.all([
+        api.solicitudes.recibidas(token),
+        api.mensajes.noLeidos(token).catch(() => ({})),
+      ]);
+      setSolicitudes(lista);
+      setNoLeidos(pendientes);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron cargar las solicitudes.');
     } finally {
@@ -123,6 +130,13 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                 )}
 
                 {!!s.motivoCancelacion && <Text style={styles.motivo}>{s.motivoCancelacion}</Text>}
+
+                <BotonChat
+                  noLeidos={noLeidos[String(s.id)] ?? 0}
+                  onPress={() =>
+                    navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: s.clienteNombre })
+                  }
+                />
 
                 {/* Acciones del maestro según el estado */}
                 {s.estado === 'SOLICITADO' &&

@@ -48,6 +48,11 @@ public class PerfilMaestroService {
         return perfiles.findByEstadoVerificacion(estado);
     }
 
+    /** Todos los perfiles de maestro (tabla del backoffice). */
+    public List<PerfilMaestro> listarTodos() {
+        return perfiles.findAll();
+    }
+
     public PerfilMaestroResponse cambiarEstado(Long usuarioId, EstadoVerificacion nuevoEstado) {
         PerfilMaestro perfil = perfiles.findByUsuarioId(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El maestro no tiene perfil"));

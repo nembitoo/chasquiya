@@ -33,7 +33,9 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // El handshake del chat pasa; el JWT se valida en el CONNECT de STOMP.
-                        .requestMatchers("/auth/registro", "/auth/login", "/ping", "/actuator/health", "/error", "/ws/**").permitAll()
+                        // /backoffice/** son solo archivos estáticos: los DATOS siguen protegidos en /admin/**.
+                        .requestMatchers("/auth/registro", "/auth/login", "/ping", "/actuator/health", "/error",
+                                "/ws/**", "/backoffice/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/maestros/**").hasRole("MAESTRO")
                         .anyRequest().authenticated())

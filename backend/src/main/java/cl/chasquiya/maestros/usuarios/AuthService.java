@@ -48,6 +48,10 @@ public class AuthService {
         if (!encoder.matches(req.password(), usuario.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos");
         }
+        if (!usuario.isActivo()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Tu cuenta está suspendida. Contacta a soporte.");
+        }
         return construirRespuesta(usuario);
     }
 

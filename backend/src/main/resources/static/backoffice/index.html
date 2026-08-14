@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChasquiYa! · Administración</title>
+  <link rel="stylesheet" href="estilos.css" />
+</head>
+<body>
+
+  <!-- Pantalla de acceso -->
+  <section id="login" class="login">
+    <form class="login-caja" onsubmit="entrar(event)">
+      <h1 class="logo">🏃 ChasquiYa!</h1>
+      <p class="login-sub">Panel de administración</p>
+      <label>Correo
+        <input id="email" type="email" value="admin@chasquiya.cl" required />
+      </label>
+      <label>Contraseña
+        <input id="password" type="password" required />
+      </label>
+      <button class="btn" type="submit">Entrar</button>
+      <p id="login-error" class="error"></p>
+    </form>
+  </section>
+
+  <!-- Panel -->
+  <section id="panel" class="oculto">
+    <header class="cabecera">
+      <div>
+        <span class="logo-mini">🏃 ChasquiYa!</span>
+        <span class="etiqueta">Administración</span>
+      </div>
+      <div class="cabecera-derecha">
+        <span id="admin-nombre" class="usuario"></span>
+        <button class="btn-texto" onclick="salir()">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab activa" data-vista="dashboard" onclick="mostrar('dashboard')">Dashboard</button>
+      <button class="tab" data-vista="maestros" onclick="mostrar('maestros')">Maestros</button>
+      <button class="tab" data-vista="usuarios" onclick="mostrar('usuarios')">Usuarios</button>
+      <button class="tab" data-vista="servicios" onclick="mostrar('servicios')">Servicios</button>
+      <button class="tab" data-vista="disputas" onclick="mostrar('disputas')">Disputas</button>
+    </nav>
+
+    <main class="contenido">
+      <p id="error-global" class="error"></p>
+
+      <div id="vista-dashboard" class="vista">
+        <div id="tarjetas" class="tarjetas"></div>
+        <div class="panel-caja">
+          <h2>Servicios por estado</h2>
+          <div id="grafico-estados"></div>
+        </div>
+      </div>
+
+      <div id="vista-maestros" class="vista oculto">
+        <h2>Maestros registrados</h2>
+        <div id="tabla-maestros"></div>
+      </div>
+
+      <div id="vista-usuarios" class="vista oculto">
+        <h2>Usuarios</h2>
+        <div id="tabla-usuarios"></div>
+      </div>
+
+      <div id="vista-servicios" class="vista oculto">
+        <h2>Servicios</h2>
+        <div id="tabla-servicios"></div>
+      </div>
+
+      <div id="vista-disputas" class="vista oculto">
+        <h2>Disputas abiertas</h2>
+        <div id="tabla-disputas"></div>
+      </div>
+    </main>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

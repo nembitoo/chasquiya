@@ -46,6 +46,10 @@ public class Usuario {
     @Column(name = "acepto_terminos", nullable = false)
     private boolean aceptoTerminos;
 
+    /** Un usuario suspendido por el admin no puede iniciar sesión. */
+    @Column(nullable = false)
+    private boolean activo = true;
+
     @Column(name = "fecha_creacion", nullable = false)
     private Instant fechaCreacion;
 
@@ -101,6 +105,14 @@ public class Usuario {
 
     public boolean isAceptoTerminos() {
         return aceptoTerminos;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
 
     public Instant getFechaCreacion() {

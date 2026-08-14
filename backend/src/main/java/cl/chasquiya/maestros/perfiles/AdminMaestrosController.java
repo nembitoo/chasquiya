@@ -45,6 +45,12 @@ public class AdminMaestrosController {
                 .toList();
     }
 
+    /** Todos los maestros con perfil, sin importar su estado (tabla del backoffice). */
+    @GetMapping
+    public List<MaestroAdminResponse> todos() {
+        return servicio.listarTodos().stream().map(this::aAdminResponse).toList();
+    }
+
     @PostMapping("/{usuarioId}/aprobar")
     public PerfilMaestroResponse aprobar(@PathVariable Long usuarioId) {
         return servicio.cambiarEstado(usuarioId, EstadoVerificacion.APROBADO);

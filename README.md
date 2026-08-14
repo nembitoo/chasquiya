@@ -49,6 +49,7 @@ Escanea el código QR con **Expo Go** (teléfono en la misma Wi-Fi).
 | Servicio | URL |
 |---|---|
 | Backend | http://localhost:8080 |
+| **Backoffice (admin)** | http://localhost:8080/backoffice/ |
 | MinIO (consola) | http://localhost:9001 |
 | Mailpit (correos de prueba) | http://localhost:8025 |
 

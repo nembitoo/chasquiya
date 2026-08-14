@@ -121,6 +121,11 @@ public class SolicitudService {
 
     // --- Mediación del admin (Hito 7) ---
 
+    /** Todas las transacciones de la plataforma (tabla del backoffice). */
+    public List<SolicitudResponse> todosLosServicios() {
+        return aResponses(solicitudes.findAll(), null);
+    }
+
     /** Solicitudes con disputa abierta, para el panel del admin. */
     public List<SolicitudResponse> disputasAbiertas() {
         return aResponses(solicitudes.findByEstadoOrderByFechaActualizacionDesc(EstadoServicio.EN_DISPUTA), null);

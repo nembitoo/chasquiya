@@ -8,6 +8,7 @@ Clientes, maestros y admins comparten tabla; los distingue `rol`.
 - `password_hash` (BCrypt — nunca texto plano)
 - `rol`: `CLIENTE | MAESTRO | ADMIN`
 - `acepto_terminos`, `fecha_creacion`
+- `activo` (Hito 8): si el admin lo suspende, **no puede iniciar sesión** (403 al hacer login)
 
 ## perfiles_maestro (Hito 2)
 Datos profesionales de un maestro. Un usuario MAESTRO tiene 0 o 1 perfil.

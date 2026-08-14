@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colores, espacio, radio, tipografia } from '../tema/tema';
+import { Icono } from './base/Icono';
 import { Boton } from './Boton';
 
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -91,13 +92,13 @@ export function SelectorFechaHora({ etiqueta, valor, onCambio }: Props) {
       <Text style={styles.etiqueta}>{etiqueta}</Text>
       <View style={styles.fila}>
         <Pressable style={styles.caja} onPress={() => abrir('date')}>
-          <Text style={styles.icono}>🗓️</Text>
+          <Icono nombre="calendar-outline" tamano="md" color={colores.textoSuave} />
           <Text style={[styles.valor, !valor && styles.placeholder]}>
             {valor ? formatearFecha(valor) : 'Elegir fecha'}
           </Text>
         </Pressable>
         <Pressable style={[styles.caja, styles.cajaHora]} onPress={() => abrir('time')}>
-          <Text style={styles.icono}>🕒</Text>
+          <Icono nombre="time-outline" tamano="md" color={colores.textoSuave} />
           <Text style={[styles.valor, !valor && styles.placeholder]}>
             {valor ? formatearHora(valor) : 'Hora'}
           </Text>

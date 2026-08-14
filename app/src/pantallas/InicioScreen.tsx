@@ -57,7 +57,7 @@ export function InicioScreen({ navigation }: Props) {
                     />
                   </View>
                   <Text style={styles.categoriaTexto} numberOfLines={1}>
-                    {o.etiqueta.replace(/^\S+\s/, '')}
+                    {o.etiqueta}
                   </Text>
                 </Pressable>
               ))}

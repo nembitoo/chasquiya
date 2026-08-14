@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colores, espacio, radio, tipografia } from '../tema/tema';
+import { Icono } from './base/Icono';
 
 type Props = {
   onPress: () => void;
@@ -12,7 +13,8 @@ type Props = {
 export function BotonChat({ onPress, noLeidos = 0 }: Props) {
   return (
     <Pressable style={styles.boton} onPress={onPress}>
-      <Text style={styles.texto}>💬 Chat</Text>
+      <Icono nombre="chatbubble-ellipses-outline" tamano="sm" color={colores.primario} />
+      <Text style={styles.texto}>Chat</Text>
       {noLeidos > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeTexto}>{noLeidos > 9 ? '9+' : noLeidos}</Text>

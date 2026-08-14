@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Boton } from '../componentes/Boton';
+import { Logo } from '../componentes/base/Logo';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, tipografia } from '../tema/tema';
 
@@ -13,7 +14,7 @@ export function BienvenidaScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.contenedor}>
       <View style={styles.centro}>
-        <Text style={styles.logo}>🏃 ChasquiYa!</Text>
+        <Logo tamano="lg" />
         <Text style={styles.tagline}>Encuentra al maestro que necesitas, cerca de ti.</Text>
       </View>
       <View style={styles.botones}>

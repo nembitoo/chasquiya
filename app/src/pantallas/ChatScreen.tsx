@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/cliente';
 import { WS_URL } from '../api/config';
 import { Mensaje } from '../api/tipos';
+import { Icono } from '../componentes/base/Icono';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
@@ -174,7 +175,7 @@ export function ChatScreen({ route, navigation }: Props) {
             {enviando ? (
               <ActivityIndicator color={colores.blanco} size="small" />
             ) : (
-              <Text style={styles.enviarTexto}>➤</Text>
+              <Icono nombre="send" tamano="md" color={colores.blanco} />
             )}
           </Pressable>
         </View>

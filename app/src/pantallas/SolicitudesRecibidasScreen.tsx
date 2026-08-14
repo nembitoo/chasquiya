@@ -7,6 +7,7 @@ import { api } from '../api/cliente';
 import { Solicitud } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { BotonChat } from '../componentes/BotonChat';
+import { Dato } from '../componentes/base/Dato';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { EstadoBadge } from '../componentes/EstadoBadge';
 import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
@@ -109,13 +110,13 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                 </View>
                 <Text style={styles.oficio}>{ETIQUETA_OFICIO[s.oficio] ?? s.oficio}</Text>
                 <Text style={styles.descripcion}>{s.descripcion}</Text>
-                <Text style={styles.dato}>📍 {s.direccion}</Text>
+                <Dato icono="location-outline" texto={s.direccion} />
                 {!!s.fechaPreferida && (
-                  <Text style={styles.dato}>🗓️ {formatearFechaHoraTexto(s.fechaPreferida)}</Text>
+                  <Dato icono="calendar-outline" texto={formatearFechaHoraTexto(s.fechaPreferida)} />
                 )}
                 {s.presupuestoEstimado != null && (
                   <Text style={styles.dato}>
-                    💰 Presupuesto del cliente: {formatearCLP(s.presupuestoEstimado)}
+                    Presupuesto del cliente: {formatearCLP(s.presupuestoEstimado)}
                   </Text>
                 )}
 
@@ -161,7 +162,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                 )}
 
                 {s.yaCalifique && (
-                  <Text style={styles.nota}>Ya calificaste a este cliente. ⭐</Text>
+                  <Text style={styles.nota}>Ya calificaste a este cliente.</Text>
                 )}
 
                 {(s.estado === 'EN_CURSO' || s.estado === 'COMPLETADO' || s.estado === 'PAGADO') && (
@@ -171,7 +172,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                         api.disputas.abrir(token, s.id, 'Problema reportado por el maestro'),
                       )
                     }>
-                    <Text style={styles.reportar}>⚠️ Reportar un problema</Text>
+                    <Text style={styles.reportar}>Reportar un problema</Text>
                   </Pressable>
                 )}
 

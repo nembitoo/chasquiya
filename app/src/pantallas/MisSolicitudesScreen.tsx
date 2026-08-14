@@ -7,6 +7,7 @@ import { api } from '../api/cliente';
 import { Solicitud } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { BotonChat } from '../componentes/BotonChat';
+import { Dato } from '../componentes/base/Dato';
 import { EstadoBadge } from '../componentes/EstadoBadge';
 import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
@@ -95,9 +96,9 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                 </View>
                 <Text style={styles.oficio}>{ETIQUETA_OFICIO[s.oficio] ?? s.oficio}</Text>
                 <Text style={styles.descripcion}>{s.descripcion}</Text>
-                <Text style={styles.dato}>📍 {s.direccion}</Text>
+                <Dato icono="location-outline" texto={s.direccion} />
                 {!!s.fechaPreferida && (
-                  <Text style={styles.dato}>🗓️ {formatearFechaHoraTexto(s.fechaPreferida)}</Text>
+                  <Dato icono="calendar-outline" texto={formatearFechaHoraTexto(s.fechaPreferida)} />
                 )}
 
                 {s.cotizacionMonto != null && (
@@ -187,7 +188,7 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                 )}
 
                 {s.yaCalifique && (
-                  <Text style={styles.nota}>Ya calificaste este servicio. ¡Gracias! ⭐</Text>
+                  <Text style={styles.nota}>Ya calificaste este servicio. ¡Gracias!</Text>
                 )}
 
                 {!!s.resolucionDisputa && (
@@ -202,7 +203,7 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                         api.disputas.abrir(token, s.id, 'Problema reportado por el cliente'),
                       )
                     }>
-                    <Text style={styles.reportar}>⚠️ Reportar un problema</Text>
+                    <Text style={styles.reportar}>Reportar un problema</Text>
                   </Pressable>
                 )}
               </View>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colores, espacio, tipografia } from '../tema/tema';
+import { Icono } from './base/Icono';
 
 /** Muestra la calificación en estrellas (solo lectura). */
 export function Estrellas({
@@ -18,7 +19,7 @@ export function Estrellas({
   }
   return (
     <View style={styles.fila}>
-      <Text style={{ fontSize: tamano }}>⭐</Text>
+      <Icono nombre="star" tamano={tamano} color="#F59E0B" />
       <Text style={[styles.nota, { fontSize: tamano }]}>{valor.toFixed(1)}</Text>
       {cantidad != null && cantidad > 0 && (
         <Text style={[styles.cantidad, { fontSize: tamano - 1 }]}>
@@ -45,7 +46,11 @@ export function SelectorEstrellas({
       <View style={styles.selectorFila}>
         {[1, 2, 3, 4, 5].map((n) => (
           <Pressable key={n} onPress={() => onCambio(n)} hitSlop={6}>
-            <Text style={styles.estrellaGrande}>{n <= valor ? '⭐' : '☆'}</Text>
+            <Icono
+              nombre={n <= valor ? 'star' : 'star-outline'}
+              tamano={34}
+              color={n <= valor ? '#F59E0B' : colores.bordeFuerte}
+            />
           </Pressable>
         ))}
       </View>

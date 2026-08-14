@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Boton } from '../componentes/Boton';
+import { Icono } from '../componentes/base/Icono';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { Rol } from '../api/tipos';
 import { useAuth } from '../estado/AuthContext';
@@ -105,7 +106,7 @@ export function RegistroScreen({ navigation }: Props) {
 
           <Pressable style={styles.terminos} onPress={() => setTerminos(!terminos)}>
             <View style={[styles.checkbox, terminos && styles.checkboxActivo]}>
-              {terminos && <Text style={styles.check}>✓</Text>}
+              {terminos && <Icono nombre="checkmark" tamano="sm" color={colores.blanco} />}
             </View>
             <Text style={styles.terminosTexto}>Acepto los términos y condiciones</Text>
           </Pressable>

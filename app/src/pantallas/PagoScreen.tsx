@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/cliente';
 import { ResumenPago } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
+import { Icono } from '../componentes/base/Icono';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
@@ -64,7 +65,7 @@ export function PagoScreen({ route, navigation }: Props) {
     return (
       <SafeAreaView style={styles.contenedor}>
         <View style={styles.exitoCaja}>
-          <Text style={styles.exitoIcono}>✅</Text>
+          <Icono nombre="checkmark-circle" tamano={72} color={colores.exito} />
           <Text style={styles.exitoTitulo}>¡Pago realizado!</Text>
           <Text style={styles.exitoTexto}>
             El servicio quedó pagado{resumen ? ` a ${resumen.maestroNombre}` : ''}.
@@ -105,7 +106,7 @@ export function PagoScreen({ route, navigation }: Props) {
             <View style={styles.tarjeta}>
               <Text style={styles.seccion}>Método de pago</Text>
               <View style={styles.metodo}>
-                <Text style={styles.metodoIcono}>🧪</Text>
+                <Icono nombre="flask-outline" tamano="xl" color={colores.primario} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.metodoTitulo}>Pago simulado</Text>
                   <Text style={styles.metodoTexto}>

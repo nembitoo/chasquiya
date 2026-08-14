@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Boton } from '../componentes/Boton';
+import { Logo } from '../componentes/base/Logo';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
@@ -39,7 +40,9 @@ export function LoginScreen({ navigation }: Props) {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.centro}>
-        <Text style={styles.logo}>🏃 ChasquiYa!</Text>
+        <View style={{ alignItems: 'center' }}>
+          <Logo tamano="md" />
+        </View>
         <Text style={styles.titulo}>Iniciar sesión</Text>
 
         <CampoTexto

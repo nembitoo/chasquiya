@@ -54,6 +54,14 @@ class EstadoServicioTest {
     void estadosFinalesNoTienenSalida() {
         assertTrue(EstadoServicio.CANCELADO.siguientesPosibles().isEmpty());
         assertTrue(EstadoServicio.CALIFICADO.siguientesPosibles().isEmpty());
-        assertTrue(EstadoServicio.EN_DISPUTA.siguientesPosibles().isEmpty());
+    }
+
+    @Test
+    void unaDisputaSeResuelveACualquieraDeLosDosLados() {
+        // A favor del cliente se anula; a favor del maestro el servicio se da por bueno.
+        assertTrue(EstadoServicio.EN_DISPUTA.puedePasarA(EstadoServicio.CANCELADO));
+        assertTrue(EstadoServicio.EN_DISPUTA.puedePasarA(EstadoServicio.COMPLETADO));
+        // Pero no puede saltar directo a estados que requieren pasos previos.
+        assertFalse(EstadoServicio.EN_DISPUTA.puedePasarA(EstadoServicio.CALIFICADO));
     }
 }

@@ -13,5 +13,7 @@ public record MaestroCercanoResponse(
         String zonaCobertura,
         int aniosExperiencia,
         Integer tarifaReferencial,
-        double distanciaKm) {
+        double distanciaKm,
+        double calificacionPromedio,
+        long cantidadCalificaciones) {
 }

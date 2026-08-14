@@ -13,5 +13,7 @@ public record MaestroPublicoResponse(
         String descripcion,
         int aniosExperiencia,
         Integer tarifaReferencial,
-        String zonaCobertura) {
+        String zonaCobertura,
+        double calificacionPromedio,
+        long cantidadCalificaciones) {
 }

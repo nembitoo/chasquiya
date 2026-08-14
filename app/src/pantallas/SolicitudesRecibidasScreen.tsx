@@ -136,12 +136,44 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
 
                 {!!s.motivoCancelacion && <Text style={styles.motivo}>{s.motivoCancelacion}</Text>}
 
+                {!!s.resolucionDisputa && (
+                  <Text style={styles.motivo}>Resolución del admin: {s.resolucionDisputa}</Text>
+                )}
+
                 <BotonChat
                   noLeidos={noLeidos[String(s.id)] ?? 0}
                   onPress={() =>
                     navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: s.clienteNombre })
                   }
                 />
+
+                {s.estado === 'PAGADO' && (
+                  <View style={styles.acciones}>
+                    <View style={{ flex: 1 }}>
+                      <Boton
+                        titulo="Calificar al cliente"
+                        onPress={() =>
+                          navigation.navigate('Calificar', {
+                            solicitudId: s.id,
+                            contraparteNombre: s.clienteNombre,
+                            esMaestro: false,
+                          })
+                        }
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {(s.estado === 'EN_CURSO' || s.estado === 'COMPLETADO' || s.estado === 'PAGADO') && (
+                  <Pressable
+                    onPress={() =>
+                      accion(s.id, () =>
+                        api.disputas.abrir(token, s.id, 'Problema reportado por el maestro'),
+                      )
+                    }>
+                    <Text style={styles.reportar}>⚠️ Reportar un problema</Text>
+                  </Pressable>
+                )}
 
                 {/* Acciones del maestro según el estado */}
                 {s.estado === 'SOLICITADO' &&
@@ -251,6 +283,13 @@ const styles = StyleSheet.create({
   cotizacionMensaje: { color: colores.texto, marginTop: espacio.xs, fontSize: tipografia.pequeno },
   motivo: { color: colores.textoSuave, fontStyle: 'italic', marginTop: espacio.sm, fontSize: tipografia.pequeno },
   acciones: { flexDirection: 'row', marginTop: espacio.md },
+  reportar: {
+    color: colores.error,
+    fontSize: tipografia.pequeno,
+    fontWeight: '600',
+    marginTop: espacio.md,
+    textAlign: 'center',
+  },
   formulario: { marginTop: espacio.md },
   error: { color: colores.error, marginBottom: espacio.md, fontSize: tipografia.cuerpo },
 });

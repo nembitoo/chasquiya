@@ -1,6 +1,8 @@
 import { API_URL } from './config';
 import {
   AuthResponse,
+  Calificacion,
+  CalificarData,
   CrearSolicitudData,
   DocumentoResponse,
   Ingresos,
@@ -14,6 +16,7 @@ import {
   PerfilMaestroData,
   PerfilMaestroResponse,
   RegistroData,
+  Reputacion,
   ResumenPago,
   Solicitud,
   Usuario,
@@ -177,6 +180,37 @@ export const api = {
       pedir<Solicitud>(
         `/solicitudes/${id}/cancelar`,
         { method: 'POST', body: JSON.stringify({ motivo }) },
+        token,
+      ),
+  },
+
+  calificaciones: {
+    calificar: (token: string, solicitudId: number, datos: CalificarData) =>
+      pedir<Calificacion>(
+        `/solicitudes/${solicitudId}/calificacion`,
+        { method: 'POST', body: JSON.stringify(datos) },
+        token,
+      ),
+    resenasDe: (token: string, usuarioId: number) =>
+      pedir<Calificacion[]>(`/usuarios/${usuarioId}/resenas`, {}, token),
+    reputacionDe: (token: string, usuarioId: number) =>
+      pedir<Reputacion>(`/usuarios/${usuarioId}/reputacion`, {}, token),
+  },
+
+  disputas: {
+    /** Cualquiera de las dos partes puede reportar un problema. */
+    abrir: (token: string, solicitudId: number, motivo: string) =>
+      pedir<Solicitud>(
+        `/solicitudes/${solicitudId}/disputa`,
+        { method: 'POST', body: JSON.stringify({ motivo }) },
+        token,
+      ),
+    // Admin
+    abiertas: (token: string) => pedir<Solicitud[]>('/admin/disputas', {}, token),
+    resolver: (token: string, solicitudId: number, aFavorDelCliente: boolean, resolucion: string) =>
+      pedir<Solicitud>(
+        `/admin/disputas/${solicitudId}/resolver`,
+        { method: 'POST', body: JSON.stringify({ aFavorDelCliente, resolucion }) },
         token,
       ),
   },

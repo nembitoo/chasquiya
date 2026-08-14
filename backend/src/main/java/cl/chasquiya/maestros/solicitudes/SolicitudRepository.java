@@ -9,4 +9,7 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
     List<Solicitud> findByClienteIdOrderByFechaCreacionDesc(Long clienteId);
 
     List<Solicitud> findByMaestroIdOrderByFechaCreacionDesc(Long maestroId);
+
+    /** Para el panel de disputas del admin. */
+    List<Solicitud> findByEstadoOrderByFechaActualizacionDesc(EstadoServicio estado);
 }

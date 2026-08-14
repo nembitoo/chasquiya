@@ -174,4 +174,43 @@ class SolicitudServiceTest {
 
         assertEquals(EstadoServicio.EN_DISPUTA, servicio.abrirDisputa(CLIENTE, 10L, "No llegó").estado());
     }
+
+    @Test
+    void elMaestroTambienPuedeAbrirDisputa() {
+        solicitudEn(EstadoServicio.EN_CURSO);
+
+        assertEquals(EstadoServicio.EN_DISPUTA,
+                servicio.abrirDisputa(MAESTRO, 10L, "El cliente no estaba en el domicilio").estado());
+    }
+
+    // --- Mediación del admin (Hito 7) ---
+
+    @Test
+    void adminResuelveDisputaAFavorDelClienteYSeAnula() {
+        solicitudEn(EstadoServicio.EN_DISPUTA);
+
+        SolicitudResponse r = servicio.resolverDisputa(10L, true, "El trabajo no se realizó");
+
+        assertEquals(EstadoServicio.CANCELADO, r.estado());
+        assertEquals("El trabajo no se realizó", r.resolucionDisputa());
+    }
+
+    @Test
+    void adminResuelveDisputaAFavorDelMaestroYElServicioSeDaPorBueno() {
+        solicitudEn(EstadoServicio.EN_DISPUTA);
+
+        SolicitudResponse r = servicio.resolverDisputa(10L, false, null);
+
+        assertEquals(EstadoServicio.COMPLETADO, r.estado());
+        assertEquals("Resuelta a favor del maestro", r.resolucionDisputa());
+    }
+
+    @Test
+    void noSePuedeResolverUnaSolicitudSinDisputa() {
+        solicitudEn(EstadoServicio.EN_CURSO);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> servicio.resolverDisputa(10L, true, "sin disputa"));
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+    }
 }

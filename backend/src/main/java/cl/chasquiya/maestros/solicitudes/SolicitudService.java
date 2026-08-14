@@ -113,6 +113,30 @@ public class SolicitudService {
         return transicionar(s, EstadoServicio.EN_DISPUTA);
     }
 
+    // --- Mediación del admin (Hito 7) ---
+
+    /** Solicitudes con disputa abierta, para el panel del admin. */
+    public List<SolicitudResponse> disputasAbiertas() {
+        return aResponses(solicitudes.findByEstadoOrderByFechaActualizacionDesc(EstadoServicio.EN_DISPUTA));
+    }
+
+    /**
+     * El admin cierra una disputa.
+     * A favor del cliente -> el servicio se anula (CANCELADO).
+     * A favor del maestro -> el servicio se da por bueno (vuelve a COMPLETADO).
+     * Nota: con pago simulado no hay devolución de dinero; eso llega con la pasarela real.
+     */
+    public SolicitudResponse resolverDisputa(Long solicitudId, boolean aFavorDelCliente, String resolucion) {
+        Solicitud s = buscar(solicitudId);
+        if (s.getEstado() != EstadoServicio.EN_DISPUTA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta solicitud no tiene una disputa abierta");
+        }
+        s.setResolucionDisputa(resolucion != null && !resolucion.isBlank()
+                ? resolucion.trim()
+                : (aFavorDelCliente ? "Resuelta a favor del cliente" : "Resuelta a favor del maestro"));
+        return transicionar(s, aFavorDelCliente ? EstadoServicio.CANCELADO : EstadoServicio.COMPLETADO);
+    }
+
     // --- Consultas ---
 
     public List<SolicitudResponse> misSolicitudesComoCliente(Long clienteId) {
@@ -204,7 +228,7 @@ public class SolicitudService {
                 s.getClienteId(), nombreDe(personas.get(s.getClienteId())),
                 s.getMaestroId(), nombreDe(personas.get(s.getMaestroId())),
                 s.getOficio(), s.getDescripcion(), s.getDireccion(), s.getFechaPreferida(),
-                s.getPresupuestoEstimado(), s.getEstado(), s.getMotivoCancelacion(),
+                s.getPresupuestoEstimado(), s.getEstado(), s.getMotivoCancelacion(), s.getResolucionDisputa(),
                 cot.map(Cotizacion::getMonto).orElse(null),
                 cot.map(Cotizacion::getMensaje).orElse(null),
                 s.getFechaCreacion());

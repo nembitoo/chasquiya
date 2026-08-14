@@ -52,6 +52,10 @@ public class Solicitud {
     @Column(name = "motivo_cancelacion")
     private String motivoCancelacion;
 
+    /** Qué resolvió el admin cuando hubo disputa. */
+    @Column(name = "resolucion_disputa")
+    private String resolucionDisputa;
+
     @Column(name = "fecha_creacion", nullable = false)
     private Instant fechaCreacion;
 
@@ -132,6 +136,14 @@ public class Solicitud {
 
     public void setMotivoCancelacion(String motivoCancelacion) {
         this.motivoCancelacion = motivoCancelacion;
+    }
+
+    public String getResolucionDisputa() {
+        return resolucionDisputa;
+    }
+
+    public void setResolucionDisputa(String resolucionDisputa) {
+        this.resolucionDisputa = resolucionDisputa;
     }
 
     public Instant getFechaCreacion() {

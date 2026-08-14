@@ -19,6 +19,7 @@ public record SolicitudResponse(
         Integer presupuestoEstimado,
         EstadoServicio estado,
         String motivoCancelacion,
+        String resolucionDisputa,
         Integer cotizacionMonto,
         String cotizacionMensaje,
         Instant fechaCreacion) {

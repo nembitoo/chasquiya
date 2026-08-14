@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.calificaciones.CalificacionService;
+import cl.chasquiya.maestros.calificaciones.dto.ReputacionResponse;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroPublicoResponse;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
@@ -28,10 +30,13 @@ public class DescubrimientoService {
 
     private final PerfilMaestroRepository perfiles;
     private final UsuarioRepository usuarios;
+    private final CalificacionService calificaciones;
 
-    public DescubrimientoService(PerfilMaestroRepository perfiles, UsuarioRepository usuarios) {
+    public DescubrimientoService(PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
+                                 CalificacionService calificaciones) {
         this.perfiles = perfiles;
         this.usuarios = usuarios;
+        this.calificaciones = calificaciones;
     }
 
     public List<MaestroCercanoResponse> buscar(double lat, double lon, Double radioKm, Oficio oficio) {
@@ -50,6 +55,8 @@ public class DescubrimientoService {
         Map<Long, Usuario> usuarioPorId = usuarios.findAllById(ids).stream()
                 .collect(Collectors.toMap(Usuario::getId, Function.identity()));
 
+        Map<Long, ReputacionResponse> reputaciones = calificaciones.reputacionesDe(ids);
+
         List<MaestroCercanoResponse> salida = new ArrayList<>();
         for (MaestroCercanoProjection r : ranking) {
             PerfilMaestro p = perfilPorUsuario.get(r.getUsuarioId());
@@ -57,10 +64,11 @@ public class DescubrimientoService {
             if (p == null || u == null) {
                 continue;
             }
+            ReputacionResponse rep = reputaciones.getOrDefault(u.getId(), ReputacionResponse.vacia());
             salida.add(new MaestroCercanoResponse(
                     u.getId(), u.getNombre(), u.getApellido(), p.getOficios(),
                     p.getZonaCobertura(), p.getAniosExperiencia(), p.getTarifaReferencial(),
-                    aKilometros(r.getDistanciaM())));
+                    aKilometros(r.getDistanciaM()), rep.promedio(), rep.cantidad()));
         }
         return salida;
     }
@@ -71,9 +79,10 @@ public class DescubrimientoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Maestro no disponible"));
         Usuario u = usuarios.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Maestro no disponible"));
+        ReputacionResponse rep = calificaciones.reputacionDe(usuarioId);
         return new MaestroPublicoResponse(u.getId(), u.getNombre(), u.getApellido(),
                 p.getOficios(), p.getDescripcion(), p.getAniosExperiencia(), p.getTarifaReferencial(),
-                p.getZonaCobertura());
+                p.getZonaCobertura(), rep.promedio(), rep.cantidad());
     }
 
     /** Metros -> kilómetros con 1 decimal. */

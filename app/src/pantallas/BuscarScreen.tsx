@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
 import { MaestroCercano, Oficio } from '../api/tipos';
+import { Estrellas } from '../componentes/Estrellas';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
@@ -105,6 +106,9 @@ export function BuscarScreen({ navigation }: Props) {
                   </Text>
                   <Text style={styles.distancia}>{m.distanciaKm} km</Text>
                 </View>
+                <View style={styles.filaEstrellas}>
+                  <Estrellas valor={m.calificacionPromedio} cantidad={m.cantidadCalificaciones} />
+                </View>
                 <Text style={styles.oficios}>{m.oficios.map((o) => ETIQUETA_OFICIO[o] ?? o).join('  ')}</Text>
                 <Text style={styles.dato}>
                   {(m.zonaCobertura ?? 'Sin comuna') + ' · ' + m.aniosExperiencia + ' años exp.'}
@@ -161,6 +165,7 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   nombre: { fontSize: tipografia.subtitulo, fontWeight: '700', color: colores.texto, flexShrink: 1 },
   distancia: { color: colores.primario, fontWeight: '800' },
+  filaEstrellas: { marginTop: espacio.xs },
   oficios: { color: colores.primario, fontWeight: '600', marginTop: espacio.xs },
   dato: { color: colores.textoSuave, marginTop: espacio.xs },
   error: { color: colores.error, marginBottom: espacio.md, fontSize: tipografia.cuerpo },

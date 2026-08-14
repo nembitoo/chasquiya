@@ -5,9 +5,11 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { useAuth } from '../estado/AuthContext';
 import { Oficio } from '../api/tipos';
+import { AdminDisputasScreen } from '../pantallas/AdminDisputasScreen';
 import { AdminMaestrosScreen } from '../pantallas/AdminMaestrosScreen';
 import { BienvenidaScreen } from '../pantallas/BienvenidaScreen';
 import { BuscarScreen } from '../pantallas/BuscarScreen';
+import { CalificarScreen } from '../pantallas/CalificarScreen';
 import { ChatScreen } from '../pantallas/ChatScreen';
 import { IngresosScreen } from '../pantallas/IngresosScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
@@ -36,6 +38,8 @@ export type RootStackParamList = {
   Chat: { solicitudId: number; contraparteNombre: string };
   Pago: { solicitudId: number };
   Ingresos: undefined;
+  Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
+  AdminDisputas: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -65,6 +69,8 @@ export function Navegacion() {
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="Pago" component={PagoScreen} />
             <Stack.Screen name="Ingresos" component={IngresosScreen} />
+            <Stack.Screen name="Calificar" component={CalificarScreen} />
+            <Stack.Screen name="AdminDisputas" component={AdminDisputasScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="Admin" component={AdminMaestrosScreen} />
           </>

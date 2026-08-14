@@ -118,10 +118,37 @@ export type Solicitud = {
   presupuestoEstimado: number | null;
   estado: EstadoServicio;
   motivoCancelacion: string | null;
+  resolucionDisputa: string | null;
   cotizacionMonto: number | null;
   cotizacionMensaje: string | null;
   fechaCreacion: string;
 };
+
+/** Calificación que se envía al terminar el servicio. */
+export type CalificarData = {
+  estrellas: number;
+  comentario: string | null;
+  puntualidad: number | null;
+  calidad: number | null;
+  trato: number | null;
+};
+
+/** Reseña recibida por un usuario. */
+export type Calificacion = {
+  id: number;
+  solicitudId: number;
+  autorId: number;
+  autorNombre: string;
+  estrellas: number;
+  comentario: string | null;
+  puntualidad: number | null;
+  calidad: number | null;
+  trato: number | null;
+  fechaCreacion: string;
+};
+
+/** Reputación: promedio y cantidad de calificaciones. */
+export type Reputacion = { promedio: number; cantidad: number };
 
 /** Desglose que ve el cliente antes de pagar. */
 export type ResumenPago = {
@@ -175,6 +202,8 @@ export type MaestroCercano = {
   aniosExperiencia: number;
   tarifaReferencial: number | null;
   distanciaKm: number;
+  calificacionPromedio: number;
+  cantidadCalificaciones: number;
 };
 
 /** Perfil público de un maestro (lo que ve un cliente). */
@@ -187,6 +216,8 @@ export type MaestroPublico = {
   aniosExperiencia: number;
   tarifaReferencial: number | null;
   zonaCobertura: string | null;
+  calificacionPromedio: number;
+  cantidadCalificaciones: number;
 };
 
 /** Vista que el admin ve de un maestro (para aprobar/rechazar). */

@@ -4,8 +4,9 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { MaestroPublico } from '../api/tipos';
+import { Calificacion, MaestroPublico } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
+import { Estrellas } from '../componentes/Estrellas';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
@@ -23,6 +24,7 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
   const token = sesion?.token ?? '';
 
   const [maestro, setMaestro] = useState<MaestroPublico | null>(null);
+  const [resenas, setResenas] = useState<Calificacion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
@@ -30,7 +32,12 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        setMaestro(await api.descubrimiento.maestro(token, usuarioId));
+        const [m, r] = await Promise.all([
+          api.descubrimiento.maestro(token, usuarioId),
+          api.calificaciones.resenasDe(token, usuarioId).catch(() => []),
+        ]);
+        setMaestro(m);
+        setResenas(r);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'No se pudo cargar el maestro.');
       } finally {
@@ -62,6 +69,13 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
           <Text style={styles.nombre}>
             {maestro.nombre} {maestro.apellido}
           </Text>
+          <View style={styles.filaEstrellas}>
+            <Estrellas
+              valor={maestro.calificacionPromedio}
+              cantidad={maestro.cantidadCalificaciones}
+              tamano={16}
+            />
+          </View>
           <Text style={styles.oficios}>
             {maestro.oficios.map((o) => ETIQUETA_OFICIO[o] ?? o).join('  ')}
           </Text>
@@ -79,6 +93,21 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
             <>
               <Text style={styles.seccion}>Sobre mí</Text>
               <Text style={styles.descripcion}>{maestro.descripcion}</Text>
+            </>
+          )}
+
+          {resenas.length > 0 && (
+            <>
+              <Text style={styles.seccion}>Reseñas de clientes</Text>
+              {resenas.slice(0, 5).map((r) => (
+                <View key={r.id} style={styles.resena}>
+                  <View style={styles.resenaTop}>
+                    <Text style={styles.resenaAutor}>{r.autorNombre}</Text>
+                    <Estrellas valor={r.estrellas} />
+                  </View>
+                  {!!r.comentario && <Text style={styles.resenaComentario}>{r.comentario}</Text>}
+                </View>
+              ))}
             </>
           )}
 
@@ -140,6 +169,18 @@ const styles = StyleSheet.create({
   datoValor: { color: colores.texto, fontWeight: '700', marginTop: espacio.xs },
   seccion: { fontSize: tipografia.subtitulo, fontWeight: '700', color: colores.texto, marginTop: espacio.lg },
   descripcion: { color: colores.texto, marginTop: espacio.sm, lineHeight: 22 },
+  filaEstrellas: { marginTop: espacio.sm },
+  resena: {
+    backgroundColor: colores.blanco,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    padding: espacio.md,
+    marginTop: espacio.sm,
+  },
+  resenaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  resenaAutor: { fontWeight: '700', color: colores.texto, flexShrink: 1 },
+  resenaComentario: { color: colores.textoSuave, marginTop: espacio.xs },
   aviso: { color: colores.textoSuave, marginTop: espacio.lg, fontStyle: 'italic' },
   acciones: { marginTop: espacio.xl },
   error: { color: colores.error, padding: espacio.lg, fontSize: tipografia.cuerpo },

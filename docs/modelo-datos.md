@@ -58,6 +58,20 @@ cotizado; la plataforma retiene el % (config. `COMISION_PORCENTAJE`, por defecto
 recibe el resto. El cálculo vive en `CalculadoraComision` y está testeado a fondo (invariante:
 `comisión + monto del maestro = monto del servicio`, sin perder pesos por redondeo).
 
+## calificaciones (Hito 7)
+Calificación mutua al cerrar el servicio. Cada parte califica **una vez** (`UNIQUE(solicitud_id, autor_id)`).
+- `id`, `solicitud_id` (FK), `autor_id`, `destinatario_id`, `estrellas` (1-5), `comentario`
+- `puntualidad`, `calidad`, `trato` (1-5): **solo se llenan al calificar a un maestro**
+- Cuando **ambas** partes califican, la solicitud pasa a `CALIFICADO`.
+- El promedio alimenta las tarjetas de búsqueda y el perfil público del maestro.
+
+> **Regla legal (Ley 21.431):** la reputación es información pública, **no** un mecanismo de sanción
+> automática. El sistema nunca bloquea a un maestro por su nota; cualquier medida la toma un admin.
+
+**Disputas:** `solicitudes.resolucion_disputa` guarda lo que resolvió el admin. La máquina de estados
+permite `EN_DISPUTA → CANCELADO` (a favor del cliente) o `EN_DISPUTA → COMPLETADO` (a favor del maestro).
+Con pago simulado **no hay devolución de dinero**; eso se define al integrar una pasarela real.
+
 ## Relaciones
 ```
 usuarios (1) ──< perfiles_maestro (0..1, solo rol MAESTRO)
@@ -67,4 +81,5 @@ usuarios (cliente) (1) ──< solicitudes (N) >── (1) usuarios (maestro)
 solicitudes (1) ──< cotizaciones (0..1)
 solicitudes (1) ──< mensajes (N)
 solicitudes (1) ──< pagos (0..1)
+solicitudes (1) ──< calificaciones (0..2, una por parte)
 ```

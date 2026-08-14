@@ -173,7 +173,40 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                 )}
 
                 {s.estado === 'PAGADO' && (
-                  <Text style={styles.nota}>Servicio pagado. La calificación llega en el próximo hito.</Text>
+                  <View style={styles.acciones}>
+                    <View style={{ flex: 1 }}>
+                      <Boton
+                        titulo="Calificar servicio"
+                        onPress={() =>
+                          navigation.navigate('Calificar', {
+                            solicitudId: s.id,
+                            contraparteNombre: s.maestroNombre,
+                            esMaestro: true,
+                          })
+                        }
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {s.estado === 'CALIFICADO' && (
+                  <Text style={styles.nota}>Servicio finalizado y calificado. ¡Gracias!</Text>
+                )}
+
+                {!!s.resolucionDisputa && (
+                  <Text style={styles.motivo}>Resolución del admin: {s.resolucionDisputa}</Text>
+                )}
+
+                {/* Reportar un problema: disponible desde que el trabajo empezó. */}
+                {(s.estado === 'EN_CURSO' || s.estado === 'COMPLETADO' || s.estado === 'PAGADO') && (
+                  <Pressable
+                    onPress={() =>
+                      accion(s.id, () =>
+                        api.disputas.abrir(token, s.id, 'Problema reportado por el cliente'),
+                      )
+                    }>
+                    <Text style={styles.reportar}>⚠️ Reportar un problema</Text>
+                  </Pressable>
                 )}
               </View>
             ))
@@ -217,5 +250,12 @@ const styles = StyleSheet.create({
   motivo: { color: colores.textoSuave, fontStyle: 'italic', marginTop: espacio.sm, fontSize: tipografia.pequeno },
   acciones: { flexDirection: 'row', marginTop: espacio.md },
   nota: { color: colores.textoSuave, fontSize: tipografia.pequeno, marginTop: espacio.md, fontStyle: 'italic' },
+  reportar: {
+    color: colores.error,
+    fontSize: tipografia.pequeno,
+    fontWeight: '600',
+    marginTop: espacio.md,
+    textAlign: 'center',
+  },
   error: { color: colores.error, marginBottom: espacio.md, fontSize: tipografia.cuerpo },
 });

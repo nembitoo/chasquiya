@@ -32,10 +32,13 @@ public enum EstadoServicio {
             // (el maestro es independiente: cancelar no se castiga — Ley 21.431).
             case ACEPTADO -> Set.of(EN_CURSO, CANCELADO);
             case EN_CURSO -> Set.of(COMPLETADO, EN_DISPUTA);
-            case COMPLETADO -> Set.of(PAGADO, EN_DISPUTA);   // PAGADO: Hito 6
-            case PAGADO -> Set.of(CALIFICADO, EN_DISPUTA);   // CALIFICADO: Hito 7
-            // Estados finales (la disputa la resuelve un admin, Hito 7).
-            case CALIFICADO, CANCELADO, EN_DISPUTA -> Set.of();
+            case COMPLETADO -> Set.of(PAGADO, EN_DISPUTA);
+            case PAGADO -> Set.of(CALIFICADO, EN_DISPUTA);
+            // Un admin resuelve la disputa: a favor del cliente (se anula) o
+            // a favor del maestro (el servicio se da por bueno y sigue su curso).
+            case EN_DISPUTA -> Set.of(CANCELADO, COMPLETADO);
+            // Estados finales.
+            case CALIFICADO, CANCELADO -> Set.of();
         };
     }
 

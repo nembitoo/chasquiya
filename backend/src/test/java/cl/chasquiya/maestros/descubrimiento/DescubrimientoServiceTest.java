@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.calificaciones.CalificacionService;
+import cl.chasquiya.maestros.calificaciones.dto.ReputacionResponse;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.MaestroCercanoProjection;
@@ -30,7 +33,9 @@ class DescubrimientoServiceTest {
 
     private final PerfilMaestroRepository perfiles = mock(PerfilMaestroRepository.class);
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
-    private final DescubrimientoService servicio = new DescubrimientoService(perfiles, usuarios);
+    private final CalificacionService calificaciones = mock(CalificacionService.class);
+    private final DescubrimientoService servicio =
+            new DescubrimientoService(perfiles, usuarios, calificaciones);
 
     private MaestroCercanoProjection proj(long id, double metros) {
         MaestroCercanoProjection p = mock(MaestroCercanoProjection.class);
@@ -60,6 +65,9 @@ class DescubrimientoServiceTest {
         when(perfiles.buscarCercanos(anyDouble(), anyDouble(), anyDouble())).thenReturn(List.of(r1, r2));
         when(perfiles.findByUsuarioIdIn(any())).thenReturn(List.of(perfilAprobado(1L), perfilAprobado(2L)));
         when(usuarios.findAllById(any())).thenReturn(List.of(usuario(1L, "Ana"), usuario(2L, "Luis")));
+        // Ana tiene reputación; Luis todavía no.
+        when(calificaciones.reputacionesDe(any()))
+                .thenReturn(Map.of(1L, new ReputacionResponse(4.7, 3)));
 
         List<MaestroCercanoResponse> res = servicio.buscar(-33.4, -70.6, 25.0, null);
 
@@ -68,6 +76,9 @@ class DescubrimientoServiceTest {
         assertEquals("Ana", res.get(0).nombre());
         assertEquals(1.5, res.get(0).distanciaKm());
         assertEquals(3.2, res.get(1).distanciaKm());
+        assertEquals(4.7, res.get(0).calificacionPromedio());
+        assertEquals(3, res.get(0).cantidadCalificaciones());
+        assertEquals(0, res.get(1).calificacionPromedio(), "sin calificaciones -> 0");
     }
 
     @Test

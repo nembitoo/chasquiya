@@ -72,6 +72,12 @@ export function InicioScreen({ navigation }: Props) {
           <>
             <Boton titulo="Revisar maestros pendientes" onPress={() => navigation.navigate('Admin')} />
             <View style={{ height: espacio.sm }} />
+            <Boton
+              titulo="Disputas abiertas"
+              variante="secundario"
+              onPress={() => navigation.navigate('AdminDisputas')}
+            />
+            <View style={{ height: espacio.sm }} />
           </>
         )}
         <Boton titulo="Cerrar sesión" variante="secundario" onPress={cerrarSesion} />

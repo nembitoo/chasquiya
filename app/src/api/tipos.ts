@@ -82,6 +82,47 @@ export type DocumentoResponse = {
   fechaCreacion: string;
 };
 
+/** Estados por los que pasa un servicio (máquina de estados del negocio). */
+export type EstadoServicio =
+  | 'SOLICITADO'
+  | 'COTIZADO'
+  | 'ACEPTADO'
+  | 'EN_CURSO'
+  | 'COMPLETADO'
+  | 'PAGADO'
+  | 'CALIFICADO'
+  | 'CANCELADO'
+  | 'EN_DISPUTA';
+
+/** Datos para crear una solicitud de servicio. */
+export type CrearSolicitudData = {
+  maestroId: number;
+  oficio: Oficio;
+  descripcion: string;
+  direccion: string;
+  fechaPreferida: string | null;
+  presupuestoEstimado: number | null;
+};
+
+/** Una solicitud vista desde la app. */
+export type Solicitud = {
+  id: number;
+  clienteId: number;
+  clienteNombre: string;
+  maestroId: number;
+  maestroNombre: string;
+  oficio: Oficio;
+  descripcion: string;
+  direccion: string;
+  fechaPreferida: string | null;
+  presupuestoEstimado: number | null;
+  estado: EstadoServicio;
+  motivoCancelacion: string | null;
+  cotizacionMonto: number | null;
+  cotizacionMensaje: string | null;
+  fechaCreacion: string;
+};
+
 /** Tarjeta de un maestro cercano en la búsqueda. */
 export type MaestroCercano = {
   usuarioId: number;

@@ -39,11 +39,26 @@ export function InicioScreen({ navigation }: Props) {
           <>
             <Boton titulo="Buscar maestros" onPress={() => navigation.navigate('Buscar')} />
             <View style={{ height: espacio.sm }} />
+            <Boton
+              titulo="Mis servicios"
+              variante="secundario"
+              onPress={() => navigation.navigate('MisSolicitudes')}
+            />
+            <View style={{ height: espacio.sm }} />
           </>
         )}
         {rol === 'MAESTRO' && (
           <>
-            <Boton titulo="Mi perfil profesional" onPress={() => navigation.navigate('PerfilMaestro')} />
+            <Boton
+              titulo="Solicitudes recibidas"
+              onPress={() => navigation.navigate('SolicitudesRecibidas')}
+            />
+            <View style={{ height: espacio.sm }} />
+            <Boton
+              titulo="Mi perfil profesional"
+              variante="secundario"
+              onPress={() => navigation.navigate('PerfilMaestro')}
+            />
             <View style={{ height: espacio.sm }} />
           </>
         )}

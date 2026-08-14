@@ -85,7 +85,16 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
           {!!aviso && <Text style={styles.aviso}>{aviso}</Text>}
 
           <View style={styles.acciones}>
-            <Boton titulo="Solicitar servicio" onPress={() => setAviso('La solicitud de servicios llega en el próximo hito. 🙌')} />
+            <Boton
+              titulo="Solicitar servicio"
+              onPress={() =>
+                navigation.navigate('NuevaSolicitud', {
+                  maestroId: maestro.usuarioId,
+                  maestroNombre: `${maestro.nombre} ${maestro.apellido}`,
+                  oficios: maestro.oficios,
+                })
+              }
+            />
             <View style={{ height: espacio.sm }} />
             <Boton
               titulo="Enviar mensaje"

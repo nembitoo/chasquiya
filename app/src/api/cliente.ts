@@ -1,6 +1,7 @@
 import { API_URL } from './config';
 import {
   AuthResponse,
+  CrearSolicitudData,
   DocumentoResponse,
   LoginData,
   MaestroAdmin,
@@ -10,6 +11,7 @@ import {
   PerfilMaestroData,
   PerfilMaestroResponse,
   RegistroData,
+  Solicitud,
   Usuario,
 } from './tipos';
 
@@ -143,6 +145,36 @@ export const api = {
     },
     maestro: (token: string, usuarioId: number) =>
       pedir<MaestroPublico>(`/descubrimiento/maestros/${usuarioId}`, {}, token),
+  },
+
+  solicitudes: {
+    // Cliente
+    crear: (token: string, datos: CrearSolicitudData) =>
+      pedir<Solicitud>('/solicitudes', { method: 'POST', body: JSON.stringify(datos) }, token),
+    mias: (token: string) => pedir<Solicitud[]>('/solicitudes/mias', {}, token),
+    aceptar: (token: string, id: number) =>
+      pedir<Solicitud>(`/solicitudes/${id}/aceptar`, { method: 'POST' }, token),
+    rechazar: (token: string, id: number) =>
+      pedir<Solicitud>(`/solicitudes/${id}/rechazar`, { method: 'POST' }, token),
+    // Maestro
+    recibidas: (token: string) => pedir<Solicitud[]>('/solicitudes/recibidas', {}, token),
+    cotizar: (token: string, id: number, monto: number, mensaje: string) =>
+      pedir<Solicitud>(
+        `/solicitudes/${id}/cotizar`,
+        { method: 'POST', body: JSON.stringify({ monto, mensaje }) },
+        token,
+      ),
+    iniciar: (token: string, id: number) =>
+      pedir<Solicitud>(`/solicitudes/${id}/iniciar`, { method: 'POST' }, token),
+    completar: (token: string, id: number) =>
+      pedir<Solicitud>(`/solicitudes/${id}/completar`, { method: 'POST' }, token),
+    // Ambas partes
+    cancelar: (token: string, id: number, motivo: string) =>
+      pedir<Solicitud>(
+        `/solicitudes/${id}/cancelar`,
+        { method: 'POST', body: JSON.stringify({ motivo }) },
+        token,
+      ),
   },
 
   documentos: {

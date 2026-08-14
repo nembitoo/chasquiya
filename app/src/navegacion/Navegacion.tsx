@@ -4,14 +4,18 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { useAuth } from '../estado/AuthContext';
+import { Oficio } from '../api/tipos';
 import { AdminMaestrosScreen } from '../pantallas/AdminMaestrosScreen';
 import { BienvenidaScreen } from '../pantallas/BienvenidaScreen';
 import { BuscarScreen } from '../pantallas/BuscarScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
+import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
+import { NuevaSolicitudScreen } from '../pantallas/NuevaSolicitudScreen';
 import { PerfilMaestroScreen } from '../pantallas/PerfilMaestroScreen';
 import { RegistroScreen } from '../pantallas/RegistroScreen';
+import { SolicitudesRecibidasScreen } from '../pantallas/SolicitudesRecibidasScreen';
 import { colores } from '../tema/tema';
 
 export type RootStackParamList = {
@@ -23,6 +27,9 @@ export type RootStackParamList = {
   Admin: undefined;
   Buscar: undefined;
   MaestroPublico: { usuarioId: number };
+  NuevaSolicitud: { maestroId: number; maestroNombre: string; oficios: Oficio[] };
+  MisSolicitudes: undefined;
+  SolicitudesRecibidas: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -46,6 +53,9 @@ export function Navegacion() {
             <Stack.Screen name="Inicio" component={InicioScreen} />
             <Stack.Screen name="Buscar" component={BuscarScreen} />
             <Stack.Screen name="MaestroPublico" component={MaestroPublicoScreen} />
+            <Stack.Screen name="NuevaSolicitud" component={NuevaSolicitudScreen} />
+            <Stack.Screen name="MisSolicitudes" component={MisSolicitudesScreen} />
+            <Stack.Screen name="SolicitudesRecibidas" component={SolicitudesRecibidasScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="Admin" component={AdminMaestrosScreen} />
           </>

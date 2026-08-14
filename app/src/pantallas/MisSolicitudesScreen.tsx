@@ -1,4 +1,3 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,11 +11,11 @@ import { EstadoBadge } from '../componentes/EstadoBadge';
 import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
-import { RootStackParamList } from '../navegacion/Navegacion';
+import { TabProps } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
 import { formatearCLP } from '../utilidades/moneda';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'MisSolicitudes'>;
+type Props = TabProps<'MisSolicitudes'>;
 
 const ETIQUETA_OFICIO: Record<string, string> = Object.fromEntries(
   OFICIOS.map((o) => [o.valor, o.etiqueta]),
@@ -71,9 +70,6 @@ export function MisSolicitudesScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.contenedor}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.navigate('Inicio')} hitSlop={12}>
-          <Text style={styles.volver}>‹ Inicio</Text>
-        </Pressable>
         <Text style={styles.titulo}>Mis servicios</Text>
       </View>
 

@@ -1,108 +1,206 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Boton } from '../componentes/Boton';
+import { Avatar } from '../componentes/base/Avatar';
+import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
+import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
-import { RootStackParamList } from '../navegacion/Navegacion';
-import { colores, espacio, radio, tipografia } from '../tema/tema';
+import { TabProps } from '../navegacion/Navegacion';
+import { colores, espacio, margenPantalla, radio, sombra, texto as t } from '../tema/tema';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Inicio'>;
+type Props = TabProps<'Inicio'>;
 
 export function InicioScreen({ navigation }: Props) {
-  const { sesion, cerrarSesion } = useAuth();
+  const { sesion } = useAuth();
   const rol = sesion?.rol;
 
-  const etiquetaRol =
-    rol === 'MAESTRO' ? 'Cuenta de Maestro' : rol === 'ADMIN' ? 'Administrador' : 'Cuenta de Cliente';
-
-  const nota =
-    rol === 'MAESTRO'
-      ? 'Completa tu perfil profesional para que un administrador te apruebe y aparezcas ante los clientes.'
-      : rol === 'ADMIN'
-        ? 'Revisa y aprueba los maestros que se registran en la plataforma.'
-        : 'Busca maestros de confianza cerca de ti.';
-
   return (
-    <SafeAreaView style={styles.contenedor}>
-      <View style={styles.centro}>
-        <Text style={styles.saludo}>Hola, {sesion?.nombre} 👋</Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeTexto}>{etiquetaRol}</Text>
+    <SafeAreaView style={styles.contenedor} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Saludo */}
+        <View style={styles.cabecera}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.saludo}>Hola, {sesion?.nombre} 👋</Text>
+            <Text style={t.pequeno}>
+              {rol === 'MAESTRO'
+                ? 'Revisa tus solicitudes del día'
+                : rol === 'ADMIN'
+                  ? 'Resumen de la plataforma'
+                  : '¿Qué necesitas arreglar hoy?'}
+            </Text>
+          </View>
+          <Avatar nombre={sesion?.nombre} tamano={44} />
         </View>
-        <Text style={styles.nota}>{nota}</Text>
-      </View>
 
-      <View>
         {rol === 'CLIENTE' && (
           <>
-            <Boton titulo="Buscar maestros" onPress={() => navigation.navigate('Buscar')} />
-            <View style={{ height: espacio.sm }} />
-            <Boton
+            {/* Buscador (lleva a la pestaña Buscar) */}
+            <Pressable style={styles.buscador} onPress={() => navigation.navigate('Buscar')}>
+              <Icono nombre="search" tamano="md" color={colores.textoTenue} />
+              <Text style={styles.buscadorTexto}>¿Qué servicio necesitas?</Text>
+            </Pressable>
+
+            {/* Categorías */}
+            <Text style={[t.h3, styles.tituloSeccion]}>Categorías</Text>
+            <View style={styles.grilla}>
+              {OFICIOS.slice(0, 8).map((o) => (
+                <Pressable
+                  key={o.valor}
+                  style={({ pressed }) => [styles.categoria, pressed && styles.presionado]}
+                  onPress={() => navigation.navigate('Buscar')}>
+                  <View style={styles.categoriaIcono}>
+                    <Icono
+                      nombre={(ICONO_OFICIO[o.valor] ?? 'ellipsis-horizontal') as NombreIcono}
+                      tamano="lg"
+                      color={colores.primario}
+                    />
+                  </View>
+                  <Text style={styles.categoriaTexto} numberOfLines={1}>
+                    {o.etiqueta.replace(/^\S+\s/, '')}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <AccesoRapido
+              icono="search"
+              titulo="Buscar maestros cerca de ti"
+              descripcion="Filtra por oficio y distancia"
+              onPress={() => navigation.navigate('Buscar')}
+            />
+            <AccesoRapido
+              icono="briefcase"
               titulo="Mis servicios"
-              variante="secundario"
+              descripcion="Sigue el estado de tus solicitudes"
               onPress={() => navigation.navigate('MisSolicitudes')}
             />
-            <View style={{ height: espacio.sm }} />
           </>
         )}
+
         {rol === 'MAESTRO' && (
           <>
-            <Boton
+            <AccesoRapido
+              icono="file-tray-full"
               titulo="Solicitudes recibidas"
+              descripcion="Cotiza y gestiona tus trabajos"
               onPress={() => navigation.navigate('SolicitudesRecibidas')}
             />
-            <View style={{ height: espacio.sm }} />
-            <Boton
+            <AccesoRapido
+              icono="cash"
               titulo="Mis ingresos"
-              variante="secundario"
+              descripcion="Revisa lo que has ganado"
               onPress={() => navigation.navigate('Ingresos')}
             />
-            <View style={{ height: espacio.sm }} />
-            <Boton
+            <AccesoRapido
+              icono="briefcase"
               titulo="Mi perfil profesional"
-              variante="secundario"
+              descripcion="Oficios, tarifas y documentos"
               onPress={() => navigation.navigate('PerfilMaestro')}
             />
-            <View style={{ height: espacio.sm }} />
           </>
         )}
+
         {rol === 'ADMIN' && (
           <>
-            <Boton titulo="Revisar maestros pendientes" onPress={() => navigation.navigate('Admin')} />
-            <View style={{ height: espacio.sm }} />
-            <Boton
+            <AccesoRapido
+              icono="shield-checkmark"
+              titulo="Maestros pendientes"
+              descripcion="Aprueba o rechaza perfiles"
+              onPress={() => navigation.navigate('Admin')}
+            />
+            <AccesoRapido
+              icono="alert-circle"
               titulo="Disputas abiertas"
-              variante="secundario"
+              descripcion="Media entre clientes y maestros"
               onPress={() => navigation.navigate('AdminDisputas')}
             />
-            <View style={{ height: espacio.sm }} />
+            <Text style={styles.nota}>
+              El panel completo con métricas está en el backoffice web.
+            </Text>
           </>
         )}
-        <Boton titulo="Cerrar sesión" variante="secundario" onPress={cerrarSesion} />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
+function AccesoRapido({
+  icono,
+  titulo,
+  descripcion,
+  onPress,
+}: {
+  icono: NombreIcono;
+  titulo: string;
+  descripcion: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={({ pressed }) => [styles.acceso, pressed && styles.presionado]} onPress={onPress}>
+      <View style={styles.accesoIcono}>
+        <Icono nombre={icono} tamano="lg" color={colores.primario} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={t.cuerpoFuerte}>{titulo}</Text>
+        <Text style={t.pequeno}>{descripcion}</Text>
+      </View>
+      <Icono nombre="chevron-forward" tamano="md" color={colores.textoTenue} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: colores.fondo, padding: espacio.lg, justifyContent: 'space-between' },
-  centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  saludo: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
-  badge: {
-    marginTop: espacio.md,
+  contenedor: { flex: 1, backgroundColor: colores.fondo },
+  scroll: { padding: margenPantalla, paddingBottom: espacio.xl },
+  cabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm, marginBottom: espacio.lg },
+  saludo: { ...t.h2 },
+  buscador: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.xs,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderRadius: radio.md,
+    paddingHorizontal: espacio.md,
+    height: 52,
+    marginBottom: espacio.lg,
+    ...sombra.nivel1,
+  },
+  buscadorTexto: { ...t.cuerpo, color: colores.textoTenue },
+  tituloSeccion: { marginBottom: espacio.sm },
+  grilla: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm, marginBottom: espacio.lg },
+  categoria: { width: '22%', alignItems: 'center', gap: espacio.xxs },
+  categoriaIcono: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radio.md,
     backgroundColor: colores.primarioSuave,
-    paddingHorizontal: espacio.md,
-    paddingVertical: espacio.sm,
-    borderRadius: radio.completo,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  badgeTexto: { color: colores.primario, fontWeight: '700' },
-  nota: {
-    marginTop: espacio.lg,
-    fontSize: tipografia.cuerpo,
-    color: colores.textoSuave,
-    textAlign: 'center',
-    paddingHorizontal: espacio.md,
+  categoriaTexto: { ...t.etiqueta, textAlign: 'center' },
+  acceso: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.superficie,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    padding: espacio.md,
+    marginBottom: espacio.sm,
+    ...sombra.nivel1,
   },
+  accesoIcono: {
+    width: 44,
+    height: 44,
+    borderRadius: radio.sm,
+    backgroundColor: colores.primarioSuave,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  presionado: { opacity: 0.7 },
+  nota: { ...t.etiqueta, textAlign: 'center', marginTop: espacio.md },
 });

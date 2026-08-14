@@ -1,4 +1,3 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,10 +7,10 @@ import { DocumentoResponse, MaestroAdmin } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
-import { RootStackParamList } from '../navegacion/Navegacion';
+import { TabProps } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Admin'>;
+type Props = TabProps<'Admin'>;
 
 const ETIQUETA_OFICIO: Record<string, string> = Object.fromEntries(
   OFICIOS.map((o) => [o.valor, o.etiqueta]),
@@ -62,9 +61,6 @@ export function AdminMaestrosScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.contenedor}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
-          <Text style={styles.volver}>‹ Volver</Text>
-        </Pressable>
         <Text style={styles.titulo}>Maestros pendientes</Text>
       </View>
 

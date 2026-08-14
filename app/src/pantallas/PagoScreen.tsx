@@ -72,7 +72,10 @@ export function PagoScreen({ route, navigation }: Props) {
           {!!resumen && <Text style={styles.exitoMonto}>{formatearCLP(resumen.montoServicio)}</Text>}
           <Text style={styles.nota}>Recuerda: es un pago simulado, no se movió dinero real.</Text>
           <View style={styles.exitoBoton}>
-            <Boton titulo="Volver a mis servicios" onPress={() => navigation.navigate('MisSolicitudes')} />
+            <Boton
+              titulo="Volver a mis servicios"
+              onPress={() => navigation.navigate('Tabs', { screen: 'MisSolicitudes' })}
+            />
           </View>
         </View>
       </SafeAreaView>

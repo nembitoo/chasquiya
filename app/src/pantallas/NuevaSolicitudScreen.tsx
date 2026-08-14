@@ -61,7 +61,7 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
         presupuestoEstimado: presupuesto ? Number(presupuesto) : null,
       });
       // Vamos al listado para que vea su solicitud recién creada.
-      navigation.replace('MisSolicitudes');
+      navigation.navigate('Tabs', { screen: 'MisSolicitudes' });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo enviar la solicitud.');
     } finally {

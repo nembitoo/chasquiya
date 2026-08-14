@@ -1,4 +1,3 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,10 +8,10 @@ import { MaestroCercano, Oficio } from '../api/tipos';
 import { Estrellas } from '../componentes/Estrellas';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
-import { RootStackParamList } from '../navegacion/Navegacion';
+import { TabProps } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Buscar'>;
+type Props = TabProps<'Buscar'>;
 
 // Si el cliente no da permiso de ubicación, usamos el centro de Santiago.
 const UBICACION_POR_DEFECTO = { lat: -33.4489, lon: -70.6693 };
@@ -71,9 +70,6 @@ export function BuscarScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.contenedor}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
-          <Text style={styles.volver}>‹ Volver</Text>
-        </Pressable>
         <Text style={styles.titulo}>Maestros cerca de ti</Text>
         {usandoDefecto && <Text style={styles.aviso}>Sin permiso de ubicación: mostrando desde el centro de Santiago.</Text>}
       </View>

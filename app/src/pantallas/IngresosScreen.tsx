@@ -1,5 +1,4 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,11 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/cliente';
 import { Ingresos } from '../api/tipos';
 import { useAuth } from '../estado/AuthContext';
-import { RootStackParamList } from '../navegacion/Navegacion';
+import { TabProps } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
 import { formatearCLP } from '../utilidades/moneda';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Ingresos'>;
+type Props = TabProps<'Ingresos'>;
 
 export function IngresosScreen({ navigation }: Props) {
   const { sesion } = useAuth();
@@ -44,9 +43,6 @@ export function IngresosScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.contenedor}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.navigate('Inicio')} hitSlop={12}>
-          <Text style={styles.volver}>‹ Inicio</Text>
-        </Pressable>
         <Text style={styles.titulo}>Mis ingresos</Text>
       </View>
 

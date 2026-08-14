@@ -1,16 +1,23 @@
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { BottomTabScreenProps, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  CompositeScreenProps,
+  NavigationContainer,
+  NavigatorScreenParams,
+} from '@react-navigation/native';
+import { NativeStackScreenProps, createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
-import { useAuth } from '../estado/AuthContext';
 import { Oficio } from '../api/tipos';
+import { Icono, NombreIcono } from '../componentes/base/Icono';
+import { useAuth } from '../estado/AuthContext';
 import { AdminDisputasScreen } from '../pantallas/AdminDisputasScreen';
 import { AdminMaestrosScreen } from '../pantallas/AdminMaestrosScreen';
 import { BienvenidaScreen } from '../pantallas/BienvenidaScreen';
 import { BuscarScreen } from '../pantallas/BuscarScreen';
 import { CalificarScreen } from '../pantallas/CalificarScreen';
 import { ChatScreen } from '../pantallas/ChatScreen';
+import { ChatsScreen } from '../pantallas/ChatsScreen';
 import { IngresosScreen } from '../pantallas/IngresosScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
@@ -19,30 +26,141 @@ import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
 import { NuevaSolicitudScreen } from '../pantallas/NuevaSolicitudScreen';
 import { PagoScreen } from '../pantallas/PagoScreen';
 import { PerfilMaestroScreen } from '../pantallas/PerfilMaestroScreen';
+import { PerfilScreen } from '../pantallas/PerfilScreen';
 import { RegistroScreen } from '../pantallas/RegistroScreen';
 import { SolicitudesRecibidasScreen } from '../pantallas/SolicitudesRecibidasScreen';
-import { colores } from '../tema/tema';
+import { colores, fuentes } from '../tema/tema';
 
+/** Pantallas de la pila: acceso y detalles que se abren "encima" de las pestañas. */
 export type RootStackParamList = {
   Bienvenida: undefined;
   Registro: undefined;
   Login: undefined;
-  Inicio: undefined;
-  PerfilMaestro: undefined;
-  Admin: undefined;
-  Buscar: undefined;
+  /** Permite navegar a una pestaña concreta: navigate('Tabs', { screen: 'MisSolicitudes' }) */
+  Tabs: NavigatorScreenParams<TabParamList>;
+  Chat: { solicitudId: number; contraparteNombre: string };
   MaestroPublico: { usuarioId: number };
   NuevaSolicitud: { maestroId: number; maestroNombre: string; oficios: Oficio[] };
-  MisSolicitudes: undefined;
-  SolicitudesRecibidas: undefined;
-  Chat: { solicitudId: number; contraparteNombre: string };
   Pago: { solicitudId: number };
-  Ingresos: undefined;
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
-  AdminDisputas: undefined;
+  PerfilMaestro: undefined;
 };
 
+/** Pestañas inferiores. Cada rol ve un subconjunto. */
+export type TabParamList = {
+  Inicio: undefined;
+  Buscar: undefined;
+  MisSolicitudes: undefined;
+  SolicitudesRecibidas: undefined;
+  Ingresos: undefined;
+  Admin: undefined;
+  AdminDisputas: undefined;
+  Chats: undefined;
+  Perfil: undefined;
+};
+
+/** Props de una pantalla que vive en una pestaña (puede navegar también a la pila). */
+export type TabProps<T extends keyof TabParamList> = CompositeScreenProps<
+  BottomTabScreenProps<TabParamList, T>,
+  NativeStackScreenProps<RootStackParamList>
+>;
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
+
+/** Icono de cada pestaña: relleno cuando está activa, contorno cuando no. */
+function iconoPestana(base: string) {
+  return ({ focused, color }: { focused: boolean; color: string }) => (
+    <Icono nombre={(focused ? base : `${base}-outline`) as NombreIcono} tamano="lg" color={color} />
+  );
+}
+
+function Pestanas() {
+  const { sesion } = useAuth();
+  const rol = sesion?.rol;
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colores.primario,
+        tabBarInactiveTintColor: colores.textoTenue,
+        tabBarStyle: {
+          backgroundColor: colores.superficie,
+          borderTopColor: colores.borde,
+          height: 62,
+          paddingTop: 6,
+          paddingBottom: 8,
+        },
+        tabBarLabelStyle: { fontFamily: fuentes.medium, fontSize: 11 },
+      }}>
+      <Tab.Screen
+        name="Inicio"
+        component={InicioScreen}
+        options={{ tabBarIcon: iconoPestana('home') }}
+      />
+
+      {rol === 'CLIENTE' && (
+        <>
+          <Tab.Screen
+            name="Buscar"
+            component={BuscarScreen}
+            options={{ tabBarIcon: iconoPestana('search') }}
+          />
+          <Tab.Screen
+            name="MisSolicitudes"
+            component={MisSolicitudesScreen}
+            options={{ title: 'Servicios', tabBarIcon: iconoPestana('briefcase') }}
+          />
+        </>
+      )}
+
+      {rol === 'MAESTRO' && (
+        <>
+          <Tab.Screen
+            name="SolicitudesRecibidas"
+            component={SolicitudesRecibidasScreen}
+            options={{ title: 'Solicitudes', tabBarIcon: iconoPestana('file-tray-full') }}
+          />
+          <Tab.Screen
+            name="Ingresos"
+            component={IngresosScreen}
+            options={{ tabBarIcon: iconoPestana('cash') }}
+          />
+        </>
+      )}
+
+      {rol === 'ADMIN' && (
+        <>
+          <Tab.Screen
+            name="Admin"
+            component={AdminMaestrosScreen}
+            options={{ title: 'Maestros', tabBarIcon: iconoPestana('shield-checkmark') }}
+          />
+          <Tab.Screen
+            name="AdminDisputas"
+            component={AdminDisputasScreen}
+            options={{ title: 'Disputas', tabBarIcon: iconoPestana('alert-circle') }}
+          />
+        </>
+      )}
+
+      {rol !== 'ADMIN' && (
+        <Tab.Screen
+          name="Chats"
+          component={ChatsScreen}
+          options={{ title: 'Chat', tabBarIcon: iconoPestana('chatbubbles') }}
+        />
+      )}
+
+      <Tab.Screen
+        name="Perfil"
+        component={PerfilScreen}
+        options={{ tabBarIcon: iconoPestana('person') }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 export function Navegacion() {
   const { sesion, cargando } = useAuth();
@@ -60,19 +178,13 @@ export function Navegacion() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {sesion ? (
           <>
-            <Stack.Screen name="Inicio" component={InicioScreen} />
-            <Stack.Screen name="Buscar" component={BuscarScreen} />
+            <Stack.Screen name="Tabs" component={Pestanas} />
+            <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="MaestroPublico" component={MaestroPublicoScreen} />
             <Stack.Screen name="NuevaSolicitud" component={NuevaSolicitudScreen} />
-            <Stack.Screen name="MisSolicitudes" component={MisSolicitudesScreen} />
-            <Stack.Screen name="SolicitudesRecibidas" component={SolicitudesRecibidasScreen} />
-            <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="Pago" component={PagoScreen} />
-            <Stack.Screen name="Ingresos" component={IngresosScreen} />
             <Stack.Screen name="Calificar" component={CalificarScreen} />
-            <Stack.Screen name="AdminDisputas" component={AdminDisputasScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
-            <Stack.Screen name="Admin" component={AdminMaestrosScreen} />
           </>
         ) : (
           <>

@@ -147,7 +147,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                   }
                 />
 
-                {s.estado === 'PAGADO' && (
+                {(s.estado === 'PAGADO' || s.estado === 'CALIFICADO') && !s.yaCalifique && (
                   <View style={styles.acciones}>
                     <View style={{ flex: 1 }}>
                       <Boton
@@ -162,6 +162,10 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                       />
                     </View>
                   </View>
+                )}
+
+                {s.yaCalifique && (
+                  <Text style={styles.nota}>Ya calificaste a este cliente. ⭐</Text>
                 )}
 
                 {(s.estado === 'EN_CURSO' || s.estado === 'COMPLETADO' || s.estado === 'PAGADO') && (
@@ -283,6 +287,7 @@ const styles = StyleSheet.create({
   cotizacionMensaje: { color: colores.texto, marginTop: espacio.xs, fontSize: tipografia.pequeno },
   motivo: { color: colores.textoSuave, fontStyle: 'italic', marginTop: espacio.sm, fontSize: tipografia.pequeno },
   acciones: { flexDirection: 'row', marginTop: espacio.md },
+  nota: { color: colores.textoSuave, fontSize: tipografia.pequeno, marginTop: espacio.md, fontStyle: 'italic' },
   reportar: {
     color: colores.error,
     fontSize: tipografia.pequeno,

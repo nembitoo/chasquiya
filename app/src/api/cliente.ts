@@ -62,11 +62,25 @@ async function pedir<T>(ruta: string, opciones: RequestInit = {}, token?: string
   }
 
   if (!res.ok) {
-    let mensaje = 'Ocurrió un error. Inténtalo de nuevo.';
-    if (res.status === 409) mensaje = 'Ya existe una cuenta con ese correo.';
-    else if (res.status === 401) mensaje = 'Correo o contraseña incorrectos.';
-    else if (res.status === 403) mensaje = 'No tienes permiso para esta acción.';
-    else if (res.status === 400) mensaje = 'Revisa los datos ingresados.';
+    // Preferimos el motivo que envía el backend ("Ya calificaste este servicio", etc.).
+    // Puede venir como "detail" (ProblemDetail, RFC 9457) o "message" según la versión.
+    let mensaje = '';
+    try {
+      const cuerpo = await res.clone().json();
+      const motivo = cuerpo?.detail ?? cuerpo?.message;
+      if (typeof motivo === 'string' && motivo.trim()) {
+        mensaje = motivo;
+      }
+    } catch {
+      // Sin cuerpo JSON: usamos un mensaje según el código.
+    }
+    if (!mensaje) {
+      if (res.status === 409) mensaje = 'Esta acción ya no es posible.';
+      else if (res.status === 401) mensaje = 'Correo o contraseña incorrectos.';
+      else if (res.status === 403) mensaje = 'No tienes permiso para esta acción.';
+      else if (res.status === 400) mensaje = 'Revisa los datos ingresados.';
+      else mensaje = 'Ocurrió un error. Inténtalo de nuevo.';
+    }
     throw new ApiError(mensaje, res.status);
   }
 

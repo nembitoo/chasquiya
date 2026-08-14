@@ -1,8 +1,11 @@
 package cl.chasquiya.maestros.solicitudes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,8 +39,11 @@ class SolicitudServiceTest {
     private final cl.chasquiya.maestros.usuarios.UsuarioRepository usuarios =
             mock(cl.chasquiya.maestros.usuarios.UsuarioRepository.class);
 
+    private final cl.chasquiya.maestros.calificaciones.CalificacionRepository calificaciones =
+            mock(cl.chasquiya.maestros.calificaciones.CalificacionRepository.class);
+
     private final SolicitudService servicio =
-            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios);
+            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones);
 
     @BeforeEach
     void setUp() {
@@ -203,6 +209,32 @@ class SolicitudServiceTest {
 
         assertEquals(EstadoServicio.COMPLETADO, r.estado());
         assertEquals("Resuelta a favor del maestro", r.resolucionDisputa());
+    }
+
+    @Test
+    void laRespuestaIndicaSiElUsuarioYaCalifico() {
+        Solicitud pagada = solicitudEn(EstadoServicio.PAGADO);
+        when(solicitudes.findByClienteIdOrderByFechaCreacionDesc(CLIENTE)).thenReturn(List.of(pagada));
+        when(cotizaciones.findBySolicitudIdIn(any())).thenReturn(List.of());
+        // El cliente ya dejó su calificación en la solicitud 10.
+        when(calificaciones.findBySolicitudIdInAndAutorId(any(), eq(CLIENTE)))
+                .thenReturn(List.of(new cl.chasquiya.maestros.calificaciones.Calificacion(
+                        10L, CLIENTE, MAESTRO, (short) 5, null, null, null, null)));
+
+        SolicitudResponse r = servicio.misSolicitudesComoCliente(CLIENTE).get(0);
+
+        // Así la app sabe que NO debe ofrecer calificar de nuevo.
+        assertTrue(r.yaCalifique());
+    }
+
+    @Test
+    void siNoHaCalificadoLaRespuestaLoIndica() {
+        Solicitud pagada = solicitudEn(EstadoServicio.PAGADO);
+        when(solicitudes.findByClienteIdOrderByFechaCreacionDesc(CLIENTE)).thenReturn(List.of(pagada));
+        when(cotizaciones.findBySolicitudIdIn(any())).thenReturn(List.of());
+        when(calificaciones.findBySolicitudIdInAndAutorId(any(), eq(CLIENTE))).thenReturn(List.of());
+
+        assertFalse(servicio.misSolicitudesComoCliente(CLIENTE).get(0).yaCalifique());
     }
 
     @Test

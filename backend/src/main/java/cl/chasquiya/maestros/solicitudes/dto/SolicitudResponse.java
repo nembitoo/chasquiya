@@ -22,5 +22,7 @@ public record SolicitudResponse(
         String resolucionDisputa,
         Integer cotizacionMonto,
         String cotizacionMensaje,
+        /** Si quien consulta ya dejó su calificación en este servicio. */
+        boolean yaCalifique,
         Instant fechaCreacion) {
 }

@@ -121,6 +121,8 @@ export type Solicitud = {
   resolucionDisputa: string | null;
   cotizacionMonto: number | null;
   cotizacionMensaje: string | null;
+  /** Si yo ya dejé mi calificación en este servicio. */
+  yaCalifique: boolean;
   fechaCreacion: string;
 };
 

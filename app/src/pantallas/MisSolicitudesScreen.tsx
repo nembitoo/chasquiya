@@ -172,7 +172,8 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                   </View>
                 )}
 
-                {s.estado === 'PAGADO' && (
+                {/* Solo si el servicio está pagado Y todavía no dejé mi calificación. */}
+                {(s.estado === 'PAGADO' || s.estado === 'CALIFICADO') && !s.yaCalifique && (
                   <View style={styles.acciones}>
                     <View style={{ flex: 1 }}>
                       <Boton
@@ -189,8 +190,8 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                   </View>
                 )}
 
-                {s.estado === 'CALIFICADO' && (
-                  <Text style={styles.nota}>Servicio finalizado y calificado. ¡Gracias!</Text>
+                {s.yaCalifique && (
+                  <Text style={styles.nota}>Ya calificaste este servicio. ¡Gracias! ⭐</Text>
                 )}
 
                 {!!s.resolucionDisputa && (

@@ -3,6 +3,7 @@ package cl.chasquiya.maestros.solicitudes;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -11,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.calificaciones.Calificacion;
+import cl.chasquiya.maestros.calificaciones.CalificacionRepository;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
 import cl.chasquiya.maestros.solicitudes.dto.CotizarRequest;
@@ -31,13 +34,16 @@ public class SolicitudService {
     private final CotizacionRepository cotizaciones;
     private final PerfilMaestroRepository perfiles;
     private final UsuarioRepository usuarios;
+    private final CalificacionRepository calificaciones;
 
     public SolicitudService(SolicitudRepository solicitudes, CotizacionRepository cotizaciones,
-                            PerfilMaestroRepository perfiles, UsuarioRepository usuarios) {
+                            PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
+                            CalificacionRepository calificaciones) {
         this.solicitudes = solicitudes;
         this.cotizaciones = cotizaciones;
         this.perfiles = perfiles;
         this.usuarios = usuarios;
+        this.calificaciones = calificaciones;
     }
 
     // --- Acciones del cliente ---
@@ -54,12 +60,12 @@ public class SolicitudService {
         Solicitud s = new Solicitud(clienteId, req.maestroId(), req.oficio(), req.descripcion().trim(),
                 req.direccion().trim(), req.fechaPreferida(), req.presupuestoEstimado());
         solicitudes.save(s);
-        return aResponse(s);
+        return aResponse(s, clienteId);
     }
 
     public SolicitudResponse aceptar(Long clienteId, Long solicitudId) {
         Solicitud s = deCliente(clienteId, solicitudId);
-        return transicionar(s, EstadoServicio.ACEPTADO);
+        return transicionar(s, EstadoServicio.ACEPTADO, clienteId);
     }
 
     /** El cliente rechaza la cotización: la solicitud queda cancelada. */
@@ -69,7 +75,7 @@ public class SolicitudService {
             throw transicionInvalida(s.getEstado(), EstadoServicio.CANCELADO);
         }
         s.setMotivoCancelacion("Cotización rechazada por el cliente");
-        return transicionar(s, EstadoServicio.CANCELADO);
+        return transicionar(s, EstadoServicio.CANCELADO, clienteId);
     }
 
     // --- Acciones del maestro ---
@@ -84,15 +90,15 @@ public class SolicitudService {
         c.setMonto(req.monto());
         c.setMensaje(req.mensaje());
         cotizaciones.save(c);
-        return transicionar(s, EstadoServicio.COTIZADO);
+        return transicionar(s, EstadoServicio.COTIZADO, maestroId);
     }
 
     public SolicitudResponse iniciar(Long maestroId, Long solicitudId) {
-        return transicionar(deMaestro(maestroId, solicitudId), EstadoServicio.EN_CURSO);
+        return transicionar(deMaestro(maestroId, solicitudId), EstadoServicio.EN_CURSO, maestroId);
     }
 
     public SolicitudResponse completar(Long maestroId, Long solicitudId) {
-        return transicionar(deMaestro(maestroId, solicitudId), EstadoServicio.COMPLETADO);
+        return transicionar(deMaestro(maestroId, solicitudId), EstadoServicio.COMPLETADO, maestroId);
     }
 
     // --- Acciones de ambas partes ---
@@ -104,20 +110,20 @@ public class SolicitudService {
     public SolicitudResponse cancelar(Long usuarioId, Long solicitudId, String motivo) {
         Solicitud s = deParte(usuarioId, solicitudId);
         s.setMotivoCancelacion(motivo != null && !motivo.isBlank() ? motivo.trim() : "Cancelado por una de las partes");
-        return transicionar(s, EstadoServicio.CANCELADO);
+        return transicionar(s, EstadoServicio.CANCELADO, usuarioId);
     }
 
     public SolicitudResponse abrirDisputa(Long usuarioId, Long solicitudId, String motivo) {
         Solicitud s = deParte(usuarioId, solicitudId);
         s.setMotivoCancelacion(motivo != null && !motivo.isBlank() ? motivo.trim() : "Disputa abierta");
-        return transicionar(s, EstadoServicio.EN_DISPUTA);
+        return transicionar(s, EstadoServicio.EN_DISPUTA, usuarioId);
     }
 
     // --- Mediación del admin (Hito 7) ---
 
     /** Solicitudes con disputa abierta, para el panel del admin. */
     public List<SolicitudResponse> disputasAbiertas() {
-        return aResponses(solicitudes.findByEstadoOrderByFechaActualizacionDesc(EstadoServicio.EN_DISPUTA));
+        return aResponses(solicitudes.findByEstadoOrderByFechaActualizacionDesc(EstadoServicio.EN_DISPUTA), null);
     }
 
     /**
@@ -134,33 +140,33 @@ public class SolicitudService {
         s.setResolucionDisputa(resolucion != null && !resolucion.isBlank()
                 ? resolucion.trim()
                 : (aFavorDelCliente ? "Resuelta a favor del cliente" : "Resuelta a favor del maestro"));
-        return transicionar(s, aFavorDelCliente ? EstadoServicio.CANCELADO : EstadoServicio.COMPLETADO);
+        return transicionar(s, aFavorDelCliente ? EstadoServicio.CANCELADO : EstadoServicio.COMPLETADO, null);
     }
 
     // --- Consultas ---
 
     public List<SolicitudResponse> misSolicitudesComoCliente(Long clienteId) {
-        return aResponses(solicitudes.findByClienteIdOrderByFechaCreacionDesc(clienteId));
+        return aResponses(solicitudes.findByClienteIdOrderByFechaCreacionDesc(clienteId), clienteId);
     }
 
     public List<SolicitudResponse> misSolicitudesComoMaestro(Long maestroId) {
-        return aResponses(solicitudes.findByMaestroIdOrderByFechaCreacionDesc(maestroId));
+        return aResponses(solicitudes.findByMaestroIdOrderByFechaCreacionDesc(maestroId), maestroId);
     }
 
     public SolicitudResponse obtener(Long usuarioId, Long solicitudId) {
-        return aResponse(deParte(usuarioId, solicitudId));
+        return aResponse(deParte(usuarioId, solicitudId), usuarioId);
     }
 
     // --- Interno ---
 
     /** Aplica la transición si la máquina de estados la permite; si no, 409. */
-    private SolicitudResponse transicionar(Solicitud s, EstadoServicio destino) {
+    private SolicitudResponse transicionar(Solicitud s, EstadoServicio destino, Long usuarioActual) {
         if (!s.getEstado().puedePasarA(destino)) {
             throw transicionInvalida(s.getEstado(), destino);
         }
         s.setEstado(destino);
         solicitudes.save(s);
-        return aResponse(s);
+        return aResponse(s, usuarioActual);
     }
 
     private ResponseStatusException transicionInvalida(EstadoServicio actual, EstadoServicio destino) {
@@ -198,31 +204,44 @@ public class SolicitudService {
         return s;
     }
 
-    private List<SolicitudResponse> aResponses(List<Solicitud> lista) {
+    /**
+     * @param usuarioActual quién está consultando (para saber si ya calificó);
+     *                      null cuando consulta un admin.
+     */
+    private List<SolicitudResponse> aResponses(List<Solicitud> lista, Long usuarioActual) {
         if (lista.isEmpty()) {
             return List.of();
         }
-        Map<Long, Cotizacion> cotPorSolicitud = cotizaciones
-                .findBySolicitudIdIn(lista.stream().map(Solicitud::getId).toList()).stream()
+        List<Long> ids = lista.stream().map(Solicitud::getId).toList();
+        Map<Long, Cotizacion> cotPorSolicitud = cotizaciones.findBySolicitudIdIn(ids).stream()
                 .collect(Collectors.toMap(Cotizacion::getSolicitudId, Function.identity()));
         Map<Long, Usuario> personas = usuarios
                 .findAllById(lista.stream()
                         .flatMap(s -> Stream.of(s.getClienteId(), s.getMaestroId()))
                         .distinct().toList()).stream()
                 .collect(Collectors.toMap(Usuario::getId, Function.identity()));
+        Set<Long> yaCalificadas = usuarioActual == null
+                ? Set.of()
+                : calificaciones.findBySolicitudIdInAndAutorId(ids, usuarioActual).stream()
+                        .map(Calificacion::getSolicitudId)
+                        .collect(Collectors.toSet());
 
         return lista.stream()
-                .map(s -> construir(s, Optional.ofNullable(cotPorSolicitud.get(s.getId())), personas))
+                .map(s -> construir(s, Optional.ofNullable(cotPorSolicitud.get(s.getId())), personas,
+                        yaCalificadas.contains(s.getId())))
                 .toList();
     }
 
-    private SolicitudResponse aResponse(Solicitud s) {
+    private SolicitudResponse aResponse(Solicitud s, Long usuarioActual) {
         Map<Long, Usuario> personas = usuarios.findAllById(List.of(s.getClienteId(), s.getMaestroId())).stream()
                 .collect(Collectors.toMap(Usuario::getId, Function.identity()));
-        return construir(s, cotizaciones.findBySolicitudId(s.getId()), personas);
+        boolean yaCalifico = usuarioActual != null
+                && calificaciones.existsBySolicitudIdAndAutorId(s.getId(), usuarioActual);
+        return construir(s, cotizaciones.findBySolicitudId(s.getId()), personas, yaCalifico);
     }
 
-    private SolicitudResponse construir(Solicitud s, Optional<Cotizacion> cot, Map<Long, Usuario> personas) {
+    private SolicitudResponse construir(Solicitud s, Optional<Cotizacion> cot, Map<Long, Usuario> personas,
+                                        boolean yaCalifique) {
         return new SolicitudResponse(
                 s.getId(),
                 s.getClienteId(), nombreDe(personas.get(s.getClienteId())),
@@ -231,6 +250,7 @@ public class SolicitudService {
                 s.getPresupuestoEstimado(), s.getEstado(), s.getMotivoCancelacion(), s.getResolucionDisputa(),
                 cot.map(Cotizacion::getMonto).orElse(null),
                 cot.map(Cotizacion::getMensaje).orElse(null),
+                yaCalifique,
                 s.getFechaCreacion());
     }
 

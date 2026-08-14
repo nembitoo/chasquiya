@@ -13,6 +13,9 @@ public interface CalificacionRepository extends JpaRepository<Calificacion, Long
 
     List<Calificacion> findBySolicitudId(Long solicitudId);
 
+    /** Las calificaciones que este autor ya dejó, entre varias solicitudes. */
+    List<Calificacion> findBySolicitudIdInAndAutorId(Collection<Long> solicitudIds, Long autorId);
+
     List<Calificacion> findByDestinatarioIdOrderByFechaCreacionDesc(Long destinatarioId);
 
     /** Promedio y cantidad de calificaciones recibidas, para varios usuarios de una vez. */

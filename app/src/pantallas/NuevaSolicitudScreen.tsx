@@ -15,6 +15,7 @@ import { api } from '../api/cliente';
 import { Oficio } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
+import { SelectorFechaHora, aIsoLocal } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
@@ -30,7 +31,7 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
   const [oficio, setOficio] = useState<Oficio | null>(oficios.length === 1 ? oficios[0] : null);
   const [descripcion, setDescripcion] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [fecha, setFecha] = useState('');
+  const [fecha, setFecha] = useState<Date | null>(null);
   const [presupuesto, setPresupuesto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +57,7 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
         oficio,
         descripcion: descripcion.trim(),
         direccion: direccion.trim(),
-        fechaPreferida: fecha.trim() || null,
+        fechaPreferida: fecha ? aIsoLocal(fecha) : null,
         presupuestoEstimado: presupuesto ? Number(presupuesto) : null,
       });
       // Vamos al listado para que vea su solicitud recién creada.
@@ -109,11 +110,10 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
             onChangeText={setDireccion}
             placeholder="Calle, número, comuna"
           />
-          <CampoTexto
+          <SelectorFechaHora
             etiqueta="Fecha y hora preferida (opcional)"
-            value={fecha}
-            onChangeText={setFecha}
-            placeholder="Ej: sábado 20 en la mañana"
+            valor={fecha}
+            onCambio={setFecha}
           />
           <CampoTexto
             etiqueta="Presupuesto estimado (CLP, opcional)"

@@ -9,6 +9,7 @@ import { Solicitud } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { EstadoBadge } from '../componentes/EstadoBadge';
+import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
@@ -105,7 +106,9 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                 <Text style={styles.oficio}>{ETIQUETA_OFICIO[s.oficio] ?? s.oficio}</Text>
                 <Text style={styles.descripcion}>{s.descripcion}</Text>
                 <Text style={styles.dato}>📍 {s.direccion}</Text>
-                {!!s.fechaPreferida && <Text style={styles.dato}>🗓️ {s.fechaPreferida}</Text>}
+                {!!s.fechaPreferida && (
+                  <Text style={styles.dato}>🗓️ {formatearFechaHoraTexto(s.fechaPreferida)}</Text>
+                )}
                 {s.presupuestoEstimado != null && (
                   <Text style={styles.dato}>💰 Presupuesto del cliente: ${s.presupuestoEstimado}</Text>
                 )}

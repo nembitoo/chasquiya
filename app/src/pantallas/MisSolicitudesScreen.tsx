@@ -8,6 +8,7 @@ import { api } from '../api/cliente';
 import { Solicitud } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { EstadoBadge } from '../componentes/EstadoBadge';
+import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
@@ -91,7 +92,9 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                 <Text style={styles.oficio}>{ETIQUETA_OFICIO[s.oficio] ?? s.oficio}</Text>
                 <Text style={styles.descripcion}>{s.descripcion}</Text>
                 <Text style={styles.dato}>📍 {s.direccion}</Text>
-                {!!s.fechaPreferida && <Text style={styles.dato}>🗓️ {s.fechaPreferida}</Text>}
+                {!!s.fechaPreferida && (
+                  <Text style={styles.dato}>🗓️ {formatearFechaHoraTexto(s.fechaPreferida)}</Text>
+                )}
 
                 {s.cotizacionMonto != null && (
                   <View style={styles.cotizacion}>

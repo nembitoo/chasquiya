@@ -3,15 +3,18 @@ import {
   AuthResponse,
   CrearSolicitudData,
   DocumentoResponse,
+  Ingresos,
   LoginData,
   MaestroAdmin,
   MaestroCercano,
   MaestroPublico,
   Mensaje,
   Oficio,
+  Pago,
   PerfilMaestroData,
   PerfilMaestroResponse,
   RegistroData,
+  ResumenPago,
   Solicitud,
   Usuario,
 } from './tipos';
@@ -176,6 +179,16 @@ export const api = {
         { method: 'POST', body: JSON.stringify({ motivo }) },
         token,
       ),
+  },
+
+  pagos: {
+    /** Desglose antes de pagar. */
+    resumen: (token: string, solicitudId: number) =>
+      pedir<ResumenPago>(`/solicitudes/${solicitudId}/pago`, {}, token),
+    /** Pago simulado: no se envía ningún dato de medio de pago. */
+    pagar: (token: string, solicitudId: number) =>
+      pedir<Pago>(`/solicitudes/${solicitudId}/pago`, { method: 'POST' }, token),
+    misIngresos: (token: string) => pedir<Ingresos>('/maestros/mis-ingresos', {}, token),
   },
 
   mensajes: {

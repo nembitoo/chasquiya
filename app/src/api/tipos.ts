@@ -123,6 +123,37 @@ export type Solicitud = {
   fechaCreacion: string;
 };
 
+/** Desglose que ve el cliente antes de pagar. */
+export type ResumenPago = {
+  solicitudId: number;
+  maestroNombre: string;
+  montoServicio: number;
+  porcentajeComision: number;
+  comision: number;
+  yaPagado: boolean;
+};
+
+/** Comprobante del pago realizado. */
+export type Pago = {
+  id: number;
+  solicitudId: number;
+  montoServicio: number;
+  porcentajeComision: number;
+  comision: number;
+  montoMaestro: number;
+  metodo: string;
+  fechaCreacion: string;
+};
+
+/** Panel de ingresos del maestro. */
+export type Ingresos = {
+  totalAcumulado: number;
+  totalMes: number;
+  serviciosPagados: number;
+  serviciosPorCobrar: number;
+  ultimosMeses: { mes: string; monto: number }[];
+};
+
 /** Mensaje del chat de una solicitud. */
 export type Mensaje = {
   id: number;

@@ -48,6 +48,16 @@ Chat ligado a una solicitud (mantiene contexto y privacidad: solo sus dos partes
   REST para reusar validación y persistencia. El JWT se valida en el CONNECT de STOMP y los
   permisos del chat en el SUBSCRIBE (ver `ChatAuthInterceptor`).
 
+## pagos (Hito 6)
+Registro contable del pago **simulado**. **NUNCA contiene datos de tarjeta ni medio de pago real.**
+- `id`, `solicitud_id` (FK único), `monto_servicio` (lo que paga el cliente = cotización)
+- `porcentaje_comision`, `comision`, `monto_maestro`, `metodo` (`SIMULADO`), `fecha_creacion`
+
+**Regla de negocio:** la comisión se **descuenta al maestro**. El cliente paga exactamente lo
+cotizado; la plataforma retiene el % (config. `COMISION_PORCENTAJE`, por defecto 10) y el maestro
+recibe el resto. El cálculo vive en `CalculadoraComision` y está testeado a fondo (invariante:
+`comisión + monto del maestro = monto del servicio`, sin perder pesos por redondeo).
+
 ## Relaciones
 ```
 usuarios (1) ──< perfiles_maestro (0..1, solo rol MAESTRO)
@@ -56,4 +66,5 @@ usuarios (1) ──< documentos_maestro (N)
 usuarios (cliente) (1) ──< solicitudes (N) >── (1) usuarios (maestro)
 solicitudes (1) ──< cotizaciones (0..1)
 solicitudes (1) ──< mensajes (N)
+solicitudes (1) ──< pagos (0..1)
 ```

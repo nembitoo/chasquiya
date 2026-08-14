@@ -9,11 +9,13 @@ import { AdminMaestrosScreen } from '../pantallas/AdminMaestrosScreen';
 import { BienvenidaScreen } from '../pantallas/BienvenidaScreen';
 import { BuscarScreen } from '../pantallas/BuscarScreen';
 import { ChatScreen } from '../pantallas/ChatScreen';
+import { IngresosScreen } from '../pantallas/IngresosScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
 import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
 import { NuevaSolicitudScreen } from '../pantallas/NuevaSolicitudScreen';
+import { PagoScreen } from '../pantallas/PagoScreen';
 import { PerfilMaestroScreen } from '../pantallas/PerfilMaestroScreen';
 import { RegistroScreen } from '../pantallas/RegistroScreen';
 import { SolicitudesRecibidasScreen } from '../pantallas/SolicitudesRecibidasScreen';
@@ -32,6 +34,8 @@ export type RootStackParamList = {
   MisSolicitudes: undefined;
   SolicitudesRecibidas: undefined;
   Chat: { solicitudId: number; contraparteNombre: string };
+  Pago: { solicitudId: number };
+  Ingresos: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,6 +63,8 @@ export function Navegacion() {
             <Stack.Screen name="MisSolicitudes" component={MisSolicitudesScreen} />
             <Stack.Screen name="SolicitudesRecibidas" component={SolicitudesRecibidasScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
+            <Stack.Screen name="Pago" component={PagoScreen} />
+            <Stack.Screen name="Ingresos" component={IngresosScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="Admin" component={AdminMaestrosScreen} />
           </>

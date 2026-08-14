@@ -14,6 +14,7 @@ import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
+import { formatearCLP } from '../utilidades/moneda';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MisSolicitudes'>;
 
@@ -105,7 +106,9 @@ export function MisSolicitudesScreen({ navigation }: Props) {
 
                 {s.cotizacionMonto != null && (
                   <View style={styles.cotizacion}>
-                    <Text style={styles.cotizacionMonto}>Cotización: ${s.cotizacionMonto}</Text>
+                    <Text style={styles.cotizacionMonto}>
+                      Cotización: {formatearCLP(s.cotizacionMonto)}
+                    </Text>
                     {!!s.cotizacionMensaje && (
                       <Text style={styles.cotizacionMensaje}>{s.cotizacionMensaje}</Text>
                     )}
@@ -159,7 +162,18 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                 )}
 
                 {s.estado === 'COMPLETADO' && (
-                  <Text style={styles.nota}>El pago y la calificación llegan en los próximos hitos.</Text>
+                  <View style={styles.acciones}>
+                    <View style={{ flex: 1 }}>
+                      <Boton
+                        titulo="Pagar servicio"
+                        onPress={() => navigation.navigate('Pago', { solicitudId: s.id })}
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {s.estado === 'PAGADO' && (
+                  <Text style={styles.nota}>Servicio pagado. La calificación llega en el próximo hito.</Text>
                 )}
               </View>
             ))

@@ -55,6 +55,12 @@ export function InicioScreen({ navigation }: Props) {
             />
             <View style={{ height: espacio.sm }} />
             <Boton
+              titulo="Mis ingresos"
+              variante="secundario"
+              onPress={() => navigation.navigate('Ingresos')}
+            />
+            <View style={{ height: espacio.sm }} />
+            <Boton
               titulo="Mi perfil profesional"
               variante="secundario"
               onPress={() => navigation.navigate('PerfilMaestro')}

@@ -15,6 +15,7 @@ import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
+import { formatearCLP } from '../utilidades/moneda';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SolicitudesRecibidas'>;
 
@@ -117,12 +118,16 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                   <Text style={styles.dato}>🗓️ {formatearFechaHoraTexto(s.fechaPreferida)}</Text>
                 )}
                 {s.presupuestoEstimado != null && (
-                  <Text style={styles.dato}>💰 Presupuesto del cliente: ${s.presupuestoEstimado}</Text>
+                  <Text style={styles.dato}>
+                    💰 Presupuesto del cliente: {formatearCLP(s.presupuestoEstimado)}
+                  </Text>
                 )}
 
                 {s.cotizacionMonto != null && (
                   <View style={styles.cotizacion}>
-                    <Text style={styles.cotizacionMonto}>Tu cotización: ${s.cotizacionMonto}</Text>
+                    <Text style={styles.cotizacionMonto}>
+                      Tu cotización: {formatearCLP(s.cotizacionMonto)}
+                    </Text>
                     {!!s.cotizacionMensaje && (
                       <Text style={styles.cotizacionMensaje}>{s.cotizacionMensaje}</Text>
                     )}

@@ -1,6 +1,8 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -24,6 +26,12 @@ import { colores, espacio, radio, tipografia } from '../tema/tema';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NuevaSolicitud'>;
 
+/** Foto elegida en el teléfono, todavía sin subir. */
+type FotoElegida = { uri: string; nombre: string; tipo: string };
+
+/** Mismo tope que aplica el backend. */
+const MAX_FOTOS = 5;
+
 export function NuevaSolicitudScreen({ route, navigation }: Props) {
   const { maestroId, maestroNombre, oficios, precargar } = route.params;
   const { sesion } = useAuth();
@@ -36,7 +44,31 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
   const [presupuesto, setPresupuesto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);
+  const [fotos, setFotos] = useState<FotoElegida[]>([]);
   const [error, setError] = useState('');
+
+  async function elegirFotos() {
+    setError('');
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      setError('Necesito permiso para acceder a tus fotos.');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_FOTOS - fotos.length,
+      quality: 0.6,
+    });
+    if (res.canceled) return;
+
+    const nuevas = res.assets.map((a, i) => ({
+      uri: a.uri,
+      nombre: a.fileName ?? `foto-${Date.now()}-${i}.jpg`,
+      tipo: a.mimeType ?? 'image/jpeg',
+    }));
+    setFotos((prev) => [...prev, ...nuevas].slice(0, MAX_FOTOS));
+  }
 
   // Trae las direcciones guardadas para elegir con un toque.
   useEffect(() => {
@@ -73,7 +105,7 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
     }
     try {
       setEnviando(true);
-      await api.solicitudes.crear(token, {
+      const creada = await api.solicitudes.crear(token, {
         maestroId,
         oficio,
         descripcion: descripcion.trim(),
@@ -81,6 +113,21 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
         fechaPreferida: fecha ? aIsoLocal(fecha) : null,
         presupuestoEstimado: presupuesto ? Number(presupuesto) : null,
       });
+
+      // Las fotos se suben después: recién ahora existe la solicitud a la que pertenecen.
+      // Si alguna falla no se pierde la solicitud, que es lo importante.
+      let fallidas = 0;
+      for (const f of fotos) {
+        try {
+          await api.fotos.subir(token, creada.id, f.uri, f.nombre, f.tipo);
+        } catch {
+          fallidas += 1;
+        }
+      }
+      if (fallidas > 0) {
+        setError(`Tu solicitud se envió, pero ${fallidas} foto(s) no se pudieron subir.`);
+      }
+
       // Vamos al listado para que vea su solicitud recién creada.
       navigation.navigate('Tabs', { screen: 'MisSolicitudes' });
     } catch (e) {
@@ -172,6 +219,32 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
             keyboardType="number-pad"
           />
 
+          <Text style={styles.etiqueta}>Fotos del problema (opcional)</Text>
+          <Text style={styles.ayudaFotos}>
+            Una foto ayuda al maestro a cotizar mejor y te ahorra explicaciones.
+          </Text>
+          <View style={styles.fotos}>
+            {fotos.map((f, i) => (
+              <View key={f.uri + i} style={styles.miniatura}>
+                <Image source={{ uri: f.uri }} style={styles.miniaturaImagen} />
+                <Pressable
+                  onPress={() => setFotos((prev) => prev.filter((_, j) => j !== i))}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Quitar foto ${i + 1}`}
+                  style={styles.quitarFoto}>
+                  <Icono nombre="close" tamano="sm" color={colores.textoInverso} />
+                </Pressable>
+              </View>
+            ))}
+            {fotos.length < MAX_FOTOS && (
+              <Pressable onPress={elegirFotos} style={styles.agregarFoto} accessibilityRole="button">
+                <Icono nombre="camera-outline" tamano="lg" color={colores.primario} />
+                <Text style={styles.agregarFotoTexto}>Agregar</Text>
+              </Pressable>
+            )}
+          </View>
+
           {!!error && <Text style={styles.error}>{error}</Text>}
 
           <Boton titulo="Enviar solicitud" onPress={enviar} cargando={enviando} />
@@ -190,6 +263,39 @@ function textoDireccion(d: Direccion): string {
 }
 
 const styles = StyleSheet.create({
+  ayudaFotos: {
+    fontSize: tipografia.pequeno,
+    color: colores.textoTenue,
+    marginTop: -espacio.xs,
+    marginBottom: espacio.sm,
+  },
+  fotos: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm, marginBottom: espacio.lg },
+  miniatura: { width: 84, height: 84, borderRadius: radio.sm, overflow: 'visible' },
+  miniaturaImagen: { width: 84, height: 84, borderRadius: radio.sm },
+  quitarFoto: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colores.texto,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  agregarFoto: {
+    width: 84,
+    height: 84,
+    borderRadius: radio.sm,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colores.primario,
+    backgroundColor: colores.primarioSuave,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  agregarFotoTexto: { fontSize: tipografia.pequeno, color: colores.primario, fontWeight: '600' },
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   header: { paddingHorizontal: espacio.lg, paddingTop: espacio.sm },
   volver: { color: colores.primario, fontSize: tipografia.cuerpo, fontWeight: '600', marginBottom: espacio.xs },

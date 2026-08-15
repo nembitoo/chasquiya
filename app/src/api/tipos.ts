@@ -126,6 +126,8 @@ export type Solicitud = {
   cotizacionMensaje: string | null;
   /** Si yo ya dejé mi calificación en este servicio. */
   yaCalifique: boolean;
+  /** Fotos del problema adjuntas; el contenido se pide aparte. */
+  cantidadFotos: number;
   fechaCreacion: string;
 };
 
@@ -263,6 +265,9 @@ export type MaestroPublico = {
   esFavorito: boolean;
   tieneAvatar: boolean;
 };
+
+/** Foto del problema adjunta a una solicitud (solo el id; el contenido va aparte). */
+export type FotoSolicitud = { id: number };
 
 /** Motivo del aviso: decide el icono y a dónde lleva al tocarlo. */
 export type TipoNotificacion =

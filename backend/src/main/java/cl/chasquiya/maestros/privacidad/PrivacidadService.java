@@ -26,6 +26,7 @@ import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.PerfilMaestro;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
 import cl.chasquiya.maestros.solicitudes.EstadoServicio;
+import cl.chasquiya.maestros.solicitudes.FotoSolicitudRepository;
 import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
 import cl.chasquiya.maestros.usuarios.Usuario;
@@ -53,6 +54,7 @@ public class PrivacidadService {
     private final DireccionRepository direcciones;
     private final DocumentoMaestroRepository documentos;
     private final NotificacionRepository notificaciones;
+    private final FotoSolicitudRepository fotos;
     private final PasswordEncoder encoder;
 
     public PrivacidadService(UsuarioRepository usuarios, PerfilMaestroRepository perfiles,
@@ -60,7 +62,8 @@ public class PrivacidadService {
                              CalificacionRepository calificaciones, PagoRepository pagos,
                              FavoritoRepository favoritos, DireccionRepository direcciones,
                              DocumentoMaestroRepository documentos, NotificacionRepository notificaciones,
-                             PasswordEncoder encoder) {
+                             FotoSolicitudRepository fotos, PasswordEncoder encoder) {
+        this.fotos = fotos;
         this.usuarios = usuarios;
         this.perfiles = perfiles;
         this.solicitudes = solicitudes;
@@ -155,6 +158,8 @@ public class PrivacidadService {
         documentos.deleteAll(documentos.findByUsuarioId(usuarioId));
         // Las notificaciones nombran a la otra parte: son datos personales sin valor contable.
         notificaciones.deleteAll(notificaciones.findByUsuarioId(usuarioId));
+        // Las fotos muestran la casa del cliente: es de lo más personal que guardamos.
+        fotos.deleteAll(fotos.findBySolicitudIdIn(misSolicitudes(usuarioId).stream().map(Solicitud::getId).toList()));
 
         // 2. Contenido escrito: se vacía, pero la conversación no se rompe.
         List<Long> idsSolicitudes = misSolicitudes(usuarioId).stream().map(Solicitud::getId).toList();

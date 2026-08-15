@@ -1,5 +1,6 @@
 package cl.chasquiya.maestros.solicitudes;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,10 +39,13 @@ public class SolicitudService {
     private final UsuarioRepository usuarios;
     private final CalificacionRepository calificaciones;
     private final NotificacionService notificaciones;
+    private final FotoSolicitudRepository fotos;
 
     public SolicitudService(SolicitudRepository solicitudes, CotizacionRepository cotizaciones,
                             PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
-                            CalificacionRepository calificaciones, NotificacionService notificaciones) {
+                            CalificacionRepository calificaciones, NotificacionService notificaciones,
+                            FotoSolicitudRepository fotos) {
+        this.fotos = fotos;
         this.solicitudes = solicitudes;
         this.cotizaciones = cotizaciones;
         this.perfiles = perfiles;
@@ -256,9 +260,12 @@ public class SolicitudService {
                         .map(Calificacion::getSolicitudId)
                         .collect(Collectors.toSet());
 
+        Map<Long, Integer> fotosPorSolicitud = new HashMap<>();
+        fotos.findBySolicitudIdIn(ids).forEach(f -> fotosPorSolicitud.merge(f.getSolicitudId(), 1, Integer::sum));
+
         return lista.stream()
                 .map(s -> construir(s, Optional.ofNullable(cotPorSolicitud.get(s.getId())), personas,
-                        yaCalificadas.contains(s.getId())))
+                        yaCalificadas.contains(s.getId()), fotosPorSolicitud.getOrDefault(s.getId(), 0)))
                 .toList();
     }
 
@@ -267,11 +274,12 @@ public class SolicitudService {
                 .collect(Collectors.toMap(Usuario::getId, Function.identity()));
         boolean yaCalifico = usuarioActual != null
                 && calificaciones.existsBySolicitudIdAndAutorId(s.getId(), usuarioActual);
-        return construir(s, cotizaciones.findBySolicitudId(s.getId()), personas, yaCalifico);
+        return construir(s, cotizaciones.findBySolicitudId(s.getId()), personas, yaCalifico,
+                (int) fotos.countBySolicitudId(s.getId()));
     }
 
     private SolicitudResponse construir(Solicitud s, Optional<Cotizacion> cot, Map<Long, Usuario> personas,
-                                        boolean yaCalifique) {
+                                        boolean yaCalifique, int cantidadFotos) {
         return new SolicitudResponse(
                 s.getId(),
                 s.getClienteId(), nombreDe(personas.get(s.getClienteId())), tieneAvatar(personas.get(s.getClienteId())),
@@ -281,6 +289,7 @@ public class SolicitudService {
                 cot.map(Cotizacion::getMonto).orElse(null),
                 cot.map(Cotizacion::getMensaje).orElse(null),
                 yaCalifique,
+                cantidadFotos,
                 s.getFechaCreacion());
     }
 

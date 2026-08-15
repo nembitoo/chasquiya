@@ -26,5 +26,7 @@ public record SolicitudResponse(
         String cotizacionMensaje,
         /** Si quien consulta ya dejó su calificación en este servicio. */
         boolean yaCalifique,
+        /** Fotos del problema adjuntas; el contenido se pide aparte. */
+        int cantidadFotos,
         Instant fechaCreacion) {
 }

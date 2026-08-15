@@ -290,6 +290,19 @@ export const api = {
     misIngresos: (token: string) => pedir<Ingresos>('/maestros/mis-ingresos', {}, token),
   },
 
+  fotos: {
+    /** Solo los ids: el contenido se pide aparte para que el <Image> lo cachee. */
+    listar: (token: string, solicitudId: number) =>
+      pedir<number[]>(`/solicitudes/${solicitudId}/fotos`, {}, token),
+    subir: (token: string, solicitudId: number, uri: string, nombre: string, tipo: string) =>
+      subirArchivo<{ id: number }>(`/solicitudes/${solicitudId}/fotos`, token, uri, nombre, tipo),
+    eliminar: (token: string, solicitudId: number, fotoId: number) =>
+      pedir<null>(`/solicitudes/${solicitudId}/fotos/${fotoId}`, { method: 'DELETE' }, token),
+    /** URL de la imagen; se carga con el encabezado Authorization en el <Image>. */
+    url: (solicitudId: number, fotoId: number) =>
+      `${API_URL}/solicitudes/${solicitudId}/fotos/${fotoId}/contenido`,
+  },
+
   notificaciones: {
     bandeja: (token: string) => pedir<Bandeja>('/notificaciones', {}, token),
     leer: (token: string, id: number) =>

@@ -117,7 +117,7 @@ export function PerfilMaestroScreen({ navigation }: Props) {
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.6,
     });
     if (res.canceled) {

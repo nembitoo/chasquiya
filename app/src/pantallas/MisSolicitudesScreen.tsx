@@ -12,6 +12,7 @@ import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
 import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { Card } from '../componentes/base/Card';
 import { Dato } from '../componentes/base/Dato';
+import { GaleriaFotos } from '../componentes/dominio/GaleriaFotos';
 import { Icono } from '../componentes/base/Icono';
 import { Segmentos } from '../componentes/base/Segmentos';
 import { EmptyState } from '../componentes/feedback/EmptyState';
@@ -194,6 +195,7 @@ export function MisSolicitudesScreen({ navigation }: Props) {
               {!!s.fechaPreferida && (
                 <Dato icono="calendar-outline" texto={formatearFechaHoraTexto(s.fechaPreferida)} />
               )}
+              <GaleriaFotos solicitudId={s.id} cantidad={s.cantidadFotos} />
 
               {s.cotizacionMonto != null && (
                 <View style={styles.cotizacion}>

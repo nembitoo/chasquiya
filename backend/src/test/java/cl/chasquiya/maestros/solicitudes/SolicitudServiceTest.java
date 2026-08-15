@@ -45,13 +45,16 @@ class SolicitudServiceTest {
     private final cl.chasquiya.maestros.notificaciones.NotificacionService notificaciones =
             mock(cl.chasquiya.maestros.notificaciones.NotificacionService.class);
 
+    private final FotoSolicitudRepository fotos = mock(FotoSolicitudRepository.class);
+
     private final SolicitudService servicio =
-            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones, notificaciones);
+            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones, notificaciones, fotos);
 
     @BeforeEach
     void setUp() {
         when(usuarios.findAllById(any())).thenReturn(List.of());
         when(cotizaciones.findBySolicitudId(any())).thenReturn(Optional.empty());
+        when(fotos.findBySolicitudIdIn(any())).thenReturn(List.of());
     }
 
     private Solicitud solicitudEn(EstadoServicio estado) {

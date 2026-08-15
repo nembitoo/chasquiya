@@ -41,7 +41,13 @@ export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
   Chat: { solicitudId: number; contraparteNombre: string };
   MaestroPublico: { usuarioId: number };
-  NuevaSolicitud: { maestroId: number; maestroNombre: string; oficios: Oficio[] };
+  NuevaSolicitud: {
+    maestroId: number;
+    maestroNombre: string;
+    oficios: Oficio[];
+    /** Datos de un servicio anterior, para "volver a contratar". */
+    precargar?: { descripcion: string; direccion: string };
+  };
   Pago: { solicitudId: number };
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
   PerfilMaestro: undefined;

@@ -1,13 +1,14 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { Solicitud } from '../api/tipos';
+import { EstadoServicio, Solicitud } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { BotonChat } from '../componentes/BotonChat';
 import { Dato } from '../componentes/base/Dato';
+import { Segmentos } from '../componentes/base/Segmentos';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { EstadoBadge } from '../componentes/EstadoBadge';
 import { formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
@@ -18,6 +19,10 @@ import { colores, espacio, radio, tipografia } from '../tema/tema';
 import { formatearCLP } from '../utilidades/moneda';
 
 type Props = TabProps<'SolicitudesRecibidas'>;
+type Vista = 'activos' | 'historial';
+
+/** Los trabajos terminados pasan al historial; el resto sigue "vivo". */
+const ESTADOS_HISTORIAL: EstadoServicio[] = ['PAGADO', 'CALIFICADO', 'CANCELADO'];
 
 const ETIQUETA_OFICIO: Record<string, string> = Object.fromEntries(
   OFICIOS.map((o) => [o.valor, o.etiqueta]),
@@ -36,6 +41,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   const [cotizando, setCotizando] = useState<number | null>(null);
   const [monto, setMonto] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [vista, setVista] = useState<Vista>('activos');
 
   const cargar = useCallback(async () => {
     setError('');
@@ -57,6 +63,13 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
     useCallback(() => {
       cargar();
     }, [cargar]),
+  );
+
+  const activos = solicitudes.filter((s) => !ESTADOS_HISTORIAL.includes(s.estado));
+  const historial = solicitudes.filter((s) => ESTADOS_HISTORIAL.includes(s.estado));
+  const visibles = useMemo(
+    () => (vista === 'activos' ? activos : historial),
+    [vista, activos, historial],
   );
 
   async function accion(id: number, fn: () => Promise<Solicitud>) {
@@ -87,6 +100,16 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
     <SafeAreaView style={styles.contenedor}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Solicitudes recibidas</Text>
+        <View style={styles.segmentos}>
+          <Segmentos<Vista>
+            valor={vista}
+            onCambio={setVista}
+            opciones={[
+              { valor: 'activos', etiqueta: 'Activas', cantidad: activos.length },
+              { valor: 'historial', etiqueta: 'Historial', cantidad: historial.length },
+            ]}
+          />
+        </View>
       </View>
 
       {cargando ? (
@@ -97,12 +120,14 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.lista} keyboardShouldPersistTaps="handled">
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          {solicitudes.length === 0 && !error ? (
+          {visibles.length === 0 && !error ? (
             <Text style={styles.vacio}>
-              Todavía no recibes solicitudes. Cuando un cliente te contacte, aparecerán aquí.
+              {vista === 'activos'
+                ? 'No tienes solicitudes activas. Cuando un cliente te contacte, aparecerán aquí.'
+                : 'Aquí verás los trabajos que ya terminaste.'}
             </Text>
           ) : (
-            solicitudes.map((s) => (
+            visibles.map((s) => (
               <View key={s.id} style={styles.card}>
                 <View style={styles.cardTop}>
                   <Text style={styles.cliente}>{s.clienteNombre}</Text>
@@ -257,6 +282,7 @@ const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { paddingHorizontal: espacio.lg, paddingTop: espacio.sm },
+  segmentos: { marginTop: espacio.sm, marginBottom: espacio.xs },
   volver: { color: colores.primario, fontSize: tipografia.cuerpo, fontWeight: '600', marginBottom: espacio.xs },
   titulo: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
   lista: { padding: espacio.lg },

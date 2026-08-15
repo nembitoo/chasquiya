@@ -24,13 +24,13 @@ import { colores, espacio, radio, tipografia } from '../tema/tema';
 type Props = NativeStackScreenProps<RootStackParamList, 'NuevaSolicitud'>;
 
 export function NuevaSolicitudScreen({ route, navigation }: Props) {
-  const { maestroId, maestroNombre, oficios } = route.params;
+  const { maestroId, maestroNombre, oficios, precargar } = route.params;
   const { sesion } = useAuth();
   const token = sesion?.token ?? '';
 
   const [oficio, setOficio] = useState<Oficio | null>(oficios.length === 1 ? oficios[0] : null);
-  const [descripcion, setDescripcion] = useState('');
-  const [direccion, setDireccion] = useState('');
+  const [descripcion, setDescripcion] = useState(precargar?.descripcion ?? '');
+  const [direccion, setDireccion] = useState(precargar?.direccion ?? '');
   const [fecha, setFecha] = useState<Date | null>(null);
   const [presupuesto, setPresupuesto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -77,6 +77,9 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
         </Pressable>
         <Text style={styles.titulo}>Solicitar servicio</Text>
         <Text style={styles.subtitulo}>a {maestroNombre}</Text>
+        {!!precargar && (
+          <Text style={styles.precargado}>Datos del servicio anterior: revísalos y ajústalos.</Text>
+        )}
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -140,6 +143,7 @@ const styles = StyleSheet.create({
   volver: { color: colores.primario, fontSize: tipografia.cuerpo, fontWeight: '600', marginBottom: espacio.xs },
   titulo: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
   subtitulo: { color: colores.textoSuave, marginTop: 2 },
+  precargado: { color: colores.primario, fontSize: tipografia.pequeno, marginTop: espacio.xs },
   scroll: { padding: espacio.lg },
   etiqueta: {
     fontSize: tipografia.pequeno,

@@ -44,6 +44,14 @@ function mostrarError(e) {
   document.getElementById('error-global').textContent = e instanceof Error ? e.message : String(e);
 }
 
+const OFICIOS = ['ELECTRICIDAD', 'GASFITERIA', 'CERRAJERIA', 'PINTURA', 'LIMPIEZA',
+  'REPARACIONES', 'INSTALACIONES', 'MANTENCION', 'OTROS'];
+const ETIQUETA_OFICIO = {
+  ELECTRICIDAD: 'Electricidad', GASFITERIA: 'Gasfitería', CERRAJERIA: 'Cerrajería',
+  PINTURA: 'Pintura', LIMPIEZA: 'Limpieza', REPARACIONES: 'Reparaciones',
+  INSTALACIONES: 'Instalaciones', MANTENCION: 'Mantención', OTROS: 'Otros',
+};
+
 const COLOR_ESTADO = {
   SOLICITADO: 'badge-amarillo', COTIZADO: 'badge-azul', ACEPTADO: 'badge-azul',
   EN_CURSO: 'badge-amarillo', COMPLETADO: 'badge-verde', PAGADO: 'badge-verde',
@@ -140,6 +148,11 @@ const ICONOS = {
   grafico: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
   check: '<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14.01l-3-3"/>',
   estrella: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3L7 14.2l-5-4.9 6.9-1z"/>',
+  ticket: '<path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 5v14"/>',
+  activo: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  cancelado: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+  buscar: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  filtro: '<path d="M22 3H2l8 9.5V19l4 2v-8.5z"/>',
 };
 
 const svg = (nombre) => `<svg viewBox="0 0 24 24" class="nav-icono">${ICONOS[nombre] || ''}</svg>`;
@@ -233,14 +246,17 @@ function cambiarPeriodo(nuevos) {
  * Flechita de variación. Si el período anterior fue cero, el backend manda
  * null: no se puede medir el crecimiento desde nada, así que va un guion.
  */
-function variacion(comp) {
+function variacion(comp, alRevés = false) {
   if (!comp || comp.variacion === null || comp.variacion === undefined) {
     return '<span class="var var-neutra">— sin base previa</span>';
   }
   const v = comp.variacion;
-  const clase = v > 0 ? 'var-sube' : v < 0 ? 'var-baja' : 'var-neutra';
+  // En cancelaciones, subir es malo: el color se invierte para que el verde
+  // siempre signifique "buena noticia".
+  const bueno = alRevés ? v < 0 : v > 0;
+  const clase = v === 0 ? 'var-neutra' : bueno ? 'var-sube' : 'var-baja';
   const flecha = v > 0 ? '▲' : v < 0 ? '▼' : '=';
-  return `<span class="var ${clase}">${flecha} ${Math.abs(v)}% vs período anterior</span>`;
+  return `<span class="var ${clase}">${flecha} ${Math.abs(v)}%</span>`;
 }
 
 async function cargarDashboard() {
@@ -248,12 +264,21 @@ async function cargarDashboard() {
 
   pintarAlertas(m.alertas || []);
 
+  // Tasas derivadas: se calculan aquí porque son cociente de datos que ya vienen.
+  const creados = m.serviciosCreados.actual;
+  const tasaConversion = creados ? Math.round((m.serviciosCompletados.actual / creados) * 100) : null;
+  const tasaCancelacion = creados ? Math.round((m.serviciosCancelados.actual / creados) * 100) : null;
+
   // Flujo: lo que pasó DURANTE el período, con su comparación.
   const flujo = [
     { icono: 'dinero', etiqueta: `Comisiones (${m.dias} días)`, valor: pesos(m.comisiones.actual), comp: m.comisiones },
     { icono: 'grafico', etiqueta: 'Monto transado', valor: pesos(m.montoTransado.actual), comp: m.montoTransado },
-    { icono: 'servicios', etiqueta: 'Servicios creados', valor: m.serviciosCreados.actual, comp: m.serviciosCreados },
+    { icono: 'servicios', etiqueta: 'Servicios creados', valor: creados, comp: m.serviciosCreados },
     { icono: 'check', etiqueta: 'Servicios terminados', valor: m.serviciosCompletados.actual, comp: m.serviciosCompletados },
+    { icono: 'ticket', etiqueta: 'Ticket promedio', valor: pesos(m.ticketPromedio.actual), comp: m.ticketPromedio },
+    { icono: 'usuarios', etiqueta: 'Usuarios nuevos', valor: m.usuariosNuevos.actual, comp: m.usuariosNuevos },
+    { icono: 'activo', etiqueta: 'Usuarios activos', valor: m.usuariosActivos, ayuda: 'Participaron en algún servicio' },
+    { icono: 'cancelado', etiqueta: 'Servicios cancelados', valor: m.serviciosCancelados.actual, comp: m.serviciosCancelados, alRevés: true },
   ];
   // Stock: una foto de ahora. No lleva período ni comparación.
   const stock = [
@@ -264,6 +289,8 @@ async function cargarDashboard() {
     { icono: 'maestros', etiqueta: 'Maestros pendientes', valor: m.maestrosPendientes },
     { icono: 'disputas', etiqueta: 'Disputas abiertas', valor: m.disputasAbiertas },
     { icono: 'estrella', etiqueta: 'Calificación promedio', valor: m.calificacionPromedio || '—' },
+    { icono: 'check', etiqueta: 'Tasa de conversión', valor: tasaConversion === null ? '—' : tasaConversion + '%' },
+    { icono: 'cancelado', etiqueta: 'Tasa de cancelación', valor: tasaCancelacion === null ? '—' : tasaCancelacion + '%' },
   ];
 
   document.getElementById('tarjetas').innerHTML = flujo.map((t) => `
@@ -274,7 +301,7 @@ async function cargarDashboard() {
           <div class="tarjeta-valor">${t.valor}</div>
           <div class="tarjeta-etiqueta">${t.etiqueta}</div>
         </div>
-        ${variacion(t.comp)}
+        ${t.comp ? variacion(t.comp, t.alRevés) : `<span class="var var-neutra">${t.ayuda || ''}</span>`}
       </div>
     </div>`).join('');
 
@@ -293,6 +320,39 @@ async function cargarDashboard() {
 
   dibujarEvolucion(m.serie || []);
   dibujarEstados(m.serviciosPorEstado || {});
+  dibujarUsuarios(m.serie || []);
+}
+
+/** Barras de altas por día: se ve mejor el pulso de registros que con una línea. */
+function dibujarUsuarios(serie) {
+  const tm = tema();
+  Chart.defaults.color = tm.texto;
+  const paso = serie.length > 45 ? 7 : serie.length > 14 ? 3 : 1;
+
+  nuevoGrafico('gr-usuarios', {
+    type: 'bar',
+    data: {
+      labels: serie.map((p, i) => (i % paso === 0 ? formatoDiaMes(p.fecha) : '')),
+      datasets: [{
+        label: 'Usuarios nuevos',
+        data: serie.map((p) => p.usuariosNuevos),
+        backgroundColor: PALETA.azul,
+        borderRadius: 3,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { title: (items) => formatoDiaMes(serie[items[0].dataIndex].fecha) } },
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+      },
+    },
+  });
 }
 
 function pintarAlertas(alertas) {
@@ -423,23 +483,50 @@ function formatoDiaMes(iso) {
 
 async function cargarMaestros() {
   const lista = await api('/admin/maestros');
-  document.getElementById('tabla-maestros').innerHTML = tabla(
-    ['Nombre', 'Correo', 'Oficios', 'Zona', 'Exp.', 'Estado', 'Acciones'],
-    lista,
-    (m) => `
-      <td>${txt(m.nombre)} ${txt(m.apellido)}</td>
-      <td>${txt(m.email)}</td>
-      <td>${(m.oficios || []).map(txt).join(', ')}</td>
-      <td>${txt(m.zonaCobertura || '—')}</td>
-      <td>${m.aniosExperiencia} años</td>
-      <td>${badge(m.estadoVerificacion)}</td>
-      <td class="acciones-celda">
-        ${m.estadoVerificacion !== 'APROBADO'
-          ? `<button class="btn btn-mini" onclick="decidirMaestro(${m.usuarioId}, true)">Aprobar</button>` : ''}
-        ${m.estadoVerificacion !== 'RECHAZADO'
-          ? `<button class="btn btn-mini btn-secundario" onclick="decidirMaestro(${m.usuarioId}, false)">Rechazar</button>` : ''}
-      </td>`,
-    'Todavía no hay maestros con perfil.');
+  listado({
+    id: 'maestros',
+    contenedor: 'tabla-maestros',
+    datos: lista,
+    placeholder: 'Buscar por nombre, correo, oficio o zona…',
+    vacio: 'Todavía no hay maestros con perfil.',
+    buscarEn: (m) => `${m.nombre} ${m.apellido} ${m.email} ${(m.oficios || []).join(' ')} ${m.zonaCobertura || ''} ${m.usuarioId}`,
+    filtros: [
+      {
+        clave: 'estado', etiqueta: 'Estado', de: (m) => m.estadoVerificacion,
+        opciones: [
+          { valor: 'PENDIENTE', etiqueta: 'Pendiente' },
+          { valor: 'APROBADO', etiqueta: 'Aprobado' },
+          { valor: 'RECHAZADO', etiqueta: 'Rechazado' },
+        ],
+      },
+      {
+        clave: 'oficio', etiqueta: 'Oficio', de: (m) => (m.oficios || [])[0],
+        opciones: OFICIOS.map((o) => ({ valor: o, etiqueta: ETIQUETA_OFICIO[o] || o })),
+      },
+    ],
+    ordenes: [
+      { clave: 'nombre-az', etiqueta: 'Nombre A-Z', cmp: porTextoAsc((m) => `${m.nombre} ${m.apellido}`) },
+      { clave: 'nombre-za', etiqueta: 'Nombre Z-A', cmp: porTextoDesc((m) => `${m.nombre} ${m.apellido}`) },
+      { clave: 'exp-mayor', etiqueta: 'Más experiencia', cmp: porNumeroDesc((m) => m.aniosExperiencia) },
+      { clave: 'exp-menor', etiqueta: 'Menos experiencia', cmp: porNumeroAsc((m) => m.aniosExperiencia) },
+    ],
+    render: (pagina) => tabla(
+      ['Nombre', 'Correo', 'Oficios', 'Zona', 'Exp.', 'Estado', 'Acciones'],
+      pagina,
+      (m) => `
+        <td>${txt(m.nombre)} ${txt(m.apellido)}</td>
+        <td>${txt(m.email)}</td>
+        <td>${(m.oficios || []).map((o) => txt(ETIQUETA_OFICIO[o] || o)).join(', ')}</td>
+        <td>${txt(m.zonaCobertura || '—')}</td>
+        <td>${m.aniosExperiencia} años</td>
+        <td>${badge(m.estadoVerificacion)}</td>
+        <td class="acciones-celda">
+          ${m.estadoVerificacion !== 'APROBADO'
+            ? `<button class="btn btn-mini" onclick="decidirMaestro(${m.usuarioId}, true)">Aprobar</button>` : ''}
+          ${m.estadoVerificacion !== 'RECHAZADO'
+            ? `<button class="btn btn-mini btn-secundario" onclick="decidirMaestro(${m.usuarioId}, false)">Rechazar</button>` : ''}
+        </td>`),
+  });
 }
 
 async function decidirMaestro(usuarioId, aprobar) {
@@ -453,23 +540,52 @@ async function decidirMaestro(usuarioId, aprobar) {
 
 async function cargarUsuarios() {
   const lista = await api('/admin/usuarios');
-  document.getElementById('tabla-usuarios').innerHTML = tabla(
-    ['Nombre', 'Correo', 'Teléfono', 'Rol', 'Servicios', 'Registro', 'Estado', 'Acciones'],
-    lista,
-    (u) => `
-      <td>${txt(u.nombre)} ${txt(u.apellido)}</td>
-      <td>${txt(u.email)}</td>
-      <td>${txt(u.telefono || '—')}</td>
-      <td>${badge(u.rol)}</td>
-      <td>${u.serviciosRealizados}</td>
-      <td>${fecha(u.fechaCreacion)}</td>
-      <td>${u.activo ? '<span class="badge badge-verde">Activo</span>' : '<span class="badge badge-rojo">Suspendido</span>'}</td>
-      <td class="acciones-celda">
-        ${u.rol === 'ADMIN' ? '—' : (u.activo
-          ? `<button class="btn btn-mini btn-secundario" onclick="cambiarEstadoUsuario(${u.id}, false)">Suspender</button>`
-          : `<button class="btn btn-mini" onclick="cambiarEstadoUsuario(${u.id}, true)">Reactivar</button>`)}
-      </td>`,
-    'No hay usuarios registrados.');
+  listado({
+    id: 'usuarios',
+    contenedor: 'tabla-usuarios',
+    datos: lista,
+    placeholder: 'Buscar por nombre, correo, teléfono o ID…',
+    vacio: 'No hay usuarios registrados.',
+    buscarEn: (u) => `${u.id} ${u.nombre} ${u.apellido} ${u.email} ${u.telefono || ''}`,
+    filtros: [
+      {
+        clave: 'rol', etiqueta: 'Rol', de: (u) => u.rol,
+        opciones: [
+          { valor: 'CLIENTE', etiqueta: 'Cliente' },
+          { valor: 'MAESTRO', etiqueta: 'Maestro' },
+          { valor: 'ADMIN', etiqueta: 'Admin' },
+        ],
+      },
+      {
+        clave: 'activo', etiqueta: 'Estado', de: (u) => u.activo,
+        opciones: [{ valor: true, etiqueta: 'Activo' }, { valor: false, etiqueta: 'Suspendido' }],
+      },
+    ],
+    ordenes: [
+      { clave: 'reciente', etiqueta: 'Más reciente', cmp: porFechaDesc('fechaCreacion') },
+      { clave: 'antiguo', etiqueta: 'Más antiguo', cmp: porFechaAsc('fechaCreacion') },
+      { clave: 'nombre-az', etiqueta: 'Nombre A-Z', cmp: porTextoAsc((u) => `${u.nombre} ${u.apellido}`) },
+      { clave: 'nombre-za', etiqueta: 'Nombre Z-A', cmp: porTextoDesc((u) => `${u.nombre} ${u.apellido}`) },
+      { clave: 'mas-servicios', etiqueta: 'Más servicios', cmp: porNumeroDesc((u) => u.serviciosRealizados) },
+      { clave: 'menos-servicios', etiqueta: 'Menos servicios', cmp: porNumeroAsc((u) => u.serviciosRealizados) },
+    ],
+    render: (pagina) => tabla(
+      ['Nombre', 'Correo', 'Teléfono', 'Rol', 'Servicios', 'Registro', 'Estado', 'Acciones'],
+      pagina,
+      (u) => `
+        <td>${txt(u.nombre)} ${txt(u.apellido)}</td>
+        <td>${txt(u.email)}</td>
+        <td>${txt(u.telefono || '—')}</td>
+        <td>${badge(u.rol)}</td>
+        <td>${u.serviciosRealizados}</td>
+        <td>${fecha(u.fechaCreacion)}</td>
+        <td>${u.activo ? '<span class="badge badge-verde">Activo</span>' : '<span class="badge badge-rojo">Suspendido</span>'}</td>
+        <td class="acciones-celda">
+          ${u.rol === 'ADMIN' ? '—' : (u.activo
+            ? `<button class="btn btn-mini btn-secundario" onclick="cambiarEstadoUsuario(${u.id}, false)">Suspender</button>`
+            : `<button class="btn btn-mini" onclick="cambiarEstadoUsuario(${u.id}, true)">Reactivar</button>`)}
+        </td>`),
+  });
 }
 
 async function cambiarEstadoUsuario(id, activar) {
@@ -483,19 +599,47 @@ async function cambiarEstadoUsuario(id, activar) {
 
 async function cargarServicios() {
   const lista = await api('/admin/servicios');
-  lista.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
-  document.getElementById('tabla-servicios').innerHTML = tabla(
-    ['#', 'Cliente', 'Maestro', 'Servicio', 'Fecha', 'Monto', 'Estado'],
-    lista,
-    (s) => `
-      <td>${s.id}</td>
-      <td>${txt(s.clienteNombre)}</td>
-      <td>${txt(s.maestroNombre)}</td>
-      <td>${txt(s.oficio)}</td>
-      <td>${fecha(s.fechaCreacion)}</td>
-      <td>${s.cotizacionMonto ? pesos(s.cotizacionMonto) : '—'}</td>
-      <td>${badge(s.estado)}</td>`,
-    'Todavía no hay servicios.');
+  listado({
+    id: 'servicios',
+    contenedor: 'tabla-servicios',
+    datos: lista,
+    placeholder: 'Buscar por cliente, maestro, descripción o ID…',
+    vacio: 'Todavía no hay servicios.',
+    buscarEn: (s) => `${s.id} ${s.clienteNombre} ${s.maestroNombre} ${s.descripcion || ''} ${s.direccion || ''}`,
+    filtros: [
+      {
+        clave: 'estado', etiqueta: 'Estado', de: (s) => s.estado,
+        opciones: ['SOLICITADO', 'COTIZADO', 'ACEPTADO', 'EN_CURSO', 'COMPLETADO', 'PAGADO', 'CALIFICADO', 'CANCELADO', 'EN_DISPUTA']
+          .map((e) => ({ valor: e, etiqueta: e.replace('_', ' ') })),
+      },
+      {
+        clave: 'oficio', etiqueta: 'Categoría', de: (s) => s.oficio,
+        opciones: OFICIOS.map((o) => ({ valor: o, etiqueta: ETIQUETA_OFICIO[o] || o })),
+      },
+      {
+        clave: 'maestro', etiqueta: 'Maestro', de: (s) => s.maestroNombre,
+        opciones: [...new Set(lista.map((s) => s.maestroNombre))].sort()
+          .map((n) => ({ valor: n, etiqueta: n })),
+      },
+    ],
+    ordenes: [
+      { clave: 'reciente', etiqueta: 'Más reciente', cmp: porFechaDesc('fechaCreacion') },
+      { clave: 'antiguo', etiqueta: 'Más antiguo', cmp: porFechaAsc('fechaCreacion') },
+      { clave: 'monto-mayor', etiqueta: 'Mayor monto', cmp: porNumeroDesc((s) => s.cotizacionMonto) },
+      { clave: 'monto-menor', etiqueta: 'Menor monto', cmp: porNumeroAsc((s) => s.cotizacionMonto) },
+    ],
+    render: (pagina) => tabla(
+      ['#', 'Cliente', 'Maestro', 'Servicio', 'Fecha', 'Monto', 'Estado'],
+      pagina,
+      (s) => `
+        <td>${s.id}</td>
+        <td>${txt(s.clienteNombre)}</td>
+        <td>${txt(s.maestroNombre)}</td>
+        <td>${txt(ETIQUETA_OFICIO[s.oficio] || s.oficio)}</td>
+        <td>${fecha(s.fechaCreacion)}</td>
+        <td>${s.cotizacionMonto ? pesos(s.cotizacionMonto) : '—'}</td>
+        <td>${badge(s.estado)}</td>`),
+  });
 }
 
 // ---------- Disputas ----------
@@ -541,12 +685,37 @@ const COLOR_TICKET = { NUEVO: 'badge-rojo', EN_REVISION: 'badge-amarillo', RESUE
 
 async function cargarReclamos() {
   const lista = await api('/admin/reclamos');
-  const caja = document.getElementById('tabla-reclamos');
-  if (lista.length === 0) {
-    caja.innerHTML = '<p class="vacio">No hay reclamos 🎉</p>';
-    return;
-  }
-  caja.innerHTML = lista.map((r) => `
+  listado({
+    id: 'reclamos',
+    contenedor: 'tabla-reclamos',
+    datos: lista,
+    placeholder: 'Buscar por asunto, mensaje, usuario o correo…',
+    vacio: 'No hay reclamos 🎉',
+    buscarEn: (r) => `${r.id} ${r.asunto} ${r.mensaje} ${r.usuarioNombre} ${r.usuarioEmail}`,
+    filtros: [
+      {
+        clave: 'estado', etiqueta: 'Estado', de: (r) => r.estado,
+        opciones: [
+          { valor: 'NUEVO', etiqueta: 'Nuevo' },
+          { valor: 'EN_REVISION', etiqueta: 'En revisión' },
+          { valor: 'RESUELTO', etiqueta: 'Resuelto' },
+        ],
+      },
+      {
+        clave: 'categoria', etiqueta: 'Categoría', de: (r) => r.categoria,
+        opciones: Object.entries(ETIQUETA_CATEGORIA).map(([v, e]) => ({ valor: v, etiqueta: e })),
+      },
+    ],
+    ordenes: [
+      { clave: 'antiguo', etiqueta: 'Más antiguo primero', cmp: porFechaAsc('fechaCreacion') },
+      { clave: 'reciente', etiqueta: 'Más reciente primero', cmp: porFechaDesc('fechaCreacion') },
+    ],
+    render: (pagina) => pintarReclamos(pagina),
+  });
+}
+
+function pintarReclamos(lista) {
+  return lista.map((r) => `
     <div class="disputa-caja">
       <div class="disputa-partes">
         ${txt(r.asunto)}
@@ -570,6 +739,11 @@ async function cargarReclamos() {
     </div>`).join('');
 }
 
+/** Repinta sin volver al servidor: conserva búsqueda, filtros y página. */
+function refrescarReclamos() {
+  pintarListado('reclamos');
+}
+
 async function responderReclamo(id, estado) {
   try {
     const respuesta = document.getElementById('respuesta-' + id).value;
@@ -578,17 +752,190 @@ async function responderReclamo(id, estado) {
   } catch (e) { mostrarError(e); }
 }
 
-// ---------- Tabla genérica ----------
+// ---------- Listado con buscador, filtros, orden y paginación ----------
 
-function tabla(columnas, filas, pintarFila, mensajeVacio) {
-  if (!filas || filas.length === 0) {
-    return `<div class="tabla-caja"><p class="vacio">${mensajeVacio}</p></div>`;
+/*
+ * Un solo módulo para todos los listados. La alternativa era copiar buscador,
+ * filtros y paginación en cada tabla: cinco copias que se van separando entre
+ * sí en cuanto una cambia.
+ *
+ * El estado (búsqueda, filtros, orden, página) vive por sección y sobrevive
+ * mientras dure la sesión, así que volver de otra pantalla no lo borra.
+ */
+const estadoListados = {};
+
+const TAMANOS_PAGINA = [10, 25, 50, 100];
+
+/**
+ * @param cfg.id            clave de la sección (guarda su estado)
+ * @param cfg.datos         lista completa ya traída del servidor
+ * @param cfg.buscarEn      (item) => texto donde busca el buscador
+ * @param cfg.filtros       [{ clave, etiqueta, opciones:[{valor,etiqueta}], de:(item)=>valor }]
+ * @param cfg.ordenes       [{ clave, etiqueta, cmp }]
+ * @param cfg.render        (itemsDeLaPagina) => HTML
+ */
+function listado(cfg) {
+  estadoListados[cfg.id] = { ...(estadoListados[cfg.id] || {
+    busqueda: '', filtros: {}, orden: cfg.ordenes?.[0]?.clave ?? null, pagina: 1, porPagina: 10,
+  }), cfg };
+  pintarListado(cfg.id);
+}
+
+function estadoDe(id) {
+  return estadoListados[id];
+}
+
+/** Cualquier cambio de filtro o búsqueda vuelve a la página 1: si no, se ve vacío. */
+function cambiarListado(id, cambios) {
+  const e = estadoDe(id);
+  Object.assign(e, cambios, cambios.pagina ? {} : { pagina: 1 });
+  pintarListado(id);
+}
+
+function limpiarFiltro(id, clave) {
+  const e = estadoDe(id);
+  if (clave === 'busqueda') e.busqueda = '';
+  else delete e.filtros[clave];
+  e.pagina = 1;
+  pintarListado(id);
+}
+
+function limpiarTodo(id) {
+  const e = estadoDe(id);
+  e.busqueda = '';
+  e.filtros = {};
+  e.pagina = 1;
+  pintarListado(id);
+}
+
+/** Aplica búsqueda, luego filtros, luego orden. Ese orden importa para el conteo. */
+function filtrar(e) {
+  const { cfg } = e;
+  let items = cfg.datos;
+
+  const q = e.busqueda.trim().toLowerCase();
+  if (q) {
+    items = items.filter((x) => cfg.buscarEn(x).toLowerCase().includes(q));
   }
+  for (const f of cfg.filtros || []) {
+    const valor = e.filtros[f.clave];
+    if (valor) items = items.filter((x) => String(f.de(x)) === valor);
+  }
+  const orden = (cfg.ordenes || []).find((o) => o.clave === e.orden);
+  if (orden) items = [...items].sort(orden.cmp);
+  return items;
+}
+
+function pintarListado(id) {
+  const e = estadoDe(id);
+  const { cfg } = e;
+  const items = filtrar(e);
+
+  const totalPaginas = Math.max(1, Math.ceil(items.length / e.porPagina));
+  if (e.pagina > totalPaginas) e.pagina = totalPaginas;
+  const desde = (e.pagina - 1) * e.porPagina;
+  const pagina = items.slice(desde, desde + e.porPagina);
+
+  // --- Fichas de lo que está filtrando ahora mismo ---
+  const fichas = [];
+  if (e.busqueda.trim()) {
+    fichas.push(`<button class="ficha" onclick="limpiarFiltro('${id}','busqueda')">
+      «${txt(e.busqueda.trim())}» <span aria-hidden="true">×</span></button>`);
+  }
+  for (const f of cfg.filtros || []) {
+    const valor = e.filtros[f.clave];
+    if (!valor) continue;
+    const op = f.opciones.find((o) => String(o.valor) === valor);
+    fichas.push(`<button class="ficha" onclick="limpiarFiltro('${id}','${f.clave}')">
+      ${f.etiqueta}: ${txt(op ? op.etiqueta : valor)} <span aria-hidden="true">×</span></button>`);
+  }
+
+  const controles = `
+    <div class="controles">
+      <div class="buscador">
+        ${svg('buscar')}
+        <input id="q-${id}" type="search" placeholder="${cfg.placeholder || 'Buscar…'}"
+               value="${txt(e.busqueda)}" oninput="cambiarListado('${id}',{busqueda:this.value})" />
+      </div>
+      ${(cfg.filtros || []).map((f) => `
+        <select onchange="cambiarListado('${id}',{filtros:{...estadoDe('${id}').filtros,${f.clave}:this.value||undefined}})">
+          <option value="">${f.etiqueta}: todos</option>
+          ${f.opciones.map((o) => `<option value="${o.valor}" ${e.filtros[f.clave] === String(o.valor) ? 'selected' : ''}>${o.etiqueta}</option>`).join('')}
+        </select>`).join('')}
+      ${(cfg.ordenes || []).length ? `
+        <select onchange="cambiarListado('${id}',{orden:this.value})">
+          ${cfg.ordenes.map((o) => `<option value="${o.clave}" ${e.orden === o.clave ? 'selected' : ''}>${o.etiqueta}</option>`).join('')}
+        </select>` : ''}
+      <select class="por-pagina" onchange="cambiarListado('${id}',{porPagina:Number(this.value)})">
+        ${TAMANOS_PAGINA.map((n) => `<option value="${n}" ${e.porPagina === n ? 'selected' : ''}>${n} por página</option>`).join('')}
+      </select>
+    </div>
+    ${fichas.length ? `<div class="fichas">${fichas.join('')}
+        <button class="ficha ficha-limpiar" onclick="limpiarTodo('${id}')">Limpiar todo</button></div>` : ''}`;
+
+  const cuerpo = items.length === 0
+    ? `<div class="tabla-caja"><p class="vacio">${
+        e.busqueda || Object.keys(e.filtros).length
+          ? 'Ningún resultado con esos criterios.'
+          : cfg.vacio}</p></div>`
+    : cfg.render(pagina);
+
+  const pie = items.length === 0 ? '' : `
+    <div class="paginacion">
+      <span class="paginacion-total">
+        ${desde + 1}–${desde + pagina.length} de <strong>${items.length}</strong>
+        ${items.length !== cfg.datos.length ? `(de ${cfg.datos.length} en total)` : ''}
+      </span>
+      <div class="paginacion-btns">
+        <button class="pag-btn" ${e.pagina === 1 ? 'disabled' : ''}
+                onclick="cambiarListado('${id}',{pagina:${e.pagina - 1}})">Anterior</button>
+        ${numerosDePagina(e.pagina, totalPaginas).map((n) => n === '…'
+          ? '<span class="pag-puntos">…</span>'
+          : `<button class="pag-btn ${n === e.pagina ? 'activa' : ''}"
+                     onclick="cambiarListado('${id}',{pagina:${n}})">${n}</button>`).join('')}
+        <button class="pag-btn" ${e.pagina === totalPaginas ? 'disabled' : ''}
+                onclick="cambiarListado('${id}',{pagina:${e.pagina + 1}})">Siguiente</button>
+      </div>
+    </div>`;
+
+  document.getElementById(cfg.contenedor).innerHTML = controles + cuerpo + pie;
+
+  // Escribir en el buscador reemplaza el HTML: hay que devolver el foco y el cursor.
+  const campo = document.getElementById('q-' + id);
+  if (campo && document.activeElement !== campo && e.busqueda) {
+    campo.focus();
+    campo.setSelectionRange(campo.value.length, campo.value.length);
+  }
+}
+
+/** Con muchas páginas no se listan todas: 1 … 4 5 6 … 20. */
+function numerosDePagina(actual, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const nums = new Set([1, total, actual, actual - 1, actual + 1]);
+  const ordenados = [...nums].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const salida = [];
+  ordenados.forEach((n, i) => {
+    if (i > 0 && n - ordenados[i - 1] > 1) salida.push('…');
+    salida.push(n);
+  });
+  return salida;
+}
+
+/** Tabla simple, para usar dentro de `render`. */
+function tabla(columnas, filas, pintarFila) {
   return `<div class="tabla-caja"><table>
       <thead><tr>${columnas.map((c) => `<th>${c}</th>`).join('')}</tr></thead>
       <tbody>${filas.map((f) => `<tr>${pintarFila(f)}</tr>`).join('')}</tbody>
     </table></div>`;
 }
+
+// --- Comparadores reutilizables ---
+const porFechaDesc = (campo) => (a, b) => new Date(b[campo]) - new Date(a[campo]);
+const porFechaAsc = (campo) => (a, b) => new Date(a[campo]) - new Date(b[campo]);
+const porTextoAsc = (f) => (a, b) => f(a).localeCompare(f(b), 'es');
+const porTextoDesc = (f) => (a, b) => f(b).localeCompare(f(a), 'es');
+const porNumeroDesc = (f) => (a, b) => (f(b) || 0) - (f(a) || 0);
+const porNumeroAsc = (f) => (a, b) => (f(a) || 0) - (f(b) || 0);
 
 // Si ya había una sesión guardada, entramos directo.
 if (token) {

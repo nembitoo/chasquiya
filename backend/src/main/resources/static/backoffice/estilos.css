@@ -129,7 +129,30 @@ input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: 
   font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
 }
 
-.principal { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.principal { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+
+/*
+ * Fondo decorativo (malla de puntos). Va desenfocado y con poca opacidad: es
+ * ambiente, no información. Las tarjetas y tablas tienen fondo sólido encima,
+ * así que el texto nunca compite con el dibujo.
+ *
+ * `scale` evita que el blur deje los bordes transparentes.
+ */
+.principal::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url('fondo-red.svg') center bottom / cover no-repeat;
+  filter: blur(3px);
+  transform: scale(1.03);
+  opacity: .07;
+  pointer-events: none;
+  z-index: 0;
+}
+[data-tema="oscuro"] .principal::before { opacity: .30; }
+
+/* El contenido va por encima del fondo. */
+.topbar, .contenido { position: relative; z-index: 1; }
 
 /* --- Barra superior --- */
 .topbar {
@@ -234,6 +257,53 @@ h2 { font-size: 17px; margin: 0 0 16px; }
   margin-top: 10px; padding: 10px 12px; border-radius: 8px;
   background: var(--superficie-2); border: 1px solid var(--borde); font-size: 14px;
 }
+
+/* --- Controles de los listados: buscador, filtros, orden y tamaño de página --- */
+.controles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.controles select {
+  padding: 9px 12px; font-size: 14px; font-family: inherit; cursor: pointer;
+  border-radius: 9px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto);
+}
+.controles .por-pagina { margin-left: auto; }
+
+.buscador {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 9px;
+  padding: 0 12px; color: var(--texto-suave);
+}
+.buscador svg { width: 18px; height: 18px; flex-shrink: 0; }
+.buscador input {
+  flex: 1; border: none; background: none; padding: 10px 0; font-size: 14px;
+  color: var(--texto); min-width: 0;
+}
+.buscador input:focus { outline: none; }
+.buscador:focus-within { border-color: var(--primario); }
+
+/* Fichas de los filtros activos: se ve qué está aplicado y se quita de un clic. */
+.fichas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.ficha {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: var(--primario-suave); color: var(--primario); border: 1px solid transparent;
+  border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; font-family: inherit;
+}
+.ficha:hover { border-color: var(--primario); }
+.ficha-limpiar { background: none; color: var(--texto-suave); text-decoration: underline; }
+
+/* --- Paginación --- */
+.paginacion {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin-top: 14px;
+}
+.paginacion-total { color: var(--texto-suave); font-size: 13px; }
+.paginacion-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.pag-btn {
+  min-width: 36px; padding: 7px 11px; font-size: 14px; font-family: inherit; cursor: pointer;
+  border-radius: 8px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto);
+}
+.pag-btn:hover:not(:disabled) { border-color: var(--primario); color: var(--primario); }
+.pag-btn.activa { background: var(--primario); border-color: var(--primario); color: #fff; font-weight: 700; }
+.pag-btn:disabled { opacity: .45; cursor: default; }
+.pag-puntos { color: var(--texto-suave); padding: 7px 4px; }
 
 /* --- Tablas --- */
 .tabla-caja {

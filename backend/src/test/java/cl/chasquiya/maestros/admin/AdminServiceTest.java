@@ -56,6 +56,7 @@ class AdminServiceTest {
         Usuario u = new Usuario("N" + id, "A", "u" + id + "@test.cl", "+56900000000",
                 "hash", rol, true);
         ReflectionTestUtils.setField(u, "id", id);
+        ReflectionTestUtils.setField(u, "fechaCreacion", Instant.now().minus(1, ChronoUnit.DAYS));
         return u;
     }
 

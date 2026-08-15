@@ -27,12 +27,18 @@ public record MetricasResponse(
         long maestrosPendientes,
         long disputasAbiertas,
         double calificacionPromedio,
+        /** Personas que participaron en algún servicio durante el período. */
+        long usuariosActivos,
 
         // --- Flujo (con su comparación) ---
         Comparacion serviciosCreados,
         Comparacion serviciosCompletados,
+        Comparacion serviciosCancelados,
+        Comparacion usuariosNuevos,
         Comparacion montoTransado,
         Comparacion comisiones,
+        /** Monto promedio por servicio pagado. Sube si se venden trabajos más grandes. */
+        Comparacion ticketPromedio,
 
         // --- Gráficos ---
         Map<String, Long> serviciosPorEstado,

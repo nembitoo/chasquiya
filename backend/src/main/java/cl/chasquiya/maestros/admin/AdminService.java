@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -99,6 +100,15 @@ public class AdminService {
         List<Solicitud> terminadosAntes = entre(servicios, Solicitud::getFechaActualizacion, desdeAnterior, desde)
                 .stream().filter(s -> esTerminado(s.getEstado())).toList();
 
+        // Cancelados: los que se dieron de baja DENTRO del período (por su última transición).
+        List<Solicitud> canceladosAhora = entre(servicios, Solicitud::getFechaActualizacion, desde, ahora)
+                .stream().filter(s -> s.getEstado() == EstadoServicio.CANCELADO).toList();
+        List<Solicitud> canceladosAntes = entre(servicios, Solicitud::getFechaActualizacion, desdeAnterior, desde)
+                .stream().filter(s -> s.getEstado() == EstadoServicio.CANCELADO).toList();
+
+        List<Usuario> nuevosAhora = entre(todos, Usuario::getFechaCreacion, desde, ahora);
+        List<Usuario> nuevosAntes = entre(todos, Usuario::getFechaCreacion, desdeAnterior, desde);
+
         Map<String, Long> porEstado = servicios.stream()
                 .collect(Collectors.groupingBy(s -> s.getEstado().name(), HashMap::new, Collectors.counting()));
 
@@ -114,22 +124,45 @@ public class AdminService {
                 perfilesMaestro.stream().filter(p -> p.getEstadoVerificacion() == EstadoVerificacion.PENDIENTE).count(),
                 servicios.stream().filter(s -> s.getEstado() == EstadoServicio.EN_DISPUTA).count(),
                 promedio,
+                usuariosActivos(servicios, desde, ahora),
                 Comparacion.de(creadosAhora.size(), creadosAntes.size()),
                 Comparacion.de(terminadosAhora.size(), terminadosAntes.size()),
+                Comparacion.de(canceladosAhora.size(), canceladosAntes.size()),
+                Comparacion.de(nuevosAhora.size(), nuevosAntes.size()),
                 Comparacion.de(sumar(pagosAhora, Pago::getMontoServicio), sumar(pagosAntes, Pago::getMontoServicio)),
                 Comparacion.de(sumar(pagosAhora, Pago::getComision), sumar(pagosAntes, Pago::getComision)),
+                Comparacion.de(promedioPorPago(pagosAhora), promedioPorPago(pagosAntes)),
                 porEstado,
-                serieDiaria(creadosAhora, pagosAhora, periodo),
+                serieDiaria(creadosAhora, pagosAhora, nuevosAhora, periodo),
                 alertas(perfilesMaestro, servicios, ahora));
     }
 
+    /**
+     * Personas distintas que participaron en algún servicio del período, como
+     * cliente o como maestro. Es una medida de uso real, no de registros.
+     */
+    private long usuariosActivos(List<Solicitud> servicios, Instant desde, Instant hasta) {
+        return entre(servicios, Solicitud::getFechaActualizacion, desde, hasta).stream()
+                .flatMap(s -> Stream.of(s.getClienteId(), s.getMaestroId()))
+                .distinct()
+                .count();
+    }
+
+    /** Monto promedio por servicio pagado. Sin pagos es 0, no una división por cero. */
+    private long promedioPorPago(List<Pago> lista) {
+        return lista.isEmpty() ? 0 : sumar(lista, Pago::getMontoServicio) / lista.size();
+    }
+
     /** Un punto por día, incluidos los días sin actividad (si no, el gráfico miente). */
-    private List<PuntoSerie> serieDiaria(List<Solicitud> creados, List<Pago> pagosDelPeriodo, int dias) {
+    private List<PuntoSerie> serieDiaria(List<Solicitud> creados, List<Pago> pagosDelPeriodo,
+                                         List<Usuario> nuevos, int dias) {
         Map<LocalDate, Long> serviciosPorDia = creados.stream()
                 .collect(Collectors.groupingBy(s -> enSantiago(s.getFechaCreacion()), Collectors.counting()));
         Map<LocalDate, Long> comisionesPorDia = pagosDelPeriodo.stream()
                 .collect(Collectors.groupingBy(p -> enSantiago(p.getFechaCreacion()),
                         Collectors.summingLong(Pago::getComision)));
+        Map<LocalDate, Long> usuariosPorDia = nuevos.stream()
+                .collect(Collectors.groupingBy(u -> enSantiago(u.getFechaCreacion()), Collectors.counting()));
 
         LocalDate hoy = LocalDate.now(ZONA);
         List<PuntoSerie> salida = new ArrayList<>();
@@ -137,7 +170,8 @@ public class AdminService {
             LocalDate dia = hoy.minusDays(i);
             salida.add(new PuntoSerie(dia.toString(),
                     serviciosPorDia.getOrDefault(dia, 0L),
-                    comisionesPorDia.getOrDefault(dia, 0L)));
+                    comisionesPorDia.getOrDefault(dia, 0L),
+                    usuariosPorDia.getOrDefault(dia, 0L)));
         }
         return salida;
     }

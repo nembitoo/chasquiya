@@ -155,10 +155,17 @@ input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: 
 .topbar, .contenido { position: relative; z-index: 1; }
 
 /* --- Barra superior --- */
+/* La barra ocupa todo el ancho (el fondo llega hasta el borde), pero su
+   contenido se limita al mismo ancho que el resto para que todo quede alineado. */
 .topbar {
-  display: flex; align-items: center; gap: 16px;
   background: var(--superficie); border-bottom: 1px solid var(--borde);
-  padding: 14px 26px; position: sticky; top: 0; z-index: 10;
+  padding: 14px 0; position: sticky; top: 0; z-index: 10;
+}
+/* El padding lateral va AQUÍ, no en .topbar: así el interior mide lo mismo que
+   .contenido (que también lo incluye) y ambos empiezan en la misma columna. */
+.topbar-interior {
+  display: flex; align-items: center; gap: 16px;
+  max-width: 1400px; width: 100%; margin: 0 auto; padding: 0 26px;
 }
 .topbar-titulo { flex: 1; min-width: 0; }
 .topbar-titulo h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
@@ -194,7 +201,9 @@ input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: 
 [data-tema="oscuro"] .interruptor .icono-luna { display: block; }
 
 /* --- Contenido --- */
-.contenido { padding: 26px; max-width: 1400px; width: 100%; }
+/* `margin: 0 auto` reparte el espacio sobrante a los dos lados. Sin eso el
+   ancho máximo empuja todo a la izquierda en pantallas anchas. */
+.contenido { padding: 26px; max-width: 1400px; width: 100%; margin: 0 auto; }
 h2 { font-size: 17px; margin: 0 0 16px; }
 .titulo-seccion { margin-top: 4px; }
 
@@ -364,6 +373,7 @@ tr:last-child td { border-bottom: none; }
   }
   .sidebar-fondo.visible { opacity: 1; pointer-events: auto; }
   .contenido { padding: 18px; }
-  .topbar { padding: 12px 18px; }
+  .topbar { padding: 12px 0; }
+  .topbar-interior { padding: 0 18px; }
   .usuario-datos { display: none; }
 }

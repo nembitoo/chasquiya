@@ -101,6 +101,16 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
+		<!--
+			Documentación de la API (OpenAPI/Swagger). Se genera leyendo los
+			controladores, así que no hay un archivo aparte que se desactualice.
+			La 3.x es la línea que soporta Spring Boot 4 (la 2.x es para Boot 3).
+		-->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.1.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator-test</artifactId>

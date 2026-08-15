@@ -34,8 +34,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // El handshake del chat pasa; el JWT se valida en el CONNECT de STOMP.
                         // /backoffice/** son solo archivos estáticos: los DATOS siguen protegidos en /admin/**.
+                        // La documentación es pública, pero se apaga fuera de desarrollo
+                        // (springdoc.api-docs.enabled): el mapa completo de la API no se regala.
                         .requestMatchers("/auth/registro", "/auth/login", "/auth/recuperar", "/auth/restablecer", "/ping", "/actuator/health", "/error",
-                                "/ws/**", "/backoffice/**").permitAll()
+                                "/ws/**", "/backoffice/**",
+                                "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/maestros/**").hasRole("MAESTRO")
                         .anyRequest().authenticated())

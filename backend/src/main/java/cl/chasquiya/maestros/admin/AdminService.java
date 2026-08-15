@@ -31,6 +31,7 @@ import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
 import cl.chasquiya.maestros.solicitudes.EstadoServicio;
 import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
+import cl.chasquiya.maestros.soporte.SoporteService;
 import cl.chasquiya.maestros.usuarios.RolUsuario;
 import cl.chasquiya.maestros.usuarios.Usuario;
 import cl.chasquiya.maestros.usuarios.UsuarioRepository;
@@ -49,16 +50,19 @@ public class AdminService {
     private static final int DIAS_VERIFICACION = 3;
     private static final int DIAS_DISPUTA = 5;
     private static final int DIAS_COTIZACION = 7;
+    private static final int DIAS_RECLAMO = 2;
 
     private final UsuarioRepository usuarios;
     private final PerfilMaestroRepository perfiles;
     private final SolicitudRepository solicitudes;
     private final PagoRepository pagos;
     private final CalificacionRepository calificaciones;
+    private final SoporteService soporte;
 
     public AdminService(UsuarioRepository usuarios, PerfilMaestroRepository perfiles,
                         SolicitudRepository solicitudes, PagoRepository pagos,
-                        CalificacionRepository calificaciones) {
+                        CalificacionRepository calificaciones, SoporteService soporte) {
+        this.soporte = soporte;
         this.usuarios = usuarios;
         this.perfiles = perfiles;
         this.solicitudes = solicitudes;
@@ -162,6 +166,16 @@ public class AdminService {
         if (disputasViejas > 0) {
             salida.add(new Alerta("disputa", "alta",
                     "disputa(s) llevan más de " + DIAS_DISPUTA + " días sin resolver", disputasViejas));
+        }
+
+        long reclamosPendientes = soporte.pendientes();
+        if (reclamosPendientes > 0) {
+            boolean urgente = soporte.diasDelMasViejoPendiente() >= DIAS_RECLAMO;
+            salida.add(new Alerta("reclamo", urgente ? "alta" : "media",
+                    urgente
+                            ? "reclamo(s) sin resolver, alguno de hace más de " + DIAS_RECLAMO + " días"
+                            : "reclamo(s) de soporte esperando respuesta",
+                    reclamosPendientes));
         }
 
         long cotizacionesFrias = servicios.stream()

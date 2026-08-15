@@ -43,6 +43,7 @@
       <button class="tab" data-vista="usuarios" onclick="mostrar('usuarios')">Usuarios</button>
       <button class="tab" data-vista="servicios" onclick="mostrar('servicios')">Servicios</button>
       <button class="tab" data-vista="disputas" onclick="mostrar('disputas')">Disputas</button>
+      <button class="tab" data-vista="reclamos" onclick="mostrar('reclamos')">Reclamos</button>
     </nav>
 
     <main class="contenido">
@@ -95,6 +96,15 @@
       <div id="vista-disputas" class="vista oculto">
         <h2>Disputas abiertas</h2>
         <div id="tabla-disputas"></div>
+      </div>
+
+      <div id="vista-reclamos" class="vista oculto">
+        <h2>Reclamos y soporte</h2>
+        <p class="ayuda">
+          Problemas que no son de un servicio puntual. Los pendientes van primero
+          y, dentro de cada grupo, el más antiguo arriba.
+        </p>
+        <div id="tabla-reclamos"></div>
       </div>
     </main>
   </section>

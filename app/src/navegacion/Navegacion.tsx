@@ -14,6 +14,7 @@ import { useAuth } from '../estado/AuthContext';
 import { AdminDisputasScreen } from '../pantallas/AdminDisputasScreen';
 import { AdminMaestrosScreen } from '../pantallas/AdminMaestrosScreen';
 import { AgendaScreen } from '../pantallas/AgendaScreen';
+import { AyudaScreen } from '../pantallas/AyudaScreen';
 import { BienvenidaScreen } from '../pantallas/BienvenidaScreen';
 import { BuscarScreen } from '../pantallas/BuscarScreen';
 import { CalificarScreen } from '../pantallas/CalificarScreen';
@@ -60,6 +61,7 @@ export type RootStackParamList = {
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
   PerfilMaestro: undefined;
   Agenda: undefined;
+  Ayuda: undefined;
   Favoritos: undefined;
   MisDatos: undefined;
   Direcciones: undefined;
@@ -208,6 +210,7 @@ export function Navegacion() {
             <Stack.Screen name="Calificar" component={CalificarScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="Agenda" component={AgendaScreen} />
+            <Stack.Screen name="Ayuda" component={AyudaScreen} />
             <Stack.Screen name="Favoritos" component={FavoritosScreen} />
             <Stack.Screen name="MisDatos" component={MisDatosScreen} />
             <Stack.Screen name="Direcciones" component={DireccionesScreen} />

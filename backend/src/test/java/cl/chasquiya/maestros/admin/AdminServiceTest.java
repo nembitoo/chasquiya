@@ -46,8 +46,11 @@ class AdminServiceTest {
     private final PagoRepository pagos = mock(PagoRepository.class);
     private final CalificacionRepository calificaciones = mock(CalificacionRepository.class);
 
+    private final cl.chasquiya.maestros.soporte.SoporteService soporte =
+            mock(cl.chasquiya.maestros.soporte.SoporteService.class);
+
     private final AdminService servicio =
-            new AdminService(usuarios, perfiles, solicitudes, pagos, calificaciones);
+            new AdminService(usuarios, perfiles, solicitudes, pagos, calificaciones, soporte);
 
     private Usuario usuario(long id, RolUsuario rol) {
         Usuario u = new Usuario("N" + id, "A", "u" + id + "@test.cl", "+56900000000",

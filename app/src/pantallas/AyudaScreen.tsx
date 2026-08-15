@@ -1,0 +1,239 @@
+import { useFocusEffect } from '@react-navigation/native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useCallback, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { api } from '../api/cliente';
+import { CategoriaTicket, Ticket } from '../api/tipos';
+import { Boton } from '../componentes/Boton';
+import { CampoTexto } from '../componentes/CampoTexto';
+import { Icono } from '../componentes/base/Icono';
+import { Segmentos } from '../componentes/base/Segmentos';
+import { EmptyState } from '../componentes/feedback/EmptyState';
+import { useAuth } from '../estado/AuthContext';
+import { RootStackParamList } from '../navegacion/Navegacion';
+import { colores, espacio, margenPantalla, radio, texto as t } from '../tema/tema';
+import { tiempoRelativo } from '../utilidades/tiempo';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Ayuda'>;
+
+const CATEGORIAS: { valor: CategoriaTicket; etiqueta: string }[] = [
+  { valor: 'PAGO', etiqueta: 'Un pago' },
+  { valor: 'SERVICIO', etiqueta: 'Un servicio' },
+  { valor: 'CUENTA', etiqueta: 'Mi cuenta' },
+  { valor: 'DENUNCIA', etiqueta: 'Denuncia' },
+  { valor: 'SUGERENCIA', etiqueta: 'Sugerencia' },
+  { valor: 'OTRO', etiqueta: 'Otro' },
+];
+
+const ETIQUETA_ESTADO: Record<string, string> = {
+  NUEVO: 'Recibido',
+  EN_REVISION: 'En revisión',
+  RESUELTO: 'Resuelto',
+};
+
+export function AyudaScreen({ navigation }: Props) {
+  const { sesion } = useAuth();
+  const token = sesion?.token ?? '';
+
+  const [vista, setVista] = useState<'nuevo' | 'mios'>('nuevo');
+  const [categoria, setCategoria] = useState<CategoriaTicket>('SERVICIO');
+  const [asunto, setAsunto] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [mios, setMios] = useState<Ticket[]>([]);
+  const [error, setError] = useState('');
+  const [exito, setExito] = useState('');
+
+  const cargar = useCallback(async () => {
+    try {
+      setMios(await api.soporte.mios(token));
+    } catch {
+      /* si falla, la pestaña sale vacía */
+    }
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargar();
+    }, [cargar]),
+  );
+
+  async function enviar() {
+    setError('');
+    setExito('');
+    if (!asunto.trim()) {
+      setError('Escribe un asunto breve.');
+      return;
+    }
+    if (mensaje.trim().length < 10) {
+      setError('Cuéntanos un poco más para poder ayudarte.');
+      return;
+    }
+    try {
+      setEnviando(true);
+      await api.soporte.crear(token, { categoria, asunto: asunto.trim(), mensaje: mensaje.trim() });
+      setAsunto('');
+      setMensaje('');
+      setExito('Recibimos tu mensaje. Te responderemos por acá.');
+      await cargar();
+      setVista('mios');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo enviar tu mensaje.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.contenedor} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.volver}>
+          <Icono nombre="chevron-back" tamano="md" color={colores.primario} />
+          <Text style={styles.volverTexto}>Volver</Text>
+        </Pressable>
+        <Text style={t.h1}>Ayuda</Text>
+      </View>
+
+      <View style={styles.segmentos}>
+        <Segmentos
+          opciones={[
+            { valor: 'nuevo', etiqueta: 'Escribirnos' },
+            { valor: 'mios', etiqueta: `Mis reclamos${mios.length ? ` (${mios.length})` : ''}` },
+          ]}
+          valor={vista}
+          onCambio={(v) => setVista(v as 'nuevo' | 'mios')}
+        />
+      </View>
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        {vista === 'nuevo' ? (
+          <ScrollView contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
+            <Text style={styles.ayuda}>
+              Si tu problema es con un servicio en curso, también puedes abrir una disputa desde ese
+              servicio. Esto es para todo lo demás.
+            </Text>
+
+            <Text style={styles.etiqueta}>¿Sobre qué es?</Text>
+            <View style={styles.pills}>
+              {CATEGORIAS.map((c) => (
+                <Pressable
+                  key={c.valor}
+                  onPress={() => setCategoria(c.valor)}
+                  style={[styles.pildora, categoria === c.valor && styles.pildoraActiva]}>
+                  <Text style={[styles.pildoraTexto, categoria === c.valor && styles.pildoraTextoActivo]}>
+                    {c.etiqueta}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <CampoTexto etiqueta="Asunto" value={asunto} onChangeText={setAsunto} maxLength={120} />
+            <CampoTexto
+              etiqueta="Cuéntanos qué pasó"
+              value={mensaje}
+              onChangeText={setMensaje}
+              multiline
+              numberOfLines={6}
+              style={styles.multilinea}
+              maxLength={2000}
+            />
+
+            {!!error && <Text style={styles.error}>{error}</Text>}
+            {!!exito && <Text style={styles.exito}>{exito}</Text>}
+
+            <Boton titulo="Enviar" onPress={enviar} cargando={enviando} />
+          </ScrollView>
+        ) : mios.length === 0 ? (
+          <EmptyState
+            icono="chatbubble-ellipses-outline"
+            titulo="Sin reclamos"
+            descripcion="Cuando nos escribas, el estado de tu mensaje aparecerá acá."
+            accion={{ titulo: 'Escribirnos', onPress: () => setVista('nuevo') }}
+          />
+        ) : (
+          <ScrollView contentContainerStyle={styles.cuerpo}>
+            {mios.map((r) => (
+              <View key={r.id} style={styles.tarjeta}>
+                <View style={styles.filaTitulo}>
+                  <Text style={[t.cuerpoFuerte, { flex: 1 }]} numberOfLines={1}>
+                    {r.asunto}
+                  </Text>
+                  <View style={[styles.estado, r.estado === 'RESUELTO' && styles.estadoResuelto]}>
+                    <Text style={[styles.estadoTexto, r.estado === 'RESUELTO' && styles.estadoTextoResuelto]}>
+                      {ETIQUETA_ESTADO[r.estado] ?? r.estado}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.fecha}>{tiempoRelativo(r.fechaCreacion)}</Text>
+                <Text style={t.pequeno}>{r.mensaje}</Text>
+                {!!r.respuesta && (
+                  <View style={styles.respuesta}>
+                    <Text style={styles.respuestaTitulo}>Respuesta de ChasquiYa!</Text>
+                    <Text style={t.pequeno}>{r.respuesta}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  contenedor: { flex: 1, backgroundColor: colores.fondo },
+  header: { paddingHorizontal: margenPantalla, paddingTop: espacio.sm },
+  volver: { flexDirection: 'row', alignItems: 'center', marginBottom: espacio.xxs },
+  volverTexto: { ...t.pequenoFuerte, color: colores.primario },
+  segmentos: { paddingHorizontal: margenPantalla, paddingTop: espacio.sm },
+  cuerpo: { padding: margenPantalla },
+  ayuda: { ...t.pequeno, marginBottom: espacio.md },
+  etiqueta: { ...t.pequenoFuerte, color: colores.textoSuave, marginBottom: espacio.sm },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.xs, marginBottom: espacio.md },
+  pildora: {
+    paddingHorizontal: espacio.md,
+    paddingVertical: espacio.xs,
+    borderRadius: radio.completo,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    backgroundColor: colores.superficie,
+  },
+  pildoraActiva: { borderColor: colores.primario, backgroundColor: colores.primarioSuave },
+  pildoraTexto: { ...t.pequeno },
+  pildoraTextoActivo: { color: colores.primario, fontWeight: '700' },
+  multilinea: { height: 130, textAlignVertical: 'top' },
+  error: { ...t.pequeno, color: colores.error, marginBottom: espacio.sm },
+  exito: { ...t.pequeno, color: colores.exito, marginBottom: espacio.sm },
+  tarjeta: {
+    backgroundColor: colores.superficie,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    padding: espacio.md,
+    marginBottom: espacio.sm,
+    gap: 2,
+  },
+  filaTitulo: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs },
+  fecha: { ...t.etiqueta, color: colores.textoTenue, marginBottom: espacio.xxs },
+  estado: {
+    paddingHorizontal: espacio.xs,
+    paddingVertical: 2,
+    borderRadius: radio.completo,
+    backgroundColor: colores.alertaFondo,
+  },
+  estadoResuelto: { backgroundColor: colores.exitoFondo },
+  estadoTexto: { ...t.etiqueta, color: colores.alertaTexto, fontWeight: '700' },
+  estadoTextoResuelto: { color: colores.exitoTexto },
+  respuesta: {
+    marginTop: espacio.sm,
+    padding: espacio.sm,
+    borderRadius: radio.sm,
+    backgroundColor: colores.fondo,
+    borderWidth: 1,
+    borderColor: colores.borde,
+  },
+  respuestaTitulo: { ...t.pequenoFuerte, color: colores.primario, marginBottom: 2 },
+});

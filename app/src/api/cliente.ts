@@ -6,6 +6,7 @@ import {
   Calificacion,
   CalificarData,
   CrearSolicitudData,
+  CrearTicketData,
   Direccion,
   DireccionData,
   DocumentoResponse,
@@ -24,6 +25,7 @@ import {
   Reputacion,
   ResumenPago,
   Solicitud,
+  Ticket,
   Usuario,
 } from './tipos';
 
@@ -288,6 +290,12 @@ export const api = {
     pagar: (token: string, solicitudId: number) =>
       pedir<Pago>(`/solicitudes/${solicitudId}/pago`, { method: 'POST' }, token),
     misIngresos: (token: string) => pedir<Ingresos>('/maestros/mis-ingresos', {}, token),
+  },
+
+  soporte: {
+    crear: (token: string, datos: CrearTicketData) =>
+      pedir<Ticket>('/soporte/reclamos', { method: 'POST', body: JSON.stringify(datos) }, token),
+    mios: (token: string) => pedir<Ticket[]>('/soporte/reclamos', {}, token),
   },
 
   fotos: {

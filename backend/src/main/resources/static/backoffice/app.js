@@ -110,6 +110,7 @@ function mostrar(vista) {
     usuarios: cargarUsuarios,
     servicios: cargarServicios,
     disputas: cargarDisputas,
+    reclamos: cargarReclamos,
   };
   cargadores[vista]().catch(mostrarError);
 }
@@ -424,6 +425,53 @@ async function resolverDisputa(id, aFavorDelCliente) {
       body: JSON.stringify({ aFavorDelCliente, resolucion }),
     });
     await cargarDisputas();
+  } catch (e) { mostrarError(e); }
+}
+
+// ---------- Reclamos y soporte ----------
+
+const ETIQUETA_CATEGORIA = {
+  PAGO: 'Pago', SERVICIO: 'Servicio', CUENTA: 'Cuenta',
+  DENUNCIA: 'Denuncia', SUGERENCIA: 'Sugerencia', OTRO: 'Otro',
+};
+const COLOR_TICKET = { NUEVO: 'badge-rojo', EN_REVISION: 'badge-amarillo', RESUELTO: 'badge-verde' };
+
+async function cargarReclamos() {
+  const lista = await api('/admin/reclamos');
+  const caja = document.getElementById('tabla-reclamos');
+  if (lista.length === 0) {
+    caja.innerHTML = '<p class="vacio">No hay reclamos 🎉</p>';
+    return;
+  }
+  caja.innerHTML = lista.map((r) => `
+    <div class="disputa-caja">
+      <div class="disputa-partes">
+        ${txt(r.asunto)}
+        <span class="badge ${COLOR_TICKET[r.estado] || 'badge-gris'}">${txt(r.estado)}</span>
+        <span class="badge badge-gris">${txt(ETIQUETA_CATEGORIA[r.categoria] || r.categoria)}</span>
+      </div>
+      <div style="color:#6B7280;margin-top:4px">
+        ${txt(r.usuarioNombre)} · ${txt(r.usuarioEmail)} · ${fecha(r.fechaCreacion)}
+        ${r.solicitudId ? ` · servicio #${r.solicitudId}` : ''}
+      </div>
+      <div class="disputa-motivo">${txt(r.mensaje)}</div>
+      ${r.respuesta ? `<div class="respuesta-caja"><strong>Respuesta:</strong> ${txt(r.respuesta)}</div>` : ''}
+      ${r.estado === 'RESUELTO' ? '' : `
+        <div class="fila-form">
+          <input id="respuesta-${r.id}" placeholder="Respuesta al usuario (obligatoria para cerrar)" />
+          ${r.estado === 'NUEVO'
+            ? `<button class="btn btn-mini btn-secundario" onclick="responderReclamo(${r.id}, 'EN_REVISION')">Tomar</button>`
+            : ''}
+          <button class="btn btn-mini" onclick="responderReclamo(${r.id}, 'RESUELTO')">Resolver</button>
+        </div>`}
+    </div>`).join('');
+}
+
+async function responderReclamo(id, estado) {
+  try {
+    const respuesta = document.getElementById('respuesta-' + id).value;
+    await api(`/admin/reclamos/${id}`, { method: 'POST', body: JSON.stringify({ estado, respuesta }) });
+    await cargarReclamos();
   } catch (e) { mostrarError(e); }
 }
 

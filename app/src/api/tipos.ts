@@ -270,6 +270,29 @@ export type MaestroPublico = {
   trabajosCompletados: number;
 };
 
+export type CategoriaTicket = 'PAGO' | 'SERVICIO' | 'CUENTA' | 'DENUNCIA' | 'SUGERENCIA' | 'OTRO';
+export type EstadoTicket = 'NUEVO' | 'EN_REVISION' | 'RESUELTO';
+
+/** Reclamo de soporte. Complementa a las disputas, que son de un servicio puntual. */
+export type Ticket = {
+  id: number;
+  categoria: CategoriaTicket;
+  asunto: string;
+  mensaje: string;
+  estado: EstadoTicket;
+  respuesta: string | null;
+  solicitudId: number | null;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+};
+
+export type CrearTicketData = {
+  categoria: CategoriaTicket;
+  asunto: string;
+  mensaje: string;
+  solicitudId?: number | null;
+};
+
 /** Foto del problema adjunta a una solicitud (solo el id; el contenido va aparte). */
 export type FotoSolicitud = { id: number };
 

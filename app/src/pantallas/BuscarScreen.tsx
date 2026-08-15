@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
 import { FiltrosBusqueda, MaestroCercano, Oficio } from '../api/tipos';
@@ -42,6 +42,7 @@ export function BuscarScreen({ navigation }: Props) {
   const [filtros, setFiltros] = useState<FiltrosBusqueda>({ orden: 'distancia' });
   const [panelAbierto, setPanelAbierto] = useState(false);
 
+  const insets = useSafeAreaInsets();
   const [vista, setVista] = useState<'lista' | 'mapa'>('lista');
   const [texto, setTexto] = useState('');
   const [maestros, setMaestros] = useState<MaestroCercano[]>([]);
@@ -246,7 +247,10 @@ export function BuscarScreen({ navigation }: Props) {
       {/* Panel de filtros (hoja inferior con el Modal nativo) */}
       <Modal visible={panelAbierto} transparent animationType="slide" onRequestClose={() => setPanelAbierto(false)}>
         <Pressable style={styles.modalFondo} onPress={() => setPanelAbierto(false)}>
-          <Pressable style={styles.hoja} onPress={(e) => e.stopPropagation()}>
+          {/* El inset deja el botón de aplicar sobre los controles del teléfono. */}
+          <Pressable
+            style={[styles.hoja, { paddingBottom: margenPantalla + insets.bottom }]}
+            onPress={(e) => e.stopPropagation()}>
             <View style={styles.asa} />
             <Text style={[t.h2, styles.hojaTitulo]}>Filtros</Text>
 

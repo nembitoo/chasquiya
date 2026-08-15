@@ -58,7 +58,7 @@ export function AdminDisputasScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.contenedor}>
+    <SafeAreaView style={styles.contenedor} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Disputas abiertas</Text>
       </View>

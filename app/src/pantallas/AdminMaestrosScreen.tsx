@@ -59,7 +59,7 @@ export function AdminMaestrosScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.contenedor}>
+    <SafeAreaView style={styles.contenedor} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Maestros pendientes</Text>
       </View>

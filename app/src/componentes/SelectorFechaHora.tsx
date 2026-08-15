@@ -1,6 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colores, espacio, radio, tipografia } from '../tema/tema';
 import { Icono } from './base/Icono';
@@ -58,6 +59,7 @@ type Props = {
 
 /** Selecciona fecha y hora con los selectores nativos del teléfono. */
 export function SelectorFechaHora({ etiqueta, valor, onCambio }: Props) {
+  const insets = useSafeAreaInsets();
   const [modo, setModo] = useState<Modo | null>(null);
   // Mientras el usuario elige en iOS, guardamos aquí el valor tentativo.
   const [temporal, setTemporal] = useState<Date>(valor ?? proximaHoraRedonda());
@@ -119,7 +121,7 @@ export function SelectorFechaHora({ etiqueta, valor, onCambio }: Props) {
       {modo && Platform.OS === 'ios' && (
         <Modal transparent animationType="slide" visible>
           <View style={styles.modalFondo}>
-            <View style={styles.modalCaja}>
+            <View style={[styles.modalCaja, { paddingBottom: espacio.lg + insets.bottom }]}>
               <DateTimePicker
                 value={temporal}
                 mode={modo}

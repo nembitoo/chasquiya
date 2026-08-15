@@ -41,7 +41,7 @@ export function IngresosScreen({ navigation }: Props) {
   const maximo = datos?.ultimosMeses.reduce((max, m) => Math.max(max, m.monto), 0) ?? 0;
 
   return (
-    <SafeAreaView style={styles.contenedor}>
+    <SafeAreaView style={styles.contenedor} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Mis ingresos</Text>
       </View>

@@ -7,6 +7,7 @@ import {
 import { NativeStackScreenProps, createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Oficio } from '../api/tipos';
 import { Icono, NombreIcono } from '../componentes/base/Icono';
@@ -102,6 +103,15 @@ function iconoPestana(base: string) {
 function Pestanas() {
   const { sesion } = useAuth();
   const rol = sesion?.rol;
+  /*
+   * En Android la barra de navegación del sistema (o la barrita de gestos) se
+   * dibuja ENCIMA de la app. Con una altura fija, las pestañas quedaban debajo
+   * de esos botones: al intentar tocarlas se salía de la app.
+   *
+   * `insets.bottom` es cuánto ocupa el sistema en ese teléfono; se suma a la
+   * altura y al padding para dejar las pestañas siempre por encima.
+   */
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -112,9 +122,9 @@ function Pestanas() {
         tabBarStyle: {
           backgroundColor: colores.superficie,
           borderTopColor: colores.borde,
-          height: 62,
+          height: 62 + insets.bottom,
           paddingTop: 6,
-          paddingBottom: 8,
+          paddingBottom: 8 + insets.bottom,
         },
         tabBarLabelStyle: { fontFamily: fuentes.medium, fontSize: 11 },
       }}>

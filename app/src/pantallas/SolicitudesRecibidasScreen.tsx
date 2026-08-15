@@ -99,7 +99,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.contenedor}>
+    <SafeAreaView style={styles.contenedor} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Solicitudes recibidas</Text>
         <View style={styles.segmentos}>

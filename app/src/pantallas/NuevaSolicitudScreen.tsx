@@ -12,7 +12,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
 import { Direccion, Oficio } from '../api/tipos';
@@ -38,6 +38,7 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
   const { maestroId, maestroNombre, oficios, precargar } = route.params;
   const { sesion } = useAuth();
   const token = sesion?.token ?? '';
+  const insets = useSafeAreaInsets();
 
   const [oficio, setOficio] = useState<Oficio | null>(oficios.length === 1 ? oficios[0] : null);
   const [descripcion, setDescripcion] = useState(precargar?.descripcion ?? '');
@@ -268,7 +269,9 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
       {/* Paso de confirmación: revisar antes de que le llegue a alguien. */}
       <Modal visible={revisando} transparent animationType="slide" onRequestClose={() => setRevisando(false)}>
         <View style={styles.modalFondo}>
-          <View style={styles.modalCaja}>
+          {/* La hoja llega hasta el borde inferior: sin el inset, "Confirmar"
+              queda debajo de los botones del teléfono. */}
+          <View style={[styles.modalCaja, { paddingBottom: espacio.lg + insets.bottom }]}>
             <Text style={styles.modalTitulo}>Revisa tu solicitud</Text>
 
             <FilaResumen etiqueta="Maestro" valor={maestroNombre} />

@@ -2,7 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
 import { Direccion } from '../api/tipos';
@@ -23,6 +23,7 @@ const VACIO = { etiqueta: '', direccion: '', comuna: '', referencia: '' };
 export function DireccionesScreen({ navigation }: Props) {
   const { sesion } = useAuth();
   const token = sesion?.token ?? '';
+  const insets = useSafeAreaInsets();
 
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -192,7 +193,9 @@ export function DireccionesScreen({ navigation }: Props) {
       {/* Formulario en hoja inferior */}
       <Modal visible={editando !== null} transparent animationType="slide" onRequestClose={() => setEditando(null)}>
         <Pressable style={styles.modalFondo} onPress={() => setEditando(null)}>
-          <Pressable style={styles.hoja} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={[styles.hoja, { paddingBottom: espacio.xl + insets.bottom }]}
+            onPress={(e) => e.stopPropagation()}>
             <View style={styles.asa} />
             <Text style={[t.h2, styles.hojaTitulo]}>
               {editando && editando > 0 ? 'Editar dirección' : 'Nueva dirección'}

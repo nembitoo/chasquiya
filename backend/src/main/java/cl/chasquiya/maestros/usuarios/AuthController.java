@@ -46,6 +46,6 @@ public class AuthController {
         Usuario u = usuarios.findByEmail(auth.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
         return new UsuarioResponse(u.getId(), u.getNombre(), u.getApellido(),
-                u.getEmail(), u.getTelefono(), u.getRol());
+                u.getEmail(), u.getTelefono(), u.getRol(), u.tieneAvatar());
     }
 }

@@ -50,6 +50,10 @@ public class Usuario {
     @Column(nullable = false)
     private boolean activo = true;
 
+    /** Clave de la foto de perfil en MinIO. Null = sin foto (se muestran iniciales). */
+    @Column(name = "avatar_objeto")
+    private String avatarObjeto;
+
     @Column(name = "fecha_creacion", nullable = false)
     private Instant fechaCreacion;
 
@@ -113,6 +117,18 @@ public class Usuario {
 
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public String getAvatarObjeto() {
+        return avatarObjeto;
+    }
+
+    public void setAvatarObjeto(String avatarObjeto) {
+        this.avatarObjeto = avatarObjeto;
+    }
+
+    public boolean tieneAvatar() {
+        return avatarObjeto != null;
     }
 
     public Instant getFechaCreacion() {

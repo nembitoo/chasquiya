@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar } from '../componentes/base/Avatar';
+import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
@@ -30,7 +30,12 @@ export function InicioScreen({ navigation }: Props) {
                   : '¿Qué necesitas arreglar hoy?'}
             </Text>
           </View>
-          <Avatar nombre={sesion?.nombre} tamano={44} />
+          <AvatarUsuario
+            usuarioId={sesion?.id}
+            nombre={sesion?.nombre}
+            tieneAvatar={sesion?.tieneAvatar}
+            tamano={44}
+          />
         </View>
 
         {rol === 'CLIENTE' && (

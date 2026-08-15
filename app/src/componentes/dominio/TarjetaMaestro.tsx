@@ -5,7 +5,7 @@ import { MaestroCercano } from '../../api/tipos';
 import { OFICIOS } from '../../datos/oficios';
 import { colores, espacio, radio, sombra, texto as t } from '../../tema/tema';
 import { formatearCLP } from '../../utilidades/moneda';
-import { Avatar } from '../base/Avatar';
+import { AvatarUsuario } from '../base/AvatarUsuario';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../base/Icono';
 import { Estrellas } from '../Estrellas';
 
@@ -35,7 +35,12 @@ export function TarjetaMaestro({ maestro, onPress, onFavorito, mostrarDistancia 
       accessibilityLabel={`Ver perfil de ${maestro.nombre} ${maestro.apellido}`}
       style={({ pressed }) => [styles.card, pressed && styles.presionada]}>
       <View style={styles.fila}>
-        <Avatar nombre={`${maestro.nombre} ${maestro.apellido}`} tamano={56} />
+        <AvatarUsuario
+          usuarioId={maestro.usuarioId}
+          nombre={`${maestro.nombre} ${maestro.apellido}`}
+          tieneAvatar={maestro.tieneAvatar}
+          tamano={56}
+        />
 
         <View style={styles.centro}>
           <View style={styles.filaNombre}>

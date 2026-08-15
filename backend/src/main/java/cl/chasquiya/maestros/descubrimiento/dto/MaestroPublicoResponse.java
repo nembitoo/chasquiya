@@ -16,5 +16,6 @@ public record MaestroPublicoResponse(
         String zonaCobertura,
         double calificacionPromedio,
         long cantidadCalificaciones,
-        boolean esFavorito) {
+        boolean esFavorito,
+        boolean tieneAvatar) {
 }

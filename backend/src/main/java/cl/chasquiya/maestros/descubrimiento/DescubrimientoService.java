@@ -118,7 +118,7 @@ public class DescubrimientoService {
                     u.getId(), u.getNombre(), u.getApellido(), p.getOficios(),
                     p.getZonaCobertura(), p.getAniosExperiencia(), p.getTarifaReferencial(),
                     distanciasKm.getOrDefault(id, 0.0), rep.promedio(), rep.cantidad(),
-                    favoritosDelCliente.contains(id)));
+                    favoritosDelCliente.contains(id), u.tieneAvatar()));
         }
         return salida;
     }
@@ -134,7 +134,7 @@ public class DescubrimientoService {
 
         return new MaestroPublicoResponse(u.getId(), u.getNombre(), u.getApellido(),
                 p.getOficios(), p.getDescripcion(), p.getAniosExperiencia(), p.getTarifaReferencial(),
-                p.getZonaCobertura(), rep.promedio(), rep.cantidad(), esFavorito);
+                p.getZonaCobertura(), rep.promedio(), rep.cantidad(), esFavorito, u.tieneAvatar());
     }
 
     private Set<Long> favoritosDe(Long clienteId) {

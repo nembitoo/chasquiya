@@ -34,6 +34,7 @@ export type Usuario = {
   email: string;
   telefono: string;
   rol: Rol;
+  tieneAvatar: boolean;
 };
 
 export type Oficio =
@@ -109,8 +110,10 @@ export type Solicitud = {
   id: number;
   clienteId: number;
   clienteNombre: string;
+  clienteTieneAvatar: boolean;
   maestroId: number;
   maestroNombre: string;
+  maestroTieneAvatar: boolean;
   oficio: Oficio;
   descripcion: string;
   direccion: string;
@@ -207,6 +210,7 @@ export type MaestroCercano = {
   calificacionPromedio: number;
   cantidadCalificaciones: number;
   esFavorito: boolean;
+  tieneAvatar: boolean;
 };
 
 /** Filtros opcionales de la búsqueda de maestros. */
@@ -231,6 +235,7 @@ export type MaestroPublico = {
   calificacionPromedio: number;
   cantidadCalificaciones: number;
   esFavorito: boolean;
+  tieneAvatar: boolean;
 };
 
 /** Vista que el admin ve de un maestro (para aprobar/rechazar). */

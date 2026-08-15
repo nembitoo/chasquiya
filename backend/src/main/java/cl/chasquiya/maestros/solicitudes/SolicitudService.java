@@ -249,14 +249,18 @@ public class SolicitudService {
                                         boolean yaCalifique) {
         return new SolicitudResponse(
                 s.getId(),
-                s.getClienteId(), nombreDe(personas.get(s.getClienteId())),
-                s.getMaestroId(), nombreDe(personas.get(s.getMaestroId())),
+                s.getClienteId(), nombreDe(personas.get(s.getClienteId())), tieneAvatar(personas.get(s.getClienteId())),
+                s.getMaestroId(), nombreDe(personas.get(s.getMaestroId())), tieneAvatar(personas.get(s.getMaestroId())),
                 s.getOficio(), s.getDescripcion(), s.getDireccion(), s.getFechaPreferida(),
                 s.getPresupuestoEstimado(), s.getEstado(), s.getMotivoCancelacion(), s.getResolucionDisputa(),
                 cot.map(Cotizacion::getMonto).orElse(null),
                 cot.map(Cotizacion::getMensaje).orElse(null),
                 yaCalifique,
                 s.getFechaCreacion());
+    }
+
+    private boolean tieneAvatar(Usuario u) {
+        return u != null && u.tieneAvatar();
     }
 
     private String nombreDe(Usuario u) {

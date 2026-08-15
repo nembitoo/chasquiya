@@ -17,5 +17,6 @@ public record MaestroCercanoResponse(
         double calificacionPromedio,
         long cantidadCalificaciones,
         /** Si quien consulta lo tiene guardado en sus favoritos. */
-        boolean esFavorito) {
+        boolean esFavorito,
+        boolean tieneAvatar) {
 }

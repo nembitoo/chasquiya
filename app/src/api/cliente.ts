@@ -202,6 +202,12 @@ export const api = {
       ),
   },
 
+  usuarios: {
+    /** Sube la foto de perfil del usuario autenticado. */
+    subirAvatar: (token: string, uri: string, nombre: string, tipo: string) =>
+      subirArchivo<{ tieneAvatar: boolean }>('/usuarios/mi-avatar', token, uri, nombre, tipo),
+  },
+
   favoritos: {
     mios: (token: string) => pedir<MaestroCercano[]>('/favoritos', {}, token),
     /** Guarda o quita el maestro; devuelve si quedó guardado. */

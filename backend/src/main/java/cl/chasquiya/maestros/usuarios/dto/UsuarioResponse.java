@@ -9,5 +9,6 @@ public record UsuarioResponse(
         String apellido,
         String email,
         String telefono,
-        RolUsuario rol) {
+        RolUsuario rol,
+        boolean tieneAvatar) {
 }

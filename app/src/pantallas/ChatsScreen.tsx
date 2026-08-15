@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
 import { Solicitud } from '../api/tipos';
-import { Avatar } from '../componentes/base/Avatar';
+import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { EstadoBadge } from '../componentes/EstadoBadge';
 import { EmptyState } from '../componentes/feedback/EmptyState';
 import { useAuth } from '../estado/AuthContext';
@@ -74,6 +74,8 @@ export function ChatsScreen({ navigation }: { navigation: any }) {
         <ScrollView contentContainerStyle={styles.lista}>
           {ordenadas.map((s) => {
             const nombre = esMaestro ? s.clienteNombre : s.maestroNombre;
+            const otroId = esMaestro ? s.clienteId : s.maestroId;
+            const otroTieneFoto = esMaestro ? s.clienteTieneAvatar : s.maestroTieneAvatar;
             const sinLeer = noLeidos[String(s.id)] ?? 0;
             return (
               <Pressable
@@ -82,7 +84,7 @@ export function ChatsScreen({ navigation }: { navigation: any }) {
                 onPress={() =>
                   navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: nombre })
                 }>
-                <Avatar nombre={nombre} tamano={48} />
+                <AvatarUsuario usuarioId={otroId} nombre={nombre} tieneAvatar={otroTieneFoto} tamano={48} />
                 <View style={styles.filaTexto}>
                   <Text style={t.cuerpoFuerte} numberOfLines={1}>
                     {nombre}

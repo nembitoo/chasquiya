@@ -1,9 +1,11 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { api } from '../api/cliente';
 import { Boton } from '../componentes/Boton';
-import { Avatar } from '../componentes/base/Avatar';
+import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { Icono, NombreIcono } from '../componentes/base/Icono';
 import { useAuth } from '../estado/AuthContext';
 import { colores, espacio, margenPantalla, radio, sombra, texto as t } from '../tema/tema';
@@ -17,8 +19,43 @@ type Opcion = {
 };
 
 export function PerfilScreen({ navigation }: { navigation: any }) {
-  const { sesion, cerrarSesion } = useAuth();
+  const { sesion, cerrarSesion, refrescar } = useAuth();
   const rol = sesion?.rol;
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState('');
+
+  /** Elige una foto de la galería y la sube como avatar. */
+  async function cambiarFoto() {
+    setError('');
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      setError('Necesito permiso para acceder a tus fotos.');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+    });
+    if (res.canceled) return;
+
+    const asset = res.assets[0];
+    try {
+      setSubiendo(true);
+      await api.usuarios.subirAvatar(
+        sesion?.token ?? '',
+        asset.uri,
+        asset.fileName ?? 'avatar.jpg',
+        asset.mimeType ?? 'image/jpeg',
+      );
+      await refrescar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo subir la foto.');
+    } finally {
+      setSubiendo(false);
+    }
+  }
 
   const etiquetaRol =
     rol === 'MAESTRO' ? 'Maestro' : rol === 'ADMIN' ? 'Administrador' : 'Cliente';
@@ -39,12 +76,28 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
     <SafeAreaView style={styles.contenedor} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.cabecera}>
-          <Avatar nombre={sesion?.nombre} tamano={72} />
+          <Pressable onPress={cambiarFoto} disabled={subiendo} accessibilityLabel="Cambiar foto de perfil">
+            <AvatarUsuario
+              usuarioId={sesion?.id}
+              nombre={sesion?.nombre}
+              tieneAvatar={sesion?.tieneAvatar}
+              tamano={88}
+            />
+            <View style={styles.camara}>
+              {subiendo ? (
+                <ActivityIndicator size="small" color={colores.blanco} />
+              ) : (
+                <Icono nombre="camera" tamano="sm" color={colores.blanco} />
+              )}
+            </View>
+          </Pressable>
           <Text style={[t.h2, styles.nombre]}>{sesion?.nombre}</Text>
           <View style={styles.chipRol}>
             <Text style={styles.chipRolTexto}>{etiquetaRol}</Text>
           </View>
         </View>
+
+        {!!error && <Text style={styles.error}>{error}</Text>}
 
         <View style={styles.tarjeta}>
           {opciones.map((o, i) => (
@@ -111,4 +164,18 @@ const styles = StyleSheet.create({
   opcionTexto: { ...t.cuerpo, flex: 1 },
   atenuado: { color: colores.textoTenue },
   proximamente: { ...t.etiqueta, color: colores.textoTenue },
+  camara: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 30,
+    height: 30,
+    borderRadius: radio.completo,
+    backgroundColor: colores.primario,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colores.fondo,
+  },
+  error: { ...t.pequeno, color: colores.error, textAlign: 'center', marginBottom: espacio.sm },
 });

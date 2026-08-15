@@ -13,6 +13,7 @@ import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { Card } from '../componentes/base/Card';
 import { Dato } from '../componentes/base/Dato';
 import { GaleriaFotos } from '../componentes/dominio/GaleriaFotos';
+import { LineaTiempo } from '../componentes/dominio/LineaTiempo';
 import { Icono } from '../componentes/base/Icono';
 import { Segmentos } from '../componentes/base/Segmentos';
 import { EmptyState } from '../componentes/feedback/EmptyState';
@@ -196,6 +197,7 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                 <Dato icono="calendar-outline" texto={formatearFechaHoraTexto(s.fechaPreferida)} />
               )}
               <GaleriaFotos solicitudId={s.id} cantidad={s.cantidadFotos} />
+              <LineaTiempo estado={s.estado} />
 
               {s.cotizacionMonto != null && (
                 <View style={styles.cotizacion}>

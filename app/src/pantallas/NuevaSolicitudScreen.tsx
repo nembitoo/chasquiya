@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -18,11 +19,12 @@ import { Direccion, Oficio } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { Icono } from '../componentes/base/Icono';
 import { CampoTexto } from '../componentes/CampoTexto';
-import { SelectorFechaHora, aIsoLocal } from '../componentes/SelectorFechaHora';
+import { SelectorFechaHora, aIsoLocal, formatearFechaHoraTexto } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
+import { formatearCLP } from '../utilidades/moneda';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NuevaSolicitud'>;
 
@@ -45,6 +47,7 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
   const [enviando, setEnviando] = useState(false);
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);
   const [fotos, setFotos] = useState<FotoElegida[]>([]);
+  const [revisando, setRevisando] = useState(false);
   const [error, setError] = useState('');
 
   async function elegirFotos() {
@@ -89,7 +92,8 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
     })();
   }, [token, precargar]);
 
-  async function enviar() {
+  /** Valida y muestra el resumen. Enviar de verdad es el paso siguiente. */
+  function revisar() {
     setError('');
     if (!oficio) {
       setError('Elige el tipo de servicio.');
@@ -103,6 +107,13 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
       setError('Indica la dirección.');
       return;
     }
+    setRevisando(true);
+  }
+
+  async function enviar() {
+    if (!oficio) return;
+    setError('');
+    setRevisando(false);
     try {
       setEnviando(true);
       const creada = await api.solicitudes.crear(token, {
@@ -247,13 +258,62 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          <Boton titulo="Enviar solicitud" onPress={enviar} cargando={enviando} />
+          <Boton titulo="Revisar y enviar" onPress={revisar} cargando={enviando} />
           <Text style={styles.nota}>
             El maestro recibirá tu solicitud y podrá enviarte una cotización. Podrás aceptarla o rechazarla.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Paso de confirmación: revisar antes de que le llegue a alguien. */}
+      <Modal visible={revisando} transparent animationType="slide" onRequestClose={() => setRevisando(false)}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalCaja}>
+            <Text style={styles.modalTitulo}>Revisa tu solicitud</Text>
+
+            <FilaResumen etiqueta="Maestro" valor={maestroNombre} />
+            <FilaResumen
+              etiqueta="Servicio"
+              valor={OFICIOS.find((o) => o.valor === oficio)?.etiqueta ?? '—'}
+            />
+            <FilaResumen etiqueta="Problema" valor={descripcion.trim()} />
+            <FilaResumen etiqueta="Dirección" valor={direccion.trim()} />
+            <FilaResumen
+              etiqueta="Fecha"
+              valor={fecha ? formatearFechaHoraTexto(aIsoLocal(fecha)) : 'A convenir'}
+            />
+            <FilaResumen
+              etiqueta="Presupuesto"
+              valor={presupuesto ? formatearCLP(Number(presupuesto)) : 'Sin presupuesto estimado'}
+            />
+            <FilaResumen
+              etiqueta="Fotos"
+              valor={fotos.length === 0 ? 'Ninguna' : `${fotos.length} adjunta(s)`}
+            />
+
+            <Text style={styles.modalNota}>
+              Todavía no es un compromiso: el maestro te enviará un precio y tú decides.
+            </Text>
+
+            <Boton titulo="Confirmar y enviar" onPress={enviar} cargando={enviando} />
+            <Boton
+              titulo="Volver a editar"
+              variante="secundario"
+              onPress={() => setRevisando(false)}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
+  );
+}
+
+function FilaResumen({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+  return (
+    <View style={styles.filaResumen}>
+      <Text style={styles.filaEtiqueta}>{etiqueta}</Text>
+      <Text style={styles.filaValor}>{valor}</Text>
+    </View>
   );
 }
 
@@ -263,6 +323,36 @@ function textoDireccion(d: Direccion): string {
 }
 
 const styles = StyleSheet.create({
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalCaja: {
+    backgroundColor: colores.superficie,
+    borderTopLeftRadius: radio.lg,
+    borderTopRightRadius: radio.lg,
+    padding: espacio.lg,
+    gap: espacio.xs,
+  },
+  modalTitulo: {
+    fontSize: tipografia.titulo,
+    fontWeight: '800',
+    color: colores.texto,
+    marginBottom: espacio.sm,
+  },
+  modalNota: {
+    fontSize: tipografia.pequeno,
+    color: colores.textoTenue,
+    marginTop: espacio.sm,
+    marginBottom: espacio.sm,
+  },
+  filaResumen: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: espacio.sm,
+    paddingVertical: espacio.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colores.borde,
+  },
+  filaEtiqueta: { width: 96, fontSize: tipografia.pequeno, color: colores.textoSuave, fontWeight: '600' },
+  filaValor: { flex: 1, fontSize: tipografia.cuerpo, color: colores.texto },
   ayudaFotos: {
     fontSize: tipografia.pequeno,
     color: colores.textoTenue,

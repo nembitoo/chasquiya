@@ -9,6 +9,7 @@ import { Boton } from '../componentes/Boton';
 import { BotonChat } from '../componentes/BotonChat';
 import { Dato } from '../componentes/base/Dato';
 import { GaleriaFotos } from '../componentes/dominio/GaleriaFotos';
+import { LineaTiempo } from '../componentes/dominio/LineaTiempo';
 import { Segmentos } from '../componentes/base/Segmentos';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { EstadoBadge } from '../componentes/EstadoBadge';
@@ -141,6 +142,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                   <Dato icono="calendar-outline" texto={formatearFechaHoraTexto(s.fechaPreferida)} />
                 )}
                 <GaleriaFotos solicitudId={s.id} cantidad={s.cantidadFotos} />
+                <LineaTiempo estado={s.estado} />
                 {s.presupuestoEstimado != null && (
                   <Text style={styles.dato}>
                     Presupuesto del cliente: {formatearCLP(s.presupuestoEstimado)}

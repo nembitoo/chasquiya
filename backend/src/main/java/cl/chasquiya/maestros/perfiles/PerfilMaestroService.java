@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.notificaciones.NotificacionService;
+import cl.chasquiya.maestros.notificaciones.TipoNotificacion;
 import cl.chasquiya.maestros.perfiles.dto.PerfilMaestroRequest;
 import cl.chasquiya.maestros.perfiles.dto.PerfilMaestroResponse;
 
@@ -14,9 +16,11 @@ import cl.chasquiya.maestros.perfiles.dto.PerfilMaestroResponse;
 public class PerfilMaestroService {
 
     private final PerfilMaestroRepository perfiles;
+    private final NotificacionService notificaciones;
 
-    public PerfilMaestroService(PerfilMaestroRepository perfiles) {
+    public PerfilMaestroService(PerfilMaestroRepository perfiles, NotificacionService notificaciones) {
         this.perfiles = perfiles;
+        this.notificaciones = notificaciones;
     }
 
     public PerfilMaestroResponse obtenerPorUsuario(Long usuarioId) {
@@ -58,6 +62,13 @@ public class PerfilMaestroService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El maestro no tiene perfil"));
         perfil.setEstadoVerificacion(nuevoEstado);
         perfiles.save(perfil);
+
+        // El maestro se entera del resultado de su verificación sin tener que preguntar.
+        if (nuevoEstado == EstadoVerificacion.APROBADO) {
+            notificaciones.avisar(usuarioId, TipoNotificacion.VERIFICACION_APROBADA, null, null);
+        } else if (nuevoEstado == EstadoVerificacion.RECHAZADO) {
+            notificaciones.avisar(usuarioId, TipoNotificacion.VERIFICACION_RECHAZADA, null, null);
+        }
         return aResponse(perfil);
     }
 

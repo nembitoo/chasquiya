@@ -14,6 +14,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.calificaciones.Calificacion;
 import cl.chasquiya.maestros.calificaciones.CalificacionRepository;
+import cl.chasquiya.maestros.notificaciones.NotificacionService;
+import cl.chasquiya.maestros.notificaciones.TipoNotificacion;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
 import cl.chasquiya.maestros.solicitudes.dto.CotizarRequest;
@@ -35,15 +37,17 @@ public class SolicitudService {
     private final PerfilMaestroRepository perfiles;
     private final UsuarioRepository usuarios;
     private final CalificacionRepository calificaciones;
+    private final NotificacionService notificaciones;
 
     public SolicitudService(SolicitudRepository solicitudes, CotizacionRepository cotizaciones,
                             PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
-                            CalificacionRepository calificaciones) {
+                            CalificacionRepository calificaciones, NotificacionService notificaciones) {
         this.solicitudes = solicitudes;
         this.cotizaciones = cotizaciones;
         this.perfiles = perfiles;
         this.usuarios = usuarios;
         this.calificaciones = calificaciones;
+        this.notificaciones = notificaciones;
     }
 
     // --- Acciones del cliente ---
@@ -60,12 +64,15 @@ public class SolicitudService {
         Solicitud s = new Solicitud(clienteId, req.maestroId(), req.oficio(), req.descripcion().trim(),
                 req.direccion().trim(), req.fechaPreferida(), req.presupuestoEstimado());
         solicitudes.save(s);
+        notificaciones.avisar(s.getMaestroId(), TipoNotificacion.SOLICITUD_NUEVA, s.getId(), nombreDe(clienteId));
         return aResponse(s, clienteId);
     }
 
     public SolicitudResponse aceptar(Long clienteId, Long solicitudId) {
         Solicitud s = deCliente(clienteId, solicitudId);
-        return transicionar(s, EstadoServicio.ACEPTADO, clienteId);
+        SolicitudResponse r = transicionar(s, EstadoServicio.ACEPTADO, clienteId);
+        notificaciones.avisar(s.getMaestroId(), TipoNotificacion.COTIZACION_ACEPTADA, s.getId(), nombreDe(clienteId));
+        return r;
     }
 
     /** El cliente rechaza la cotización: la solicitud queda cancelada. */
@@ -75,7 +82,9 @@ public class SolicitudService {
             throw transicionInvalida(s.getEstado(), EstadoServicio.CANCELADO);
         }
         s.setMotivoCancelacion("Cotización rechazada por el cliente");
-        return transicionar(s, EstadoServicio.CANCELADO, clienteId);
+        SolicitudResponse r = transicionar(s, EstadoServicio.CANCELADO, clienteId);
+        notificaciones.avisar(s.getMaestroId(), TipoNotificacion.COTIZACION_RECHAZADA, s.getId(), nombreDe(clienteId));
+        return r;
     }
 
     // --- Acciones del maestro ---
@@ -90,15 +99,23 @@ public class SolicitudService {
         c.setMonto(req.monto());
         c.setMensaje(req.mensaje());
         cotizaciones.save(c);
-        return transicionar(s, EstadoServicio.COTIZADO, maestroId);
+        SolicitudResponse r = transicionar(s, EstadoServicio.COTIZADO, maestroId);
+        notificaciones.avisar(s.getClienteId(), TipoNotificacion.COTIZACION_RECIBIDA, s.getId(), nombreDe(maestroId));
+        return r;
     }
 
     public SolicitudResponse iniciar(Long maestroId, Long solicitudId) {
-        return transicionar(deMaestro(maestroId, solicitudId), EstadoServicio.EN_CURSO, maestroId);
+        Solicitud s = deMaestro(maestroId, solicitudId);
+        SolicitudResponse r = transicionar(s, EstadoServicio.EN_CURSO, maestroId);
+        notificaciones.avisar(s.getClienteId(), TipoNotificacion.TRABAJO_INICIADO, s.getId(), nombreDe(maestroId));
+        return r;
     }
 
     public SolicitudResponse completar(Long maestroId, Long solicitudId) {
-        return transicionar(deMaestro(maestroId, solicitudId), EstadoServicio.COMPLETADO, maestroId);
+        Solicitud s = deMaestro(maestroId, solicitudId);
+        SolicitudResponse r = transicionar(s, EstadoServicio.COMPLETADO, maestroId);
+        notificaciones.avisar(s.getClienteId(), TipoNotificacion.TRABAJO_COMPLETADO, s.getId(), nombreDe(maestroId));
+        return r;
     }
 
     // --- Acciones de ambas partes ---
@@ -110,7 +127,10 @@ public class SolicitudService {
     public SolicitudResponse cancelar(Long usuarioId, Long solicitudId, String motivo) {
         Solicitud s = deParte(usuarioId, solicitudId);
         s.setMotivoCancelacion(motivo != null && !motivo.isBlank() ? motivo.trim() : "Cancelado por una de las partes");
-        return transicionar(s, EstadoServicio.CANCELADO, usuarioId);
+        SolicitudResponse r = transicionar(s, EstadoServicio.CANCELADO, usuarioId);
+        Long otraParte = s.getClienteId().equals(usuarioId) ? s.getMaestroId() : s.getClienteId();
+        notificaciones.avisar(otraParte, TipoNotificacion.SERVICIO_CANCELADO, s.getId(), nombreDe(usuarioId));
+        return r;
     }
 
     public SolicitudResponse abrirDisputa(Long usuarioId, Long solicitudId, String motivo) {
@@ -182,6 +202,11 @@ public class SolicitudService {
     private Solicitud buscar(Long solicitudId) {
         return solicitudes.findById(solicitudId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Solicitud no encontrada"));
+    }
+
+    /** Nombre para el texto de la notificación. Solo el nombre de pila: basta y expone menos. */
+    private String nombreDe(Long usuarioId) {
+        return usuarios.findById(usuarioId).map(Usuario::getNombre).orElse("La otra parte");
     }
 
     private Solicitud deCliente(Long clienteId, Long solicitudId) {

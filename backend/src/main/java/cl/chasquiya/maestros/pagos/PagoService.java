@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.notificaciones.NotificacionService;
+import cl.chasquiya.maestros.notificaciones.TipoNotificacion;
 import cl.chasquiya.maestros.pagos.dto.IngresosResponse;
 import cl.chasquiya.maestros.pagos.dto.PagoResponse;
 import cl.chasquiya.maestros.pagos.dto.ResumenPagoResponse;
@@ -39,15 +41,18 @@ public class PagoService {
     private final SolicitudRepository solicitudes;
     private final CotizacionRepository cotizaciones;
     private final UsuarioRepository usuarios;
+    private final NotificacionService notificaciones;
     private final int porcentajeComision;
 
     public PagoService(PagoRepository pagos, SolicitudRepository solicitudes,
                        CotizacionRepository cotizaciones, UsuarioRepository usuarios,
+                       NotificacionService notificaciones,
                        @Value("${chasquiya.comision.porcentaje}") int porcentajeComision) {
         this.pagos = pagos;
         this.solicitudes = solicitudes;
         this.cotizaciones = cotizaciones;
         this.usuarios = usuarios;
+        this.notificaciones = notificaciones;
         this.porcentajeComision = porcentajeComision;
     }
 
@@ -84,7 +89,14 @@ public class PagoService {
         s.setEstado(EstadoServicio.PAGADO);
         solicitudes.save(s);
 
+        notificaciones.avisar(s.getMaestroId(), TipoNotificacion.PAGO_RECIBIDO, s.getId(),
+                enPesos(reparto.montoMaestro()));
         return aResponse(pago);
+    }
+
+    /** Formato chileno: 45000 -> "$45.000". */
+    private String enPesos(int monto) {
+        return "$" + String.format("%,d", monto).replace(',', '.');
     }
 
     /** Panel de ingresos del maestro. */

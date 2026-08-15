@@ -38,8 +38,11 @@ class CalificacionServiceTest {
     private final SolicitudRepository solicitudes = mock(SolicitudRepository.class);
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
 
+    private final cl.chasquiya.maestros.notificaciones.NotificacionService notificaciones =
+            mock(cl.chasquiya.maestros.notificaciones.NotificacionService.class);
+
     private final CalificacionService servicio =
-            new CalificacionService(calificaciones, solicitudes, usuarios);
+            new CalificacionService(calificaciones, solicitudes, usuarios, notificaciones);
 
     private Solicitud solicitudEn(EstadoServicio estado) {
         Solicitud s = new Solicitud(CLIENTE, MAESTRO, Oficio.ELECTRICIDAD, "d", "dir", null, null);

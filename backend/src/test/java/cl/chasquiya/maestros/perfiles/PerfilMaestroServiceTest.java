@@ -20,7 +20,9 @@ import cl.chasquiya.maestros.perfiles.dto.PerfilMaestroResponse;
 class PerfilMaestroServiceTest {
 
     private final PerfilMaestroRepository perfiles = mock(PerfilMaestroRepository.class);
-    private final PerfilMaestroService servicio = new PerfilMaestroService(perfiles);
+    private final cl.chasquiya.maestros.notificaciones.NotificacionService notificaciones =
+            mock(cl.chasquiya.maestros.notificaciones.NotificacionService.class);
+    private final PerfilMaestroService servicio = new PerfilMaestroService(perfiles, notificaciones);
 
     private PerfilMaestroRequest requestValido() {
         return new PerfilMaestroRequest(

@@ -37,8 +37,11 @@ class PagoServiceTest {
     private final CotizacionRepository cotizaciones = mock(CotizacionRepository.class);
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
 
+    private final cl.chasquiya.maestros.notificaciones.NotificacionService notificaciones =
+            mock(cl.chasquiya.maestros.notificaciones.NotificacionService.class);
+
     private final PagoService servicio =
-            new PagoService(pagos, solicitudes, cotizaciones, usuarios, 10);
+            new PagoService(pagos, solicitudes, cotizaciones, usuarios, notificaciones, 10);
 
     private Solicitud solicitudEn(EstadoServicio estado) {
         Solicitud s = new Solicitud(CLIENTE, MAESTRO, Oficio.ELECTRICIDAD, "desc", "dir", null, null);

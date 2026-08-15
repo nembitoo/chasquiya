@@ -67,7 +67,7 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
     { icono: 'person-outline', titulo: 'Mis datos', onPress: () => navigation.navigate('MisDatos') },
     { icono: 'location-outline', titulo: 'Mis direcciones', onPress: () => navigation.navigate('Direcciones') },
     { icono: 'heart-outline', titulo: 'Mis maestros', onPress: () => navigation.navigate('Favoritos') },
-    { icono: 'notifications-outline', titulo: 'Notificaciones', proximamente: true },
+    { icono: 'notifications-outline', titulo: 'Notificaciones', onPress: () => navigation.navigate('Notificaciones') },
     { icono: 'help-circle-outline', titulo: 'Ayuda', proximamente: true },
     { icono: 'shield-checkmark-outline', titulo: 'Privacidad y mis datos', onPress: () => navigation.navigate('Privacidad') },
     { icono: 'document-text-outline', titulo: 'Términos y condiciones', onPress: () => navigation.navigate('Legal') },

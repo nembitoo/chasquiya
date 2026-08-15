@@ -20,6 +20,7 @@ import cl.chasquiya.maestros.documentos.DocumentoMaestroRepository;
 import cl.chasquiya.maestros.favoritos.FavoritoRepository;
 import cl.chasquiya.maestros.mensajes.Mensaje;
 import cl.chasquiya.maestros.mensajes.MensajeRepository;
+import cl.chasquiya.maestros.notificaciones.NotificacionRepository;
 import cl.chasquiya.maestros.pagos.PagoRepository;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.PerfilMaestro;
@@ -51,13 +52,15 @@ public class PrivacidadService {
     private final FavoritoRepository favoritos;
     private final DireccionRepository direcciones;
     private final DocumentoMaestroRepository documentos;
+    private final NotificacionRepository notificaciones;
     private final PasswordEncoder encoder;
 
     public PrivacidadService(UsuarioRepository usuarios, PerfilMaestroRepository perfiles,
                              SolicitudRepository solicitudes, MensajeRepository mensajes,
                              CalificacionRepository calificaciones, PagoRepository pagos,
                              FavoritoRepository favoritos, DireccionRepository direcciones,
-                             DocumentoMaestroRepository documentos, PasswordEncoder encoder) {
+                             DocumentoMaestroRepository documentos, NotificacionRepository notificaciones,
+                             PasswordEncoder encoder) {
         this.usuarios = usuarios;
         this.perfiles = perfiles;
         this.solicitudes = solicitudes;
@@ -67,6 +70,7 @@ public class PrivacidadService {
         this.favoritos = favoritos;
         this.direcciones = direcciones;
         this.documentos = documentos;
+        this.notificaciones = notificaciones;
         this.encoder = encoder;
     }
 
@@ -149,6 +153,8 @@ public class PrivacidadService {
         favoritos.deleteAll(favoritos.findByClienteIdOrderByFechaCreacionDesc(usuarioId));
         direcciones.deleteAll(direcciones.findByUsuarioIdOrderByEsPrincipalDescFechaCreacionDesc(usuarioId));
         documentos.deleteAll(documentos.findByUsuarioId(usuarioId));
+        // Las notificaciones nombran a la otra parte: son datos personales sin valor contable.
+        notificaciones.deleteAll(notificaciones.findByUsuarioId(usuarioId));
 
         // 2. Contenido escrito: se vacía, pero la conversación no se rompe.
         List<Long> idsSolicitudes = misSolicitudes(usuarioId).stream().map(Solicitud::getId).toList();

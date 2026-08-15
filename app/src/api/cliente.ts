@@ -2,6 +2,7 @@ import { API_URL } from './config';
 import {
   ActualizarPerfilData,
   AuthResponse,
+  Bandeja,
   Calificacion,
   CalificarData,
   CrearSolicitudData,
@@ -287,6 +288,14 @@ export const api = {
     pagar: (token: string, solicitudId: number) =>
       pedir<Pago>(`/solicitudes/${solicitudId}/pago`, { method: 'POST' }, token),
     misIngresos: (token: string) => pedir<Ingresos>('/maestros/mis-ingresos', {}, token),
+  },
+
+  notificaciones: {
+    bandeja: (token: string) => pedir<Bandeja>('/notificaciones', {}, token),
+    leer: (token: string, id: number) =>
+      pedir<null>(`/notificaciones/${id}/leer`, { method: 'POST' }, token),
+    leerTodas: (token: string) =>
+      pedir<{ marcadas: number }>('/notificaciones/leer-todas', { method: 'POST' }, token),
   },
 
   mensajes: {

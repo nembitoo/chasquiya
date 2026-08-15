@@ -13,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 import cl.chasquiya.maestros.calificaciones.dto.CalificacionResponse;
 import cl.chasquiya.maestros.calificaciones.dto.CalificarRequest;
 import cl.chasquiya.maestros.calificaciones.dto.ReputacionResponse;
+import cl.chasquiya.maestros.notificaciones.NotificacionService;
+import cl.chasquiya.maestros.notificaciones.TipoNotificacion;
 import cl.chasquiya.maestros.solicitudes.EstadoServicio;
 import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
@@ -32,12 +34,14 @@ public class CalificacionService {
     private final CalificacionRepository calificaciones;
     private final SolicitudRepository solicitudes;
     private final UsuarioRepository usuarios;
+    private final NotificacionService notificaciones;
 
     public CalificacionService(CalificacionRepository calificaciones, SolicitudRepository solicitudes,
-                               UsuarioRepository usuarios) {
+                               UsuarioRepository usuarios, NotificacionService notificaciones) {
         this.calificaciones = calificaciones;
         this.solicitudes = solicitudes;
         this.usuarios = usuarios;
+        this.notificaciones = notificaciones;
     }
 
     public CalificacionResponse calificar(Long autorId, Long solicitudId, CalificarRequest req) {
@@ -69,6 +73,9 @@ public class CalificacionService {
             s.setEstado(EstadoServicio.CALIFICADO);
             solicitudes.save(s);
         }
+
+        String autor = usuarios.findById(autorId).map(Usuario::getNombre).orElse("La otra parte");
+        notificaciones.avisar(destinatarioId, TipoNotificacion.CALIFICACION_RECIBIDA, solicitudId, autor);
 
         return aResponse(c, nombreDe(autorId));
     }

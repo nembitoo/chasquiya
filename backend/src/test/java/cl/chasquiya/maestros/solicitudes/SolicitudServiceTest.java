@@ -42,8 +42,11 @@ class SolicitudServiceTest {
     private final cl.chasquiya.maestros.calificaciones.CalificacionRepository calificaciones =
             mock(cl.chasquiya.maestros.calificaciones.CalificacionRepository.class);
 
+    private final cl.chasquiya.maestros.notificaciones.NotificacionService notificaciones =
+            mock(cl.chasquiya.maestros.notificaciones.NotificacionService.class);
+
     private final SolicitudService servicio =
-            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones);
+            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones, notificaciones);
 
     @BeforeEach
     void setUp() {

@@ -27,6 +27,7 @@ import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
 import { MisDatosScreen } from '../pantallas/MisDatosScreen';
 import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
+import { NotificacionesScreen } from '../pantallas/NotificacionesScreen';
 import { NuevaSolicitudScreen } from '../pantallas/NuevaSolicitudScreen';
 import { PagoScreen } from '../pantallas/PagoScreen';
 import { PerfilMaestroScreen } from '../pantallas/PerfilMaestroScreen';
@@ -60,6 +61,7 @@ export type RootStackParamList = {
   Favoritos: undefined;
   MisDatos: undefined;
   Direcciones: undefined;
+  Notificaciones: undefined;
   Privacidad: undefined;
   Legal: { inicial?: 'terminos' | 'privacidad' } | undefined;
 };
@@ -206,6 +208,7 @@ export function Navegacion() {
             <Stack.Screen name="Favoritos" component={FavoritosScreen} />
             <Stack.Screen name="MisDatos" component={MisDatosScreen} />
             <Stack.Screen name="Direcciones" component={DireccionesScreen} />
+            <Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
             <Stack.Screen name="Privacidad" component={PrivacidadScreen} />
             <Stack.Screen name="Legal" component={LegalScreen} />
           </>

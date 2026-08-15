@@ -264,6 +264,36 @@ export type MaestroPublico = {
   tieneAvatar: boolean;
 };
 
+/** Motivo del aviso: decide el icono y a dónde lleva al tocarlo. */
+export type TipoNotificacion =
+  | 'SOLICITUD_NUEVA'
+  | 'COTIZACION_RECIBIDA'
+  | 'COTIZACION_ACEPTADA'
+  | 'COTIZACION_RECHAZADA'
+  | 'TRABAJO_INICIADO'
+  | 'TRABAJO_COMPLETADO'
+  | 'PAGO_RECIBIDO'
+  | 'CALIFICACION_RECIBIDA'
+  | 'SERVICIO_CANCELADO'
+  | 'VERIFICACION_APROBADA'
+  | 'VERIFICACION_RECHAZADA';
+
+export type Notificacion = {
+  id: number;
+  tipo: TipoNotificacion;
+  titulo: string;
+  cuerpo: string;
+  solicitudId: number | null;
+  leida: boolean;
+  fechaCreacion: string;
+};
+
+/** Lo que necesita la campanita: historial + cuántas faltan por leer. */
+export type Bandeja = {
+  notificaciones: Notificacion[];
+  noLeidas: number;
+};
+
 /** Vista que el admin ve de un maestro (para aprobar/rechazar). */
 export type MaestroAdmin = {
   usuarioId: number;

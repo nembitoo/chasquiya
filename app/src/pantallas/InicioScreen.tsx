@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
+import { Campanita } from '../componentes/dominio/Campanita';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { TabProps } from '../navegacion/Navegacion';
@@ -30,6 +31,7 @@ export function InicioScreen({ navigation }: Props) {
                   : '¿Qué necesitas arreglar hoy?'}
             </Text>
           </View>
+          <Campanita />
           <AvatarUsuario
             usuarioId={sesion?.id}
             nombre={sesion?.nombre}

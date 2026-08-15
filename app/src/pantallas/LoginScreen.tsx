@@ -57,6 +57,9 @@ export function LoginScreen({ navigation }: Props) {
         {!!error && <Text style={styles.error}>{error}</Text>}
 
         <Boton titulo="Iniciar sesión" onPress={enviar} cargando={cargando} />
+        <Pressable onPress={() => navigation.navigate('Recuperar')} style={styles.enlace}>
+          <Text style={styles.enlaceTexto}>¿Olvidaste tu contraseña?</Text>
+        </Pressable>
         <Pressable onPress={() => navigation.navigate('Registro')} style={styles.enlace}>
           <Text style={styles.enlaceTexto}>¿No tienes cuenta? Créala aquí</Text>
         </Pressable>

@@ -133,6 +133,16 @@ export const api = {
     pedir<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(datos) }),
   yo: (token: string) => pedir<Usuario>('/auth/yo', {}, token),
 
+  /** Paso 1 de recuperación: pide el código al correo. */
+  recuperar: (email: string) =>
+    pedir<null>('/auth/recuperar', { method: 'POST', body: JSON.stringify({ email }) }),
+  /** Paso 2: usa el código para definir la contraseña nueva. */
+  restablecer: (codigo: string, passwordNueva: string) =>
+    pedir<null>('/auth/restablecer', {
+      method: 'POST',
+      body: JSON.stringify({ codigo, passwordNueva }),
+    }),
+
   perfilMaestro: {
     /** Devuelve el perfil, o null si el maestro aún no lo ha creado (404). */
     obtener: async (token: string): Promise<PerfilMaestroResponse | null> => {

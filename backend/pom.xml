@@ -91,6 +91,11 @@
 			<artifactId>minio</artifactId>
 			<version>8.5.14</version>
 		</dependency>
+		<!-- Correos transaccionales (en desarrollo los captura Mailpit) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
 		<!-- Chat en tiempo real: WebSocket + STOMP -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

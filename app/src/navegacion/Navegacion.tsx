@@ -32,6 +32,7 @@ import { PagoScreen } from '../pantallas/PagoScreen';
 import { PerfilMaestroScreen } from '../pantallas/PerfilMaestroScreen';
 import { PerfilScreen } from '../pantallas/PerfilScreen';
 import { PrivacidadScreen } from '../pantallas/PrivacidadScreen';
+import { RecuperarScreen } from '../pantallas/RecuperarScreen';
 import { RegistroScreen } from '../pantallas/RegistroScreen';
 import { SolicitudesRecibidasScreen } from '../pantallas/SolicitudesRecibidasScreen';
 import { colores, fuentes } from '../tema/tema';
@@ -41,6 +42,7 @@ export type RootStackParamList = {
   Bienvenida: undefined;
   Registro: undefined;
   Login: undefined;
+  Recuperar: undefined;
   /** Permite navegar a una pestaña concreta: navigate('Tabs', { screen: 'MisSolicitudes' }) */
   Tabs: NavigatorScreenParams<TabParamList>;
   Chat: { solicitudId: number; contraparteNombre: string };
@@ -212,6 +214,7 @@ export function Navegacion() {
             <Stack.Screen name="Bienvenida" component={BienvenidaScreen} />
             <Stack.Screen name="Registro" component={RegistroScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Recuperar" component={RecuperarScreen} />
             <Stack.Screen name="Legal" component={LegalScreen} />
           </>
         )}

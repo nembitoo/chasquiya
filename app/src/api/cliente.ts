@@ -1,9 +1,12 @@
 import { API_URL } from './config';
 import {
+  ActualizarPerfilData,
   AuthResponse,
   Calificacion,
   CalificarData,
   CrearSolicitudData,
+  Direccion,
+  DireccionData,
   DocumentoResponse,
   FiltrosBusqueda,
   Ingresos,
@@ -206,6 +209,18 @@ export const api = {
     /** Sube la foto de perfil del usuario autenticado. */
     subirAvatar: (token: string, uri: string, nombre: string, tipo: string) =>
       subirArchivo<{ tieneAvatar: boolean }>('/usuarios/mi-avatar', token, uri, nombre, tipo),
+    actualizarPerfil: (token: string, datos: ActualizarPerfilData) =>
+      pedir<Usuario>('/auth/yo', { method: 'PUT', body: JSON.stringify(datos) }, token),
+  },
+
+  direcciones: {
+    mias: (token: string) => pedir<Direccion[]>('/mis-direcciones', {}, token),
+    crear: (token: string, datos: DireccionData) =>
+      pedir<Direccion>('/mis-direcciones', { method: 'POST', body: JSON.stringify(datos) }, token),
+    actualizar: (token: string, id: number, datos: DireccionData) =>
+      pedir<Direccion>(`/mis-direcciones/${id}`, { method: 'PUT', body: JSON.stringify(datos) }, token),
+    eliminar: (token: string, id: number) =>
+      pedir<null>(`/mis-direcciones/${id}`, { method: 'DELETE' }, token),
   },
 
   favoritos: {

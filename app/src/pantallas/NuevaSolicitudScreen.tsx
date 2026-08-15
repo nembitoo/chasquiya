@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,8 +12,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { Oficio } from '../api/tipos';
+import { Direccion, Oficio } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
+import { Icono } from '../componentes/base/Icono';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { SelectorFechaHora, aIsoLocal } from '../componentes/SelectorFechaHora';
 import { OFICIOS } from '../datos/oficios';
@@ -34,7 +35,27 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
   const [fecha, setFecha] = useState<Date | null>(null);
   const [presupuesto, setPresupuesto] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [direcciones, setDirecciones] = useState<Direccion[]>([]);
   const [error, setError] = useState('');
+
+  // Trae las direcciones guardadas para elegir con un toque.
+  useEffect(() => {
+    (async () => {
+      try {
+        const lista = await api.direcciones.mias(token);
+        setDirecciones(lista);
+        // Si no venimos de "volver a contratar", proponemos la principal.
+        if (!precargar) {
+          const principal = lista.find((d) => d.esPrincipal);
+          if (principal) {
+            setDireccion(textoDireccion(principal));
+          }
+        }
+      } catch {
+        /* sin direcciones guardadas: se escribe a mano */
+      }
+    })();
+  }, [token, precargar]);
 
   async function enviar() {
     setError('');
@@ -107,6 +128,32 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
             style={styles.multilinea}
             placeholder="Ej: se cortó la luz del living y salta el automático"
           />
+          {direcciones.length > 0 && (
+            <>
+              <Text style={styles.etiqueta}>Mis direcciones</Text>
+              <View style={styles.pills}>
+                {direcciones.map((d) => {
+                  const activa = direccion === textoDireccion(d);
+                  return (
+                    <Pressable
+                      key={d.id}
+                      onPress={() => setDireccion(textoDireccion(d))}
+                      style={[styles.pildora, activa && styles.pildoraActiva]}>
+                      <Icono
+                        nombre="location-outline"
+                        tamano="sm"
+                        color={activa ? colores.primario : colores.textoSuave}
+                      />
+                      <Text style={[styles.pildoraTexto, activa && styles.pildoraTextoActivo]}>
+                        {d.etiqueta}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
           <CampoTexto
             etiqueta="Dirección"
             value={direccion}
@@ -137,6 +184,11 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
   );
 }
 
+/** Junta dirección y comuna en una sola línea. */
+function textoDireccion(d: Direccion): string {
+  return d.comuna ? `${d.direccion}, ${d.comuna}` : d.direccion;
+}
+
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   header: { paddingHorizontal: espacio.lg, paddingTop: espacio.sm },
@@ -153,6 +205,9 @@ const styles = StyleSheet.create({
   },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm, marginBottom: espacio.md },
   pildora: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderRadius: radio.completo,
     borderWidth: 1.5,
     borderColor: colores.borde,

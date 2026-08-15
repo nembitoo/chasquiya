@@ -64,8 +64,8 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
     ...(rol === 'MAESTRO'
       ? [{ icono: 'briefcase-outline' as NombreIcono, titulo: 'Mi perfil profesional', onPress: () => navigation.navigate('PerfilMaestro') }]
       : []),
-    { icono: 'person-outline', titulo: 'Mis datos', proximamente: true },
-    { icono: 'location-outline', titulo: 'Mis direcciones', proximamente: true },
+    { icono: 'person-outline', titulo: 'Mis datos', onPress: () => navigation.navigate('MisDatos') },
+    { icono: 'location-outline', titulo: 'Mis direcciones', onPress: () => navigation.navigate('Direcciones') },
     { icono: 'heart-outline', titulo: 'Mis maestros', onPress: () => navigation.navigate('Favoritos') },
     { icono: 'notifications-outline', titulo: 'Notificaciones', proximamente: true },
     { icono: 'help-circle-outline', titulo: 'Ayuda', proximamente: true },

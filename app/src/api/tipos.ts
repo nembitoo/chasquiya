@@ -213,6 +213,32 @@ export type MaestroCercano = {
   tieneAvatar: boolean;
 };
 
+/** Dirección guardada del usuario. */
+export type Direccion = {
+  id: number;
+  etiqueta: string;
+  direccion: string;
+  comuna: string | null;
+  referencia: string | null;
+  esPrincipal: boolean;
+};
+
+/** Datos para crear o editar una dirección. */
+export type DireccionData = {
+  etiqueta: string;
+  direccion: string;
+  comuna: string | null;
+  referencia: string | null;
+  esPrincipal: boolean;
+};
+
+/** Datos editables de la cuenta. */
+export type ActualizarPerfilData = {
+  nombre: string;
+  apellido: string;
+  telefono: string;
+};
+
 /** Filtros opcionales de la búsqueda de maestros. */
 export type FiltrosBusqueda = {
   oficio?: Oficio;

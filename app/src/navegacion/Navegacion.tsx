@@ -18,11 +18,13 @@ import { BuscarScreen } from '../pantallas/BuscarScreen';
 import { CalificarScreen } from '../pantallas/CalificarScreen';
 import { ChatScreen } from '../pantallas/ChatScreen';
 import { ChatsScreen } from '../pantallas/ChatsScreen';
+import { DireccionesScreen } from '../pantallas/DireccionesScreen';
 import { FavoritosScreen } from '../pantallas/FavoritosScreen';
 import { IngresosScreen } from '../pantallas/IngresosScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
+import { MisDatosScreen } from '../pantallas/MisDatosScreen';
 import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
 import { NuevaSolicitudScreen } from '../pantallas/NuevaSolicitudScreen';
 import { PagoScreen } from '../pantallas/PagoScreen';
@@ -52,6 +54,8 @@ export type RootStackParamList = {
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
   PerfilMaestro: undefined;
   Favoritos: undefined;
+  MisDatos: undefined;
+  Direcciones: undefined;
 };
 
 /** Pestañas inferiores. Cada rol ve un subconjunto. */
@@ -194,6 +198,8 @@ export function Navegacion() {
             <Stack.Screen name="Calificar" component={CalificarScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="Favoritos" component={FavoritosScreen} />
+            <Stack.Screen name="MisDatos" component={MisDatosScreen} />
+            <Stack.Screen name="Direcciones" component={DireccionesScreen} />
           </>
         ) : (
           <>

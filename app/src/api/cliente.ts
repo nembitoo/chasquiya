@@ -213,6 +213,14 @@ export const api = {
       pedir<Usuario>('/auth/yo', { method: 'PUT', body: JSON.stringify(datos) }, token),
   },
 
+  privacidad: {
+    /** Derecho de acceso y portabilidad (Ley 21.719). */
+    misDatos: (token: string) => pedir<Record<string, unknown>>('/privacidad/mis-datos', {}, token),
+    /** Derecho de supresión: anonimiza la cuenta. */
+    eliminarCuenta: (token: string) =>
+      pedir<{ mensaje: string }>('/privacidad/mi-cuenta', { method: 'DELETE' }, token),
+  },
+
   direcciones: {
     mias: (token: string) => pedir<Direccion[]>('/mis-direcciones', {}, token),
     crear: (token: string, datos: DireccionData) =>

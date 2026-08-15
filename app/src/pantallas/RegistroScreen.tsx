@@ -108,7 +108,18 @@ export function RegistroScreen({ navigation }: Props) {
             <View style={[styles.checkbox, terminos && styles.checkboxActivo]}>
               {terminos && <Icono nombre="checkmark" tamano="sm" color={colores.blanco} />}
             </View>
-            <Text style={styles.terminosTexto}>Acepto los términos y condiciones</Text>
+            <Text style={styles.terminosTexto}>
+              Acepto los{' '}
+              <Text style={styles.enlaceTexto} onPress={() => navigation.navigate('Legal')}>
+                términos y condiciones
+              </Text>{' '}
+              y la{' '}
+              <Text
+                style={styles.enlaceTexto}
+                onPress={() => navigation.navigate('Legal', { inicial: 'privacidad' })}>
+                política de privacidad
+              </Text>
+            </Text>
           </Pressable>
 
           {!!error && <Text style={styles.error}>{error}</Text>}

@@ -69,7 +69,8 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
     { icono: 'heart-outline', titulo: 'Mis maestros', onPress: () => navigation.navigate('Favoritos') },
     { icono: 'notifications-outline', titulo: 'Notificaciones', proximamente: true },
     { icono: 'help-circle-outline', titulo: 'Ayuda', proximamente: true },
-    { icono: 'document-text-outline', titulo: 'Términos y privacidad', proximamente: true },
+    { icono: 'shield-checkmark-outline', titulo: 'Privacidad y mis datos', onPress: () => navigation.navigate('Privacidad') },
+    { icono: 'document-text-outline', titulo: 'Términos y condiciones', onPress: () => navigation.navigate('Legal') },
   ];
 
   return (

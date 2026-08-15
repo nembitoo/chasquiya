@@ -21,6 +21,7 @@ import { ChatsScreen } from '../pantallas/ChatsScreen';
 import { DireccionesScreen } from '../pantallas/DireccionesScreen';
 import { FavoritosScreen } from '../pantallas/FavoritosScreen';
 import { IngresosScreen } from '../pantallas/IngresosScreen';
+import { LegalScreen } from '../pantallas/LegalScreen';
 import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
@@ -30,6 +31,7 @@ import { NuevaSolicitudScreen } from '../pantallas/NuevaSolicitudScreen';
 import { PagoScreen } from '../pantallas/PagoScreen';
 import { PerfilMaestroScreen } from '../pantallas/PerfilMaestroScreen';
 import { PerfilScreen } from '../pantallas/PerfilScreen';
+import { PrivacidadScreen } from '../pantallas/PrivacidadScreen';
 import { RegistroScreen } from '../pantallas/RegistroScreen';
 import { SolicitudesRecibidasScreen } from '../pantallas/SolicitudesRecibidasScreen';
 import { colores, fuentes } from '../tema/tema';
@@ -56,6 +58,8 @@ export type RootStackParamList = {
   Favoritos: undefined;
   MisDatos: undefined;
   Direcciones: undefined;
+  Privacidad: undefined;
+  Legal: { inicial?: 'terminos' | 'privacidad' } | undefined;
 };
 
 /** Pestañas inferiores. Cada rol ve un subconjunto. */
@@ -200,12 +204,15 @@ export function Navegacion() {
             <Stack.Screen name="Favoritos" component={FavoritosScreen} />
             <Stack.Screen name="MisDatos" component={MisDatosScreen} />
             <Stack.Screen name="Direcciones" component={DireccionesScreen} />
+            <Stack.Screen name="Privacidad" component={PrivacidadScreen} />
+            <Stack.Screen name="Legal" component={LegalScreen} />
           </>
         ) : (
           <>
             <Stack.Screen name="Bienvenida" component={BienvenidaScreen} />
             <Stack.Screen name="Registro" component={RegistroScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Legal" component={LegalScreen} />
           </>
         )}
       </Stack.Navigator>

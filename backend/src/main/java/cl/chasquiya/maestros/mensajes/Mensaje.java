@@ -66,6 +66,11 @@ public class Mensaje {
         return texto;
     }
 
+    /** Se usa al anonimizar la cuenta del autor (Ley 21.719). */
+    public void setTexto(String texto) {
+        this.texto = texto;
+    }
+
     public boolean isLeido() {
         return leido;
     }

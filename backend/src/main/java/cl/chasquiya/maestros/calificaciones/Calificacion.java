@@ -91,6 +91,11 @@ public class Calificacion {
         return comentario;
     }
 
+    /** Se usa al anonimizar: la nota se conserva, el comentario se borra. */
+    public void setComentario(String comentario) {
+        this.comentario = comentario;
+    }
+
     public Short getPuntualidad() {
         return puntualidad;
     }

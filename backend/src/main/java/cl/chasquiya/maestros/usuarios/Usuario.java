@@ -54,6 +54,10 @@ public class Usuario {
     @Column(name = "avatar_objeto")
     private String avatarObjeto;
 
+    /** Cuándo el usuario ejerció su derecho de supresión (Ley 21.719). */
+    @Column(name = "fecha_anonimizacion")
+    private Instant fechaAnonimizacion;
+
     @Column(name = "fecha_creacion", nullable = false)
     private Instant fechaCreacion;
 
@@ -127,6 +131,14 @@ public class Usuario {
         return activo;
     }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public void setActivo(boolean activo) {
         this.activo = activo;
     }
@@ -141,6 +153,18 @@ public class Usuario {
 
     public boolean tieneAvatar() {
         return avatarObjeto != null;
+    }
+
+    public Instant getFechaAnonimizacion() {
+        return fechaAnonimizacion;
+    }
+
+    public void setFechaAnonimizacion(Instant fechaAnonimizacion) {
+        this.fechaAnonimizacion = fechaAnonimizacion;
+    }
+
+    public boolean estaAnonimizado() {
+        return fechaAnonimizacion != null;
     }
 
     public Instant getFechaCreacion() {

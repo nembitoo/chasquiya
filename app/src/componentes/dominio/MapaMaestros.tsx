@@ -31,24 +31,7 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
   const mapa = useRef<MapView>(null);
   const [elegido, setElegido] = useState<MaestroCercano | null>(null);
 
-  /*
-   * Los marcadores tienen contenido propio (el precio). En Android,
-   * react-native-maps convierte ese contenido en imagen UNA vez; si se le dice
-   * `tracksViewChanges={false}` desde el inicio, saca la foto antes de que el
-   * contenido se haya medido y el marcador queda invisible.
-   *
-   * Por eso se sigue el cambio al principio y se corta después: así se dibuja
-   * bien y igual se evita el costo de redibujar en cada movimiento del mapa.
-   */
-  const [rastrear, setRastrear] = useState(true);
-
   const ubicables = maestros.filter((m) => m.latitudAprox != null && m.longitudAprox != null);
-
-  useEffect(() => {
-    setRastrear(true);
-    const t = setTimeout(() => setRastrear(false), 1000);
-    return () => clearTimeout(t);
-  }, [maestros]);
 
   /*
    * La búsqueda trae maestros de hasta 25 km, pero el zoom inicial muestra unos
@@ -114,7 +97,18 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
             key={m.usuarioId}
             coordinate={{ latitude: m.latitudAprox as number, longitude: m.longitudAprox as number }}
             onPress={() => setElegido(m)}
-            tracksViewChanges={rastrear}>
+            /*
+             * Android dibuja cada marcador con contenido propio como una imagen.
+             * Congelar esa imagen (`tracksViewChanges={false}`) ahorra trabajo,
+             * pero solo sale bien si se congela justo cuando el contenido ya
+             * está medido: antes queda invisible, y a medio medir queda cortado.
+             * No hay un momento confiable para hacerlo.
+             *
+             * Con 16 marcadores ese ahorro no se nota, así que se deja en vivo:
+             * vale más que se vea bien. Si algún día hay cientos, la salida es
+             * un marcador simple con el precio en el globo de detalle.
+             */
+            tracksViewChanges>
             {/* La envoltura transparente le da aire al recorte que hace Android. */}
             <View style={styles.pinEnvoltura}>
               <View style={[styles.pin, elegido?.usuarioId === m.usuarioId && styles.pinActivo]}>

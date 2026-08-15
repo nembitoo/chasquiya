@@ -88,21 +88,104 @@ function salir() {
 }
 
 function abrirPanel() {
+  const nombre = localStorage.getItem('chasquiya_admin_nombre') || '';
   document.getElementById('login').classList.add('oculto');
   document.getElementById('panel').classList.remove('oculto');
-  document.getElementById('admin-nombre').textContent =
-    localStorage.getItem('chasquiya_admin_nombre') || '';
+  document.getElementById('admin-nombre').textContent = nombre;
+  document.getElementById('admin-inicial').textContent = (nombre.trim()[0] || 'A').toUpperCase();
+  pintarMenu();
   mostrar('dashboard');
 }
 
+// ---------- Tema ----------
+
+/**
+ * El tema se guarda en el navegador y se aplica en el <html>, no aquí: el
+ * index lo lee antes de pintar para que no haya un destello blanco al cargar.
+ */
+function alternarTema() {
+  const oscuro = document.documentElement.dataset.tema === 'oscuro';
+  const nuevo = oscuro ? 'claro' : 'oscuro';
+  document.documentElement.dataset.tema = nuevo;
+  localStorage.setItem('chasquiya_tema', nuevo);
+
+  // Chart.js dibuja en un canvas: no hereda CSS, hay que redibujarlo a mano.
+  if (!document.getElementById('vista-dashboard').classList.contains('oculto')) {
+    cargarDashboard().catch(mostrarError);
+  }
+}
+
+/** Colores del tema actual, leídos del CSS para no repetirlos en dos lugares. */
+function tema() {
+  const css = getComputedStyle(document.documentElement);
+  const leer = (nombre) => css.getPropertyValue(nombre).trim();
+  return {
+    primario: leer('--primario'),
+    texto: leer('--texto-suave'),
+    borde: leer('--borde'),
+    esOscuro: document.documentElement.dataset.tema === 'oscuro',
+  };
+}
+
 // ---------- Navegación ----------
+
+const ICONOS = {
+  dashboard: '<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+  maestros: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+  usuarios: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+  servicios: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  disputas: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  reclamos: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/>',
+  dinero: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  grafico: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+  check: '<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14.01l-3-3"/>',
+  estrella: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3L7 14.2l-5-4.9 6.9-1z"/>',
+};
+
+const svg = (nombre) => `<svg viewBox="0 0 24 24" class="nav-icono">${ICONOS[nombre] || ''}</svg>`;
+
+const VISTAS = [
+  { id: 'dashboard', titulo: 'Dashboard', subtitulo: 'Resumen de la plataforma' },
+  { id: 'maestros', titulo: 'Maestros', subtitulo: 'Perfiles registrados y su verificación' },
+  { id: 'usuarios', titulo: 'Usuarios', subtitulo: 'Cuentas de clientes y maestros' },
+  { id: 'servicios', titulo: 'Servicios', subtitulo: 'Todas las transacciones de la plataforma' },
+  { id: 'disputas', titulo: 'Disputas', subtitulo: 'Problemas abiertos sobre un servicio' },
+  { id: 'reclamos', titulo: 'Reclamos', subtitulo: 'Soporte que no es de un servicio puntual' },
+];
+
+function pintarMenu() {
+  document.getElementById('menu').innerHTML = VISTAS.map((v) => `
+    <button class="nav-item" data-vista="${v.id}" onclick="mostrar('${v.id}')">
+      ${svg(v.id)}
+      <span>${v.titulo}</span>
+      <span class="nav-contador oculto" id="contador-${v.id}"></span>
+    </button>`).join('');
+}
+
+/** Marca en el menú lo que está esperando una decisión. */
+function marcarPendientes(id, cantidad) {
+  const globo = document.getElementById('contador-' + id);
+  if (!globo) return;
+  globo.textContent = cantidad;
+  globo.classList.toggle('oculto', !cantidad);
+}
+
+function alternarMenu(abrir) {
+  document.getElementById('sidebar').classList.toggle('abierto', abrir);
+  document.getElementById('sidebar-fondo').classList.toggle('visible', abrir);
+}
 
 function mostrar(vista) {
   document.getElementById('error-global').textContent = '';
   document.querySelectorAll('.vista').forEach((v) => v.classList.add('oculto'));
   document.getElementById('vista-' + vista).classList.remove('oculto');
-  document.querySelectorAll('.tab').forEach((t) =>
-    t.classList.toggle('activa', t.dataset.vista === vista));
+  document.querySelectorAll('.nav-item').forEach((b) =>
+    b.classList.toggle('activa', b.dataset.vista === vista));
+
+  const datos = VISTAS.find((v) => v.id === vista);
+  document.getElementById('titulo-vista').textContent = datos.titulo;
+  document.getElementById('subtitulo-vista').textContent = datos.subtitulo;
+  alternarMenu(false);
 
   const cargadores = {
     dashboard: cargarDashboard,
@@ -167,34 +250,46 @@ async function cargarDashboard() {
 
   // Flujo: lo que pasó DURANTE el período, con su comparación.
   const flujo = [
-    { etiqueta: `Comisiones (${m.dias} días)`, valor: pesos(m.comisiones.actual), comp: m.comisiones, destacada: true },
-    { etiqueta: 'Monto transado', valor: pesos(m.montoTransado.actual), comp: m.montoTransado },
-    { etiqueta: 'Servicios creados', valor: m.serviciosCreados.actual, comp: m.serviciosCreados },
-    { etiqueta: 'Servicios terminados', valor: m.serviciosCompletados.actual, comp: m.serviciosCompletados },
+    { icono: 'dinero', etiqueta: `Comisiones (${m.dias} días)`, valor: pesos(m.comisiones.actual), comp: m.comisiones },
+    { icono: 'grafico', etiqueta: 'Monto transado', valor: pesos(m.montoTransado.actual), comp: m.montoTransado },
+    { icono: 'servicios', etiqueta: 'Servicios creados', valor: m.serviciosCreados.actual, comp: m.serviciosCreados },
+    { icono: 'check', etiqueta: 'Servicios terminados', valor: m.serviciosCompletados.actual, comp: m.serviciosCompletados },
   ];
   // Stock: una foto de ahora. No lleva período ni comparación.
   const stock = [
-    { etiqueta: 'Usuarios registrados', valor: m.usuariosTotales },
-    { etiqueta: 'Clientes', valor: m.clientes },
-    { etiqueta: 'Maestros', valor: m.maestros },
-    { etiqueta: 'Maestros aprobados', valor: m.maestrosAprobados },
-    { etiqueta: 'Maestros pendientes', valor: m.maestrosPendientes },
-    { etiqueta: 'Disputas abiertas', valor: m.disputasAbiertas },
-    { etiqueta: 'Calificación promedio', valor: m.calificacionPromedio ? '⭐ ' + m.calificacionPromedio : '—' },
+    { icono: 'usuarios', etiqueta: 'Usuarios registrados', valor: m.usuariosTotales },
+    { icono: 'usuarios', etiqueta: 'Clientes', valor: m.clientes },
+    { icono: 'maestros', etiqueta: 'Maestros', valor: m.maestros },
+    { icono: 'check', etiqueta: 'Maestros aprobados', valor: m.maestrosAprobados },
+    { icono: 'maestros', etiqueta: 'Maestros pendientes', valor: m.maestrosPendientes },
+    { icono: 'disputas', etiqueta: 'Disputas abiertas', valor: m.disputasAbiertas },
+    { icono: 'estrella', etiqueta: 'Calificación promedio', valor: m.calificacionPromedio || '—' },
   ];
 
   document.getElementById('tarjetas').innerHTML = flujo.map((t) => `
-    <div class="tarjeta ${t.destacada ? 'destacada' : ''}">
-      <div class="tarjeta-etiqueta">${t.etiqueta}</div>
-      <div class="tarjeta-valor">${t.valor}</div>
-      ${variacion(t.comp)}
+    <div class="tarjeta">
+      <div class="tarjeta-icono">${svg(t.icono)}</div>
+      <div class="tarjeta-pie">
+        <div>
+          <div class="tarjeta-valor">${t.valor}</div>
+          <div class="tarjeta-etiqueta">${t.etiqueta}</div>
+        </div>
+        ${variacion(t.comp)}
+      </div>
     </div>`).join('');
 
   document.getElementById('tarjetas-stock').innerHTML = stock.map((t) => `
     <div class="tarjeta tarjeta-chica">
-      <div class="tarjeta-etiqueta">${t.etiqueta}</div>
+      <div class="tarjeta-icono">${svg(t.icono)}</div>
       <div class="tarjeta-valor">${t.valor}</div>
+      <div class="tarjeta-etiqueta">${t.etiqueta}</div>
     </div>`).join('');
+
+  // El menú avisa de lo pendiente sin tener que entrar a cada sección.
+  marcarPendientes('maestros', m.maestrosPendientes);
+  marcarPendientes('disputas', m.disputasAbiertas);
+  marcarPendientes('reclamos',
+    (m.alertas || []).filter((a) => a.tipo === 'reclamo').reduce((n, a) => n + a.cantidad, 0));
 
   dibujarEvolucion(m.serie || []);
   dibujarEstados(m.serviciosPorEstado || {});
@@ -222,6 +317,10 @@ function dibujarEvolucion(serie) {
   // Con 90 días, una etiqueta por día es ilegible: se muestran salteadas.
   const paso = serie.length > 45 ? 7 : serie.length > 14 ? 3 : 1;
   const etiquetas = serie.map((p, i) => (i % paso === 0 ? formatoDiaMes(p.fecha) : ''));
+  const tm = tema();
+  // Los ejes y la leyenda son texto sobre el fondo: siguen al tema.
+  Chart.defaults.color = tm.texto;
+  Chart.defaults.borderColor = tm.borde;
 
   nuevoGrafico('gr-evolucion', {
     type: 'line',
@@ -278,6 +377,8 @@ function dibujarEvolucion(serie) {
 }
 
 function dibujarEstados(porEstado) {
+  const tm = tema();
+  Chart.defaults.color = tm.texto;
   const estados = Object.entries(porEstado).sort((a, b) => b[1] - a[1]);
   const vacio = document.getElementById('estados-vacio');
   const lienzo = document.getElementById('gr-estados');
@@ -298,7 +399,9 @@ function dibujarEstados(porEstado) {
       datasets: [{
         data: estados.map(([, n]) => n),
         backgroundColor: estados.map(([e]) => COLOR_GRAFICO_ESTADO[e] || PALETA.gris),
-        borderWidth: 0,
+        // El borde separa los gajos; tiene que ser del color del panel, no blanco fijo.
+        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--superficie').trim(),
+        borderWidth: 2,
       }],
     },
     options: {

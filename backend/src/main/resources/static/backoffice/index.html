@@ -5,13 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ChasquiYa! · Administración</title>
   <link rel="stylesheet" href="estilos.css" />
+  <!--
+    El tema se aplica ANTES de pintar. Si esperáramos a app.js, quien tenga modo
+    oscuro vería un destello blanco en cada carga.
+  -->
+  <script>
+    document.documentElement.dataset.tema = localStorage.getItem('chasquiya_tema') || 'claro';
+  </script>
 </head>
 <body>
 
   <!-- Pantalla de acceso -->
   <section id="login" class="login">
     <form class="login-caja" onsubmit="entrar(event)">
-      <h1 class="logo">🏃 ChasquiYa!</h1>
+      <div class="login-marca">
+        <span class="logo-icono">C</span>
+        <span class="logo-texto">ChasquiYa!</span>
+      </div>
       <p class="login-sub">Panel de administración</p>
       <label>Correo
         <input id="email" type="email" value="admin@chasquiya.cl" required />
@@ -25,88 +35,119 @@
   </section>
 
   <!-- Panel -->
-  <section id="panel" class="oculto">
-    <header class="cabecera">
-      <div>
-        <span class="logo-mini">🏃 ChasquiYa!</span>
-        <span class="etiqueta">Administración</span>
+  <section id="panel" class="layout oculto">
+
+    <!-- Barra lateral -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-marca">
+        <span class="logo-icono">C</span>
+        <span class="logo-texto">ChasquiYa!</span>
       </div>
-      <div class="cabecera-derecha">
-        <span id="admin-nombre" class="usuario"></span>
-        <button class="btn-texto" onclick="salir()">Cerrar sesión</button>
-      </div>
-    </header>
 
-    <nav class="tabs">
-      <button class="tab activa" data-vista="dashboard" onclick="mostrar('dashboard')">Dashboard</button>
-      <button class="tab" data-vista="maestros" onclick="mostrar('maestros')">Maestros</button>
-      <button class="tab" data-vista="usuarios" onclick="mostrar('usuarios')">Usuarios</button>
-      <button class="tab" data-vista="servicios" onclick="mostrar('servicios')">Servicios</button>
-      <button class="tab" data-vista="disputas" onclick="mostrar('disputas')">Disputas</button>
-      <button class="tab" data-vista="reclamos" onclick="mostrar('reclamos')">Reclamos</button>
-    </nav>
+      <p class="sidebar-seccion">Menú</p>
+      <nav class="sidebar-nav" id="menu"></nav>
 
-    <main class="contenido">
-      <p id="error-global" class="error"></p>
+      <p class="sidebar-seccion">Cuenta</p>
+      <nav class="sidebar-nav">
+        <button class="nav-item" onclick="salir()">
+          <svg viewBox="0 0 24 24" class="nav-icono"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </nav>
+    </aside>
 
-      <div id="vista-dashboard" class="vista">
-        <!-- Lo que espera una decisión: lo primero que se ve al entrar -->
-        <div id="alertas" class="alertas"></div>
+    <!-- Fondo que cierra el menú en pantallas chicas -->
+    <div class="sidebar-fondo" id="sidebar-fondo" onclick="alternarMenu(false)"></div>
 
-        <div class="barra-periodo">
-          <span class="periodo-titulo">Período</span>
-          <button class="periodo-btn" data-dias="7" onclick="cambiarPeriodo(7)">7 días</button>
-          <button class="periodo-btn activo" data-dias="30" onclick="cambiarPeriodo(30)">30 días</button>
-          <button class="periodo-btn" data-dias="90" onclick="cambiarPeriodo(90)">90 días</button>
+    <div class="principal">
+      <!-- Barra superior -->
+      <header class="topbar">
+        <button class="icono-btn solo-movil" onclick="alternarMenu(true)" aria-label="Abrir menú">
+          <svg viewBox="0 0 24 24" class="nav-icono"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+
+        <div class="topbar-titulo">
+          <h1 id="titulo-vista">Dashboard</h1>
+          <p id="subtitulo-vista">Resumen de la plataforma</p>
         </div>
 
-        <div id="tarjetas" class="tarjetas"></div>
+        <div class="topbar-acciones">
+          <!-- Modo oscuro -->
+          <button class="interruptor" id="interruptor-tema" onclick="alternarTema()"
+                  aria-label="Cambiar entre modo claro y oscuro">
+            <span class="interruptor-bolita">
+              <svg viewBox="0 0 24 24" class="icono-sol"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+              <svg viewBox="0 0 24 24" class="icono-luna"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            </span>
+          </button>
 
-        <div class="panel-caja">
-          <h2>Evolución</h2>
-          <div class="lienzo"><canvas id="gr-evolucion"></canvas></div>
+          <div class="topbar-usuario">
+            <div class="usuario-datos">
+              <span id="admin-nombre" class="usuario-nombre"></span>
+              <span class="usuario-rol">Administrador</span>
+            </div>
+            <span class="usuario-avatar" id="admin-inicial">A</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="contenido">
+        <p id="error-global" class="error"></p>
+
+        <div id="vista-dashboard" class="vista">
+          <!-- Lo que espera una decisión: lo primero que se ve al entrar -->
+          <div id="alertas" class="alertas"></div>
+
+          <div class="barra-periodo">
+            <span class="periodo-titulo">Período</span>
+            <button class="periodo-btn" data-dias="7" onclick="cambiarPeriodo(7)">7 días</button>
+            <button class="periodo-btn activo" data-dias="30" onclick="cambiarPeriodo(30)">30 días</button>
+            <button class="periodo-btn" data-dias="90" onclick="cambiarPeriodo(90)">90 días</button>
+          </div>
+
+          <div id="tarjetas" class="tarjetas"></div>
+
+          <div class="grilla-graficos">
+            <div class="panel-caja">
+              <h2>Evolución</h2>
+              <div class="lienzo"><canvas id="gr-evolucion"></canvas></div>
+            </div>
+            <div class="panel-caja">
+              <h2>Servicios por estado</h2>
+              <p id="estados-vacio" class="vacio"></p>
+              <div class="lienzo lienzo-chico"><canvas id="gr-estados"></canvas></div>
+            </div>
+          </div>
+
+          <!-- Foto de ahora: no dependen del período elegido -->
+          <h2 class="titulo-seccion">Estado actual de la plataforma</h2>
+          <div id="tarjetas-stock" class="tarjetas"></div>
         </div>
 
-        <!-- Foto de ahora: no dependen del período elegido -->
-        <h2 class="titulo-seccion">Estado actual de la plataforma</h2>
-        <div id="tarjetas-stock" class="tarjetas"></div>
-
-        <div class="panel-caja">
-          <h2>Servicios por estado</h2>
-          <p id="estados-vacio" class="vacio"></p>
-          <div class="lienzo lienzo-chico"><canvas id="gr-estados"></canvas></div>
+        <div id="vista-maestros" class="vista oculto">
+          <div id="tabla-maestros"></div>
         </div>
-      </div>
 
-      <div id="vista-maestros" class="vista oculto">
-        <h2>Maestros registrados</h2>
-        <div id="tabla-maestros"></div>
-      </div>
+        <div id="vista-usuarios" class="vista oculto">
+          <div id="tabla-usuarios"></div>
+        </div>
 
-      <div id="vista-usuarios" class="vista oculto">
-        <h2>Usuarios</h2>
-        <div id="tabla-usuarios"></div>
-      </div>
+        <div id="vista-servicios" class="vista oculto">
+          <div id="tabla-servicios"></div>
+        </div>
 
-      <div id="vista-servicios" class="vista oculto">
-        <h2>Servicios</h2>
-        <div id="tabla-servicios"></div>
-      </div>
+        <div id="vista-disputas" class="vista oculto">
+          <div id="tabla-disputas"></div>
+        </div>
 
-      <div id="vista-disputas" class="vista oculto">
-        <h2>Disputas abiertas</h2>
-        <div id="tabla-disputas"></div>
-      </div>
-
-      <div id="vista-reclamos" class="vista oculto">
-        <h2>Reclamos y soporte</h2>
-        <p class="ayuda">
-          Problemas que no son de un servicio puntual. Los pendientes van primero
-          y, dentro de cada grupo, el más antiguo arriba.
-        </p>
-        <div id="tabla-reclamos"></div>
-      </div>
-    </main>
+        <div id="vista-reclamos" class="vista oculto">
+          <p class="ayuda">
+            Los pendientes van primero y, dentro de cada grupo, el más antiguo arriba.
+          </p>
+          <div id="tabla-reclamos"></div>
+        </div>
+      </main>
+    </div>
   </section>
 
   <!-- Chart.js va copiado en el repo, no por CDN: el panel debe funcionar sin

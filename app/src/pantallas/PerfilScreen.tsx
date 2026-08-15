@@ -62,7 +62,10 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
 
   const opciones: Opcion[] = [
     ...(rol === 'MAESTRO'
-      ? [{ icono: 'briefcase-outline' as NombreIcono, titulo: 'Mi perfil profesional', onPress: () => navigation.navigate('PerfilMaestro') }]
+      ? [
+          { icono: 'briefcase-outline' as NombreIcono, titulo: 'Mi perfil profesional', onPress: () => navigation.navigate('PerfilMaestro') },
+          { icono: 'calendar-outline' as NombreIcono, titulo: 'Mi agenda', onPress: () => navigation.navigate('Agenda') },
+        ]
       : []),
     { icono: 'person-outline', titulo: 'Mis datos', onPress: () => navigation.navigate('MisDatos') },
     { icono: 'location-outline', titulo: 'Mis direcciones', onPress: () => navigation.navigate('Direcciones') },

@@ -205,6 +205,12 @@ export function InicioScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('SolicitudesRecibidas')}
             />
             <AccesoRapido
+              icono="calendar"
+              titulo="Mi agenda"
+              descripcion="Los trabajos que aceptaste, por fecha"
+              onPress={() => navigation.navigate('Agenda')}
+            />
+            <AccesoRapido
               icono="cash"
               titulo="Mis ingresos"
               descripcion="Revisa lo que has ganado"

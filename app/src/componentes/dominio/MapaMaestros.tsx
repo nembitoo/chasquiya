@@ -92,7 +92,9 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
       {ubicables.length === 0 && (
         <View style={styles.sinUbicacion}>
           <Text style={styles.sinUbicacionTexto}>
-            Ningún maestro de esta búsqueda tiene su zona registrada.
+            {maestros.length === 0
+              ? 'No hay maestros cerca con estos filtros. Prueba ampliando la distancia.'
+              : 'Los maestros encontrados no tienen su zona registrada, así que no se pueden ubicar en el mapa.'}
           </Text>
         </View>
       )}

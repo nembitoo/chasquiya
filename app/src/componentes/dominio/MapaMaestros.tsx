@@ -31,7 +31,51 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
   const mapa = useRef<MapView>(null);
   const [elegido, setElegido] = useState<MaestroCercano | null>(null);
 
+  /*
+   * Los marcadores tienen contenido propio (el precio). En Android,
+   * react-native-maps convierte ese contenido en imagen UNA vez; si se le dice
+   * `tracksViewChanges={false}` desde el inicio, saca la foto antes de que el
+   * contenido se haya medido y el marcador queda invisible.
+   *
+   * Por eso se sigue el cambio al principio y se corta después: así se dibuja
+   * bien y igual se evita el costo de redibujar en cada movimiento del mapa.
+   */
+  const [rastrear, setRastrear] = useState(true);
+
   const ubicables = maestros.filter((m) => m.latitudAprox != null && m.longitudAprox != null);
+
+  useEffect(() => {
+    setRastrear(true);
+    const t = setTimeout(() => setRastrear(false), 1000);
+    return () => clearTimeout(t);
+  }, [maestros]);
+
+  /*
+   * La búsqueda trae maestros de hasta 25 km, pero el zoom inicial muestra unos
+   * 6. Sin esto, los que están más lejos quedan fuera de la pantalla y el mapa
+   * parece vacío aunque los marcadores existan.
+   *
+   * Se encuadra sobre los maestros y sobre uno mismo, para no perder la
+   * referencia de dónde está uno.
+   */
+  useEffect(() => {
+    if (ubicables.length === 0) return;
+    const puntos = [
+      { latitude: centro.lat, longitude: centro.lon },
+      ...ubicables.map((m) => ({
+        latitude: m.latitudAprox as number,
+        longitude: m.longitudAprox as number,
+      })),
+    ];
+    // Un respiro para que el mapa termine de montarse antes de encuadrar.
+    const t = setTimeout(() => {
+      mapa.current?.fitToCoordinates(puntos, {
+        edgePadding: { top: 90, right: 60, bottom: 190, left: 60 },
+        animated: true,
+      });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [maestros, centro.lat, centro.lon]);
 
   // Si cambian los resultados, el seleccionado puede ya no estar en la lista.
   useEffect(() => {
@@ -70,7 +114,7 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
             key={m.usuarioId}
             coordinate={{ latitude: m.latitudAprox as number, longitude: m.longitudAprox as number }}
             onPress={() => setElegido(m)}
-            tracksViewChanges={false}>
+            tracksViewChanges={rastrear}>
             <View style={[styles.pin, elegido?.usuarioId === m.usuarioId && styles.pinActivo]}>
               <Text style={styles.pinTexto}>
                 {m.tarifaReferencial ? formatearCLP(m.tarifaReferencial) : '$—'}
@@ -82,7 +126,9 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
 
       <View style={styles.aviso}>
         <Icono nombre="information-circle-outline" tamano="sm" color={colores.textoSuave} />
-        <Text style={styles.avisoTexto}>Zona aproximada, no la dirección exacta</Text>
+        <Text style={styles.avisoTexto}>
+          {ubicables.length} en el mapa · zona aproximada
+        </Text>
       </View>
 
       <Pressable style={styles.botonCentrar} onPress={centrarEnMi} accessibilityLabel="Centrar en mi ubicación">

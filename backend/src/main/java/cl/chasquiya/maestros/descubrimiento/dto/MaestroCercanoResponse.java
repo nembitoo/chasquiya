@@ -20,5 +20,11 @@ public record MaestroCercanoResponse(
         boolean esFavorito,
         boolean tieneAvatar,
         /** Trabajos que ya terminó: señal de confianza más concreta que las estrellas. */
-        long trabajosCompletados) {
+        long trabajosCompletados,
+        /**
+         * Posición APROXIMADA para el mapa (ver {@code UbicacionAproximada}).
+         * Nunca es la coordenada exacta que registró el maestro.
+         */
+        Double latitudAprox,
+        Double longitudAprox) {
 }

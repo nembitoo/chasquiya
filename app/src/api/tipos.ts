@@ -215,6 +215,9 @@ export type MaestroCercano = {
   tieneAvatar: boolean;
   /** Trabajos que ya terminó: señal de confianza más concreta que las estrellas. */
   trabajosCompletados: number;
+  /** Posición APROXIMADA (~500 m) para el mapa. Nunca es la coordenada exacta. */
+  latitudAprox: number | null;
+  longitudAprox: number | null;
 };
 
 /** Dirección guardada del usuario. */

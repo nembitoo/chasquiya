@@ -126,7 +126,10 @@ public class DescubrimientoService {
                     p.getZonaCobertura(), p.getAniosExperiencia(), p.getTarifaReferencial(),
                     distanciasKm.getOrDefault(id, 0.0), rep.promedio(), rep.cantidad(),
                     favoritosDelCliente.contains(id), u.tieneAvatar(),
-                    completados.getOrDefault(id, 0L)));
+                    completados.getOrDefault(id, 0L),
+                    // Al mapa va la zona, nunca la coordenada exacta del maestro.
+                    UbicacionAproximada.latitud(p.getLatitud(), id),
+                    UbicacionAproximada.longitud(p.getLongitud(), id)));
         }
         return salida;
     }

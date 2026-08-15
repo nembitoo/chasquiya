@@ -17,7 +17,23 @@ saber en qué va el trabajo). Al final lo que necesita decisiones nuevas.
 | 3c/3d | Home completo, buscador por texto, trabajos hechos | ✅ | `b3f8ca7` |
 | 3e | Agenda del maestro | ✅ | `d0bd3bb` |
 | 3f | Soporte y reclamos con tickets | ✅ | `bb47831` |
-| 3g | **Mapa de maestros** | ⏸ Pendiente | **Requiere aprobación y probarlo en el teléfono** |
+| 3g | Mapa de maestros | ✅ | Falta probarlo en el teléfono |
+
+## Nota sobre el mapa (3g)
+
+**Librería:** `react-native-maps`, que funciona en Expo Go sin configurar nada.
+Se descartó `expo-maps` porque exige un *development build*.
+
+⚠️ **Pendiente para cuando publiques en Android:** un APK propio necesita una
+**API key de Google Maps** (proyecto en Google Cloud, SDK de Maps activado y la
+key en `app.json` bajo `android.config.googleMaps.apiKey`). Es gratis, pero pide
+una cuenta con tarjeta. Hoy no hace falta: en Expo Go anda con la key de Expo, y
+en iOS usa Apple Maps, que no necesita key.
+
+**Privacidad:** el mapa nunca publica la coordenada exacta del maestro (ver
+`UbicacionAproximada.java`). La ubicación que registra suele ser su casa, así que
+se lleva a una grilla de ~500 m antes de salir de la API. El marcador dice "zona
+aproximada" para no prometer lo que no muestra.
 
 ## Detalle
 

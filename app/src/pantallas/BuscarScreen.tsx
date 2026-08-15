@@ -7,6 +7,7 @@ import { api } from '../api/cliente';
 import { FiltrosBusqueda, MaestroCercano, Oficio } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
+import { MapaMaestros } from '../componentes/dominio/MapaMaestros';
 import { TarjetaMaestro } from '../componentes/dominio/TarjetaMaestro';
 import { EmptyState } from '../componentes/feedback/EmptyState';
 import { SkeletonLista } from '../componentes/feedback/Skeleton';
@@ -41,6 +42,7 @@ export function BuscarScreen({ navigation }: Props) {
   const [filtros, setFiltros] = useState<FiltrosBusqueda>({ orden: 'distancia' });
   const [panelAbierto, setPanelAbierto] = useState(false);
 
+  const [vista, setVista] = useState<'lista' | 'mapa'>('lista');
   const [texto, setTexto] = useState('');
   const [maestros, setMaestros] = useState<MaestroCercano[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -164,6 +166,27 @@ export function BuscarScreen({ navigation }: Props) {
         <Text style={styles.contador}>
           {cargando ? 'Buscando…' : `${visibles.length} ${visibles.length === 1 ? 'maestro' : 'maestros'}`}
         </Text>
+        {/* Lista o mapa: la misma búsqueda vista de dos maneras. */}
+        <View style={styles.selectorVista}>
+          {(['lista', 'mapa'] as const).map((v) => (
+            <Pressable
+              key={v}
+              onPress={() => setVista(v)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: vista === v }}
+              style={[styles.selectorBoton, vista === v && styles.selectorBotonActivo]}>
+              <Icono
+                nombre={v === 'lista' ? 'list' : 'map'}
+                tamano="sm"
+                color={vista === v ? colores.textoInverso : colores.textoSuave}
+              />
+              <Text style={[styles.selectorTexto, vista === v && styles.selectorTextoActivo]}>
+                {v === 'lista' ? 'Lista' : 'Mapa'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <Pressable style={styles.botonFiltros} onPress={() => setPanelAbierto(true)}>
           <Icono nombre="options-outline" tamano="sm" color={colores.primario} />
           <Text style={styles.botonFiltrosTexto}>Filtros</Text>
@@ -175,7 +198,13 @@ export function BuscarScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      {cargando ? (
+      {vista === 'mapa' && !cargando && ubicacion ? (
+        <MapaMaestros
+          maestros={visibles}
+          centro={ubicacion}
+          onVerPerfil={(usuarioId) => navigation.navigate('MaestroPublico', { usuarioId })}
+        />
+      ) : cargando ? (
         <View style={styles.lista}>
           <SkeletonLista cantidad={4} />
         </View>
@@ -329,6 +358,24 @@ const styles = StyleSheet.create({
     marginTop: espacio.sm,
   },
   buscadorInput: { flex: 1, ...t.cuerpo, paddingVertical: 0 },
+  selectorVista: {
+    flexDirection: 'row',
+    backgroundColor: colores.neutral[100],
+    borderRadius: 999,
+    padding: 3,
+    marginRight: espacio.xs,
+  },
+  selectorBoton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.xxs,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: espacio.xxs,
+    borderRadius: 999,
+  },
+  selectorBotonActivo: { backgroundColor: colores.primario },
+  selectorTexto: { ...t.pequenoFuerte, color: colores.textoSuave },
+  selectorTextoActivo: { color: colores.textoInverso },
   aviso: { ...t.etiqueta, marginTop: espacio.xxs },
   chips: { maxHeight: 52, marginTop: espacio.sm },
   chipsContenido: { paddingHorizontal: margenPantalla, gap: espacio.xs, alignItems: 'center' },

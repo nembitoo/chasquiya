@@ -115,10 +115,21 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
             coordinate={{ latitude: m.latitudAprox as number, longitude: m.longitudAprox as number }}
             onPress={() => setElegido(m)}
             tracksViewChanges={rastrear}>
-            <View style={[styles.pin, elegido?.usuarioId === m.usuarioId && styles.pinActivo]}>
-              <Text style={styles.pinTexto}>
-                {m.tarifaReferencial ? formatearCLP(m.tarifaReferencial) : '$—'}
-              </Text>
+            {/* La envoltura transparente le da aire al recorte que hace Android. */}
+            <View style={styles.pinEnvoltura}>
+              <View style={[styles.pin, elegido?.usuarioId === m.usuarioId && styles.pinActivo]}>
+                <Text
+                  style={[
+                    styles.pinTexto,
+                    elegido?.usuarioId === m.usuarioId && styles.pinTextoActivo,
+                  ]}
+                  numberOfLines={1}
+                  // Sin esto, un teléfono con letra grande agranda el texto pero
+                  // no la caja del marcador, y el precio sale cortado.
+                  allowFontScaling={false}>
+                  {m.tarifaReferencial ? formatearCLP(m.tarifaReferencial) : 'A convenir'}
+                </Text>
+              </View>
             </View>
           </Marker>
         ))}
@@ -174,17 +185,25 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1 },
+  // Margen alrededor del globo: Android convierte el marcador en imagen y sin
+  // este aire recorta el borde y la sombra.
+  pinEnvoltura: { paddingHorizontal: 6, paddingVertical: 4 },
   pin: {
+    // Alto fijo y centrado: el tamaño no depende de cuándo se mida el texto.
+    height: 28,
+    minWidth: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colores.superficie,
     borderWidth: 1.5,
     borderColor: colores.primario,
     borderRadius: 999,
-    paddingHorizontal: espacio.xs,
-    paddingVertical: 3,
-    ...sombra.nivel1,
+    paddingHorizontal: 10,
+    // Sin `elevation`: en un marcador de Android la sombra sale recortada.
   },
-  pinActivo: { backgroundColor: colores.primario },
-  pinTexto: { ...t.etiqueta, fontWeight: '700', color: colores.primario },
+  pinActivo: { backgroundColor: colores.primario, borderColor: colores.primario },
+  pinTexto: { fontSize: 12, lineHeight: 16, fontWeight: '700', color: colores.primario },
+  pinTextoActivo: { color: colores.textoInverso },
   aviso: {
     position: 'absolute',
     top: espacio.sm,

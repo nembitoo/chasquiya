@@ -109,8 +109,18 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
              * un marcador simple con el precio en el globo de detalle.
              */
             tracksViewChanges>
-            {/* La envoltura transparente le da aire al recorte que hace Android. */}
-            <View style={styles.pinEnvoltura}>
+            {/*
+              La envoltura transparente le da aire al recorte que hace Android.
+
+              `collapsable={false}` es la parte que de verdad arregla el corte:
+              React Native "aplana" las vistas que no tienen props propias, como
+              optimización. Pero react-native-maps saca una FOTO de esta vista
+              nativa para dibujar el marcador, y si la vista fue aplanada, la
+              foto no coincide con lo que el layout calculó: sale cortada a la
+              mitad, siempre del mismo lado. Sin este prop, la vista nunca se
+              aplana y la foto queda completa.
+            */}
+            <View style={styles.pinEnvoltura} collapsable={false}>
               <View style={[styles.pin, elegido?.usuarioId === m.usuarioId && styles.pinActivo]}>
                 <Text
                   style={[

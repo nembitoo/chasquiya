@@ -189,20 +189,37 @@ const styles = StyleSheet.create({
   // este aire recorta el borde y la sombra.
   pinEnvoltura: { paddingHorizontal: 6, paddingVertical: 4 },
   pin: {
-    // Alto fijo y centrado: el tamaño no depende de cuándo se mida el texto.
+    /*
+     * Ancho y alto FIJOS a propósito.
+     *
+     * Con `minWidth` la caja tenía que crecer según lo que midiera el texto, y
+     * al convertir el marcador en imagen esa medida se perdía: la caja quedaba
+     * en el mínimo y el precio salía cortado ("$20.00" en vez de "$20.000").
+     *
+     * Con un ancho fijo el tamaño se conoce en la primera pasada de layout, sin
+     * depender del texto. 82 px alcanzan para "$100.000" y para "A convenir".
+     */
+    width: 82,
     height: 28,
-    minWidth: 58,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colores.superficie,
     borderWidth: 1.5,
     borderColor: colores.primario,
     borderRadius: 999,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     // Sin `elevation`: en un marcador de Android la sombra sale recortada.
   },
   pinActivo: { backgroundColor: colores.primario, borderColor: colores.primario },
-  pinTexto: { fontSize: 12, lineHeight: 16, fontWeight: '700', color: colores.primario },
+  pinTexto: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: colores.primario,
+    textAlign: 'center',
+    // Si algún texto no cabe, que se acorte con "…" y no que se recorte al borde.
+    width: '100%',
+  },
   pinTextoActivo: { color: colores.textoInverso },
   aviso: {
     position: 'absolute',

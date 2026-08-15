@@ -10,15 +10,14 @@ Este documento lista lo que falta, **priorizado por impacto sobre esfuerzo**.
 Primero lo que se ve y se usa en cada servicio (fotos, revisar antes de enviar,
 saber en qué va el trabajo). Al final lo que necesita decisiones nuevas.
 
-| # | Rebanada | Impacto | Esfuerzo | Dependencias nuevas |
-|---|----------|---------|----------|---------------------|
-| 3a | Fotos en la solicitud | Alto | Medio | No (MinIO y el selector ya están) |
-| 3b | Resumen antes de enviar + línea de tiempo del servicio | Alto | Bajo | No |
-| 3c | Home del cliente completo (cercanos, recientes) | Alto | Bajo | No |
-| 3d | Buscador por texto + trabajos realizados | Medio | Bajo | No |
-| 3e | Agenda del maestro | Medio | Medio | No (lista por fecha, sin librería) |
-| 3f | Soporte y reclamos con tickets | Medio | Medio | No |
-| 3g | **Mapa de maestros** | Alto | Alto | **Sí — requiere aprobación** |
+| # | Rebanada | Estado | Commit |
+|---|----------|--------|--------|
+| 3a | Fotos en la solicitud | ✅ | `d47a8d1` |
+| 3b | Resumen antes de enviar + línea de tiempo | ✅ | `5b0cf32` |
+| 3c/3d | Home completo, buscador por texto, trabajos hechos | ✅ | `b3f8ca7` |
+| 3e | Agenda del maestro | ✅ | `d0bd3bb` |
+| 3f | Soporte y reclamos con tickets | ✅ | `bb47831` |
+| 3g | **Mapa de maestros** | ⏸ Pendiente | **Requiere aprobación y probarlo en el teléfono** |
 
 ## Detalle
 

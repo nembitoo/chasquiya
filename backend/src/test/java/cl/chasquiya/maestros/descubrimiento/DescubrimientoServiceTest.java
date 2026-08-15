@@ -36,8 +36,10 @@ class DescubrimientoServiceTest {
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
     private final CalificacionService calificaciones = mock(CalificacionService.class);
     private final FavoritoRepository favoritos = mock(FavoritoRepository.class);
+    private final cl.chasquiya.maestros.solicitudes.SolicitudRepository solicitudes =
+            mock(cl.chasquiya.maestros.solicitudes.SolicitudRepository.class);
     private final DescubrimientoService servicio =
-            new DescubrimientoService(perfiles, usuarios, calificaciones, favoritos);
+            new DescubrimientoService(perfiles, usuarios, calificaciones, favoritos, solicitudes);
 
     private MaestroCercanoProjection proj(long id, double metros) {
         MaestroCercanoProjection p = mock(MaestroCercanoProjection.class);

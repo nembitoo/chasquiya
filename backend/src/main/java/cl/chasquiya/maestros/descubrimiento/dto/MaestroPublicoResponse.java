@@ -17,5 +17,7 @@ public record MaestroPublicoResponse(
         double calificacionPromedio,
         long cantidadCalificaciones,
         boolean esFavorito,
-        boolean tieneAvatar) {
+        boolean tieneAvatar,
+        /** Trabajos que ya terminó: señal de confianza más concreta que las estrellas. */
+        long trabajosCompletados) {
 }

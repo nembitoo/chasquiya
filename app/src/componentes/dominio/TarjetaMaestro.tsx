@@ -2,16 +2,12 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MaestroCercano } from '../../api/tipos';
-import { OFICIOS } from '../../datos/oficios';
+import { NOMBRE_OFICIO } from '../../datos/oficios';
 import { colores, espacio, radio, sombra, texto as t } from '../../tema/tema';
 import { formatearCLP } from '../../utilidades/moneda';
 import { AvatarUsuario } from '../base/AvatarUsuario';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../base/Icono';
 import { Estrellas } from '../Estrellas';
-
-const NOMBRE_OFICIO: Record<string, string> = Object.fromEntries(
-  OFICIOS.map((o) => [o.valor, o.etiqueta]),
-);
 
 type Props = {
   maestro: MaestroCercano;
@@ -91,6 +87,12 @@ export function TarjetaMaestro({ maestro, onPress, onFavorito, mostrarDistancia 
         </Text>
         <Text style={styles.separador}>·</Text>
         <Text style={styles.dato}>{maestro.aniosExperiencia} años exp.</Text>
+        {maestro.trabajosCompletados > 0 && (
+          <>
+            <Text style={styles.separador}>·</Text>
+            <Text style={styles.dato}>{maestro.trabajosCompletados} trabajos</Text>
+          </>
+        )}
         {!!maestro.zonaCobertura && (
           <>
             <Text style={styles.separador}>·</Text>

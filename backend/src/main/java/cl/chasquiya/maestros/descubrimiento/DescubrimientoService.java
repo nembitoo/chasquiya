@@ -24,6 +24,9 @@ import cl.chasquiya.maestros.perfiles.MaestroCercanoProjection;
 import cl.chasquiya.maestros.perfiles.Oficio;
 import cl.chasquiya.maestros.perfiles.PerfilMaestro;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
+import cl.chasquiya.maestros.solicitudes.EstadoServicio;
+import cl.chasquiya.maestros.solicitudes.Solicitud;
+import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
 import cl.chasquiya.maestros.usuarios.Usuario;
 import cl.chasquiya.maestros.usuarios.UsuarioRepository;
 
@@ -37,13 +40,16 @@ public class DescubrimientoService {
     private final UsuarioRepository usuarios;
     private final CalificacionService calificaciones;
     private final FavoritoRepository favoritos;
+    private final SolicitudRepository solicitudes;
 
     public DescubrimientoService(PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
-                                 CalificacionService calificaciones, FavoritoRepository favoritos) {
+                                 CalificacionService calificaciones, FavoritoRepository favoritos,
+                                 SolicitudRepository solicitudes) {
         this.perfiles = perfiles;
         this.usuarios = usuarios;
         this.calificaciones = calificaciones;
         this.favoritos = favoritos;
+        this.solicitudes = solicitudes;
     }
 
     /**
@@ -105,6 +111,7 @@ public class DescubrimientoService {
                 .collect(Collectors.toMap(Usuario::getId, Function.identity()));
         Map<Long, ReputacionResponse> reputaciones = calificaciones.reputacionesDe(usuarioIds);
         Set<Long> favoritosDelCliente = favoritosDe(clienteId);
+        Map<Long, Long> completados = trabajosCompletadosDe(usuarioIds);
 
         List<MaestroCercanoResponse> salida = new ArrayList<>();
         for (Long id : usuarioIds) {
@@ -118,9 +125,23 @@ public class DescubrimientoService {
                     u.getId(), u.getNombre(), u.getApellido(), p.getOficios(),
                     p.getZonaCobertura(), p.getAniosExperiencia(), p.getTarifaReferencial(),
                     distanciasKm.getOrDefault(id, 0.0), rep.promedio(), rep.cantidad(),
-                    favoritosDelCliente.contains(id), u.tieneAvatar()));
+                    favoritosDelCliente.contains(id), u.tieneAvatar(),
+                    completados.getOrDefault(id, 0L)));
         }
         return salida;
+    }
+
+    /**
+     * Trabajos terminados por maestro, en una sola consulta.
+     * "Terminado" es desde COMPLETADO en adelante: el trabajo se hizo, aunque el
+     * pago o la calificación todavía estén pendientes.
+     */
+    private Map<Long, Long> trabajosCompletadosDe(Collection<Long> maestroIds) {
+        return solicitudes.findByMaestroIdIn(maestroIds).stream()
+                .filter(s -> s.getEstado() == EstadoServicio.COMPLETADO
+                        || s.getEstado() == EstadoServicio.PAGADO
+                        || s.getEstado() == EstadoServicio.CALIFICADO)
+                .collect(Collectors.groupingBy(Solicitud::getMaestroId, Collectors.counting()));
     }
 
     public MaestroPublicoResponse obtenerPublico(Long usuarioId, Long clienteId) {
@@ -134,7 +155,8 @@ public class DescubrimientoService {
 
         return new MaestroPublicoResponse(u.getId(), u.getNombre(), u.getApellido(),
                 p.getOficios(), p.getDescripcion(), p.getAniosExperiencia(), p.getTarifaReferencial(),
-                p.getZonaCobertura(), rep.promedio(), rep.cantidad(), esFavorito, u.tieneAvatar());
+                p.getZonaCobertura(), rep.promedio(), rep.cantidad(), esFavorito, u.tieneAvatar(),
+                trabajosCompletadosDe(List.of(usuarioId)).getOrDefault(usuarioId, 0L));
     }
 
     private Set<Long> favoritosDe(Long clienteId) {

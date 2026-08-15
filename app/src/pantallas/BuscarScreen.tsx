@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
@@ -10,7 +10,7 @@ import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
 import { TarjetaMaestro } from '../componentes/dominio/TarjetaMaestro';
 import { EmptyState } from '../componentes/feedback/EmptyState';
 import { SkeletonLista } from '../componentes/feedback/Skeleton';
-import { OFICIOS } from '../datos/oficios';
+import { NOMBRE_OFICIO, OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { TabProps } from '../navegacion/Navegacion';
 import { colores, espacio, margenPantalla, radio, texto as t } from '../tema/tema';
@@ -41,6 +41,7 @@ export function BuscarScreen({ navigation }: Props) {
   const [filtros, setFiltros] = useState<FiltrosBusqueda>({ orden: 'distancia' });
   const [panelAbierto, setPanelAbierto] = useState(false);
 
+  const [texto, setTexto] = useState('');
   const [maestros, setMaestros] = useState<MaestroCercano[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -98,6 +99,16 @@ export function BuscarScreen({ navigation }: Props) {
     }
   }
 
+  const busqueda = texto.trim().toLowerCase();
+  const visibles = busqueda
+    ? maestros.filter((m) =>
+        [m.nombre, m.apellido, m.zonaCobertura ?? '', ...m.oficios.map((o) => NOMBRE_OFICIO[o] ?? o)]
+          .join(' ')
+          .toLowerCase()
+          .includes(busqueda),
+      )
+    : maestros;
+
   const filtrosActivos =
     (filtros.radioKm ? 1 : 0) +
     (filtros.precioMaximo ? 1 : 0) +
@@ -111,6 +122,23 @@ export function BuscarScreen({ navigation }: Props) {
         {usandoDefecto && (
           <Text style={styles.aviso}>Sin permiso de ubicación: buscando desde el centro de Santiago.</Text>
         )}
+        {/* Filtra sobre los resultados ya traídos: no hace falta volver al servidor. */}
+        <View style={styles.buscador}>
+          <Icono nombre="search" tamano="md" color={colores.textoTenue} />
+          <TextInput
+            value={texto}
+            onChangeText={setTexto}
+            placeholder="Nombre, oficio o zona"
+            placeholderTextColor={colores.textoTenue}
+            style={styles.buscadorInput}
+            autoCorrect={false}
+          />
+          {texto.length > 0 && (
+            <Pressable onPress={() => setTexto('')} hitSlop={8} accessibilityLabel="Limpiar búsqueda">
+              <Icono nombre="close-circle" tamano="md" color={colores.textoTenue} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Categorías */}
@@ -134,7 +162,7 @@ export function BuscarScreen({ navigation }: Props) {
       {/* Resumen + acceso a filtros */}
       <View style={styles.barraFiltros}>
         <Text style={styles.contador}>
-          {cargando ? 'Buscando…' : `${maestros.length} ${maestros.length === 1 ? 'maestro' : 'maestros'}`}
+          {cargando ? 'Buscando…' : `${visibles.length} ${visibles.length === 1 ? 'maestro' : 'maestros'}`}
         </Text>
         <Pressable style={styles.botonFiltros} onPress={() => setPanelAbierto(true)}>
           <Icono nombre="options-outline" tamano="sm" color={colores.primario} />
@@ -151,17 +179,31 @@ export function BuscarScreen({ navigation }: Props) {
         <View style={styles.lista}>
           <SkeletonLista cantidad={4} />
         </View>
-      ) : maestros.length === 0 ? (
+      ) : visibles.length === 0 ? (
         <EmptyState
           icono="search-outline"
           titulo="Sin resultados"
-          descripcion="No hay maestros aprobados con esos filtros. Prueba ampliando la distancia o cambiando de categoría."
-          accion={{ titulo: 'Limpiar filtros', onPress: () => { setOficio(null); setFiltros({ orden: 'distancia' }); } }}
+          descripcion={
+            busqueda
+              ? `Ningún maestro cercano coincide con "${texto.trim()}".`
+              : 'No hay maestros aprobados con esos filtros. Prueba ampliando la distancia o cambiando de categoría.'
+          }
+          accion={{
+            titulo: busqueda ? 'Limpiar búsqueda' : 'Limpiar filtros',
+            onPress: () => {
+              if (busqueda) {
+                setTexto('');
+              } else {
+                setOficio(null);
+                setFiltros({ orden: 'distancia' });
+              }
+            },
+          }}
         />
       ) : (
         <ScrollView contentContainerStyle={styles.lista}>
           {!!error && <Text style={styles.error}>{error}</Text>}
-          {maestros.map((m) => (
+          {visibles.map((m) => (
             <TarjetaMaestro
               key={m.usuarioId}
               maestro={m}
@@ -274,6 +316,19 @@ function Chip({
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   header: { paddingHorizontal: margenPantalla, paddingTop: espacio.sm },
+  buscador: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.xs,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderRadius: radio.md,
+    paddingHorizontal: espacio.md,
+    height: 46,
+    marginTop: espacio.sm,
+  },
+  buscadorInput: { flex: 1, ...t.cuerpo, paddingVertical: 0 },
   aviso: { ...t.etiqueta, marginTop: espacio.xxs },
   chips: { maxHeight: 52, marginTop: espacio.sm },
   chipsContenido: { paddingHorizontal: margenPantalla, gap: espacio.xs, alignItems: 'center' },

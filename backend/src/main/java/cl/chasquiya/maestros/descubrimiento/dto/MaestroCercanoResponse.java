@@ -18,5 +18,7 @@ public record MaestroCercanoResponse(
         long cantidadCalificaciones,
         /** Si quien consulta lo tiene guardado en sus favoritos. */
         boolean esFavorito,
-        boolean tieneAvatar) {
+        boolean tieneAvatar,
+        /** Trabajos que ya terminó: señal de confianza más concreta que las estrellas. */
+        long trabajosCompletados) {
 }

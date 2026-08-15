@@ -103,6 +103,7 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
 
           <View style={styles.filaDatos}>
             <Dato etiqueta="Experiencia" valor={`${maestro.aniosExperiencia} años`} />
+            <Dato etiqueta="Trabajos" valor={`${maestro.trabajosCompletados}`} />
             <Dato etiqueta="Zona" valor={maestro.zonaCobertura ?? '—'} />
             <Dato
               etiqueta="Tarifa ref."

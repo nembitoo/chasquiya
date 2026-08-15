@@ -1,10 +1,17 @@
-import React from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import React, { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { api } from '../api/cliente';
+import { MaestroCercano, Solicitud } from '../api/tipos';
+import { EstadoBadge } from '../componentes/EstadoBadge';
 import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
 import { Campanita } from '../componentes/dominio/Campanita';
+import { TarjetaMaestro } from '../componentes/dominio/TarjetaMaestro';
+import { SkeletonLista } from '../componentes/feedback/Skeleton';
 import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { TabProps } from '../navegacion/Navegacion';
@@ -15,6 +22,46 @@ type Props = TabProps<'Inicio'>;
 export function InicioScreen({ navigation }: Props) {
   const { sesion } = useAuth();
   const rol = sesion?.rol;
+  const token = sesion?.token ?? '';
+
+  const [cercanos, setCercanos] = useState<MaestroCercano[]>([]);
+  const [recientes, setRecientes] = useState<Solicitud[]>([]);
+  const [comuna, setComuna] = useState('');
+  const [cargando, setCargando] = useState(rol === 'CLIENTE');
+
+  const cargar = useCallback(async () => {
+    if (rol !== 'CLIENTE') return;
+    // Cada bloque falla por su cuenta: si no hay GPS igual se ven los servicios.
+    try {
+      const principal = (await api.direcciones.mias(token)).find((d) => d.esPrincipal);
+      if (principal?.comuna) setComuna(principal.comuna);
+    } catch {
+      /* sin direcciones guardadas */
+    }
+    try {
+      const permiso = await Location.requestForegroundPermissionsAsync();
+      if (permiso.granted) {
+        const pos = await Location.getCurrentPositionAsync({});
+        setCercanos(
+          (await api.descubrimiento.buscar(token, pos.coords.latitude, pos.coords.longitude, {})).slice(0, 5),
+        );
+      }
+    } catch {
+      /* sin ubicación: la sección simplemente no aparece */
+    }
+    try {
+      setRecientes((await api.solicitudes.mias(token)).slice(0, 3));
+    } catch {
+      /* sin servicios todavía */
+    }
+    setCargando(false);
+  }, [rol, token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargar();
+    }, [cargar]),
+  );
 
   return (
     <SafeAreaView style={styles.contenedor} edges={['top']}>
@@ -30,6 +77,12 @@ export function InicioScreen({ navigation }: Props) {
                   ? 'Resumen de la plataforma'
                   : '¿Qué necesitas arreglar hoy?'}
             </Text>
+            {rol === 'CLIENTE' && !!comuna && (
+              <View style={styles.ubicacion}>
+                <Icono nombre="location" tamano="sm" color={colores.primario} />
+                <Text style={styles.ubicacionTexto}>{comuna}</Text>
+              </View>
+            )}
           </View>
           <Campanita />
           <AvatarUsuario
@@ -69,6 +122,64 @@ export function InicioScreen({ navigation }: Props) {
                 </Pressable>
               ))}
             </View>
+
+            {/* Maestros cercanos */}
+            {cargando ? (
+              <SkeletonLista cantidad={2} />
+            ) : (
+              cercanos.length > 0 && (
+                <>
+                  <View style={styles.filaSeccion}>
+                    <Text style={[t.h3, { flex: 1 }]}>Cerca de ti</Text>
+                    <Pressable onPress={() => navigation.navigate('Buscar')} hitSlop={8}>
+                      <Text style={styles.verTodo}>Ver todos</Text>
+                    </Pressable>
+                  </View>
+                  {cercanos.map((m) => (
+                    <TarjetaMaestro
+                      key={m.usuarioId}
+                      maestro={m}
+                      onPress={() => navigation.navigate('MaestroPublico', { usuarioId: m.usuarioId })}
+                    />
+                  ))}
+                </>
+              )
+            )}
+
+            {/* Servicios recientes */}
+            {recientes.length > 0 && (
+              <>
+                <View style={styles.filaSeccion}>
+                  <Text style={[t.h3, { flex: 1 }]}>Tus servicios recientes</Text>
+                  <Pressable onPress={() => navigation.navigate('MisSolicitudes')} hitSlop={8}>
+                    <Text style={styles.verTodo}>Ver todos</Text>
+                  </Pressable>
+                </View>
+                {recientes.map((s) => (
+                  <Pressable
+                    key={s.id}
+                    onPress={() => navigation.navigate('MisSolicitudes')}
+                    style={({ pressed }) => [styles.reciente, pressed && styles.presionado]}>
+                    <View style={styles.accesoIcono}>
+                      <Icono
+                        nombre={(ICONO_OFICIO[s.oficio] ?? 'ellipsis-horizontal') as NombreIcono}
+                        tamano="lg"
+                        color={colores.primario}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={t.cuerpoFuerte} numberOfLines={1}>
+                        {s.maestroNombre}
+                      </Text>
+                      <Text style={t.pequeno} numberOfLines={1}>
+                        {s.descripcion}
+                      </Text>
+                    </View>
+                    <EstadoBadge estado={s.estado} />
+                  </Pressable>
+                ))}
+              </>
+            )}
 
             <AccesoRapido
               icono="search"
@@ -210,4 +321,19 @@ const styles = StyleSheet.create({
   },
   presionado: { opacity: 0.7 },
   nota: { ...t.etiqueta, textAlign: 'center', marginTop: espacio.md },
+  ubicacion: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
+  ubicacionTexto: { ...t.pequenoFuerte, color: colores.primario },
+  filaSeccion: { flexDirection: 'row', alignItems: 'center', marginBottom: espacio.sm },
+  verTodo: { ...t.pequenoFuerte, color: colores.primario },
+  reciente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.superficie,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    padding: espacio.md,
+    marginBottom: espacio.sm,
+  },
 });

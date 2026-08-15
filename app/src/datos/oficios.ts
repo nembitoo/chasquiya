@@ -12,3 +12,8 @@ export const OFICIOS: { valor: Oficio; etiqueta: string }[] = [
   { valor: 'MANTENCION', etiqueta: 'Mantención' },
   { valor: 'OTROS', etiqueta: 'Otros' },
 ];
+
+/** Búsqueda rápida del nombre legible a partir del valor del enum. */
+export const NOMBRE_OFICIO: Record<string, string> = Object.fromEntries(
+  OFICIOS.map((o) => [o.valor, o.etiqueta]),
+);

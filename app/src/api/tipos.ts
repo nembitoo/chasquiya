@@ -213,6 +213,8 @@ export type MaestroCercano = {
   cantidadCalificaciones: number;
   esFavorito: boolean;
   tieneAvatar: boolean;
+  /** Trabajos que ya terminó: señal de confianza más concreta que las estrellas. */
+  trabajosCompletados: number;
 };
 
 /** Dirección guardada del usuario. */
@@ -264,6 +266,8 @@ export type MaestroPublico = {
   cantidadCalificaciones: number;
   esFavorito: boolean;
   tieneAvatar: boolean;
+  /** Trabajos que ya terminó: señal de confianza más concreta que las estrellas. */
+  trabajosCompletados: number;
 };
 
 /** Foto del problema adjunta a una solicitud (solo el id; el contenido va aparte). */

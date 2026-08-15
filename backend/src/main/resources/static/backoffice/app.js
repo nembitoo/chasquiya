@@ -116,38 +116,203 @@ function mostrar(vista) {
 
 // ---------- Dashboard ----------
 
-async function cargarDashboard() {
-  const m = await api('/admin/metricas');
+/** Período seleccionado, en días. */
+let dias = 30;
+/** Instancias de Chart.js vivas: hay que destruirlas antes de redibujar. */
+const graficos = {};
 
-  const tarjetas = [
-    { etiqueta: 'Comisiones acumuladas', valor: pesos(m.comisionesAcumuladas), destacada: true },
-    { etiqueta: 'Monto transado', valor: pesos(m.montoTransado) },
+// Mismos colores que estilos.css, para que los gráficos no desentonen.
+const PALETA = {
+  primario: '#E11D2A',
+  primarioSuave: 'rgba(225, 29, 42, 0.12)',
+  azul: '#2563EB',
+  verde: '#16A34A',
+  amarillo: '#F59E0B',
+  rojo: '#DC2626',
+  gris: '#94A3B8',
+};
+
+const COLOR_GRAFICO_ESTADO = {
+  SOLICITADO: PALETA.amarillo, COTIZADO: PALETA.azul, ACEPTADO: PALETA.azul,
+  EN_CURSO: PALETA.amarillo, COMPLETADO: PALETA.verde, PAGADO: PALETA.verde,
+  CALIFICADO: PALETA.verde, CANCELADO: PALETA.gris, EN_DISPUTA: PALETA.rojo,
+};
+
+function cambiarPeriodo(nuevos) {
+  dias = nuevos;
+  document.querySelectorAll('.periodo-btn').forEach((b) =>
+    b.classList.toggle('activo', Number(b.dataset.dias) === dias));
+  cargarDashboard().catch(mostrarError);
+}
+
+/**
+ * Flechita de variación. Si el período anterior fue cero, el backend manda
+ * null: no se puede medir el crecimiento desde nada, así que va un guion.
+ */
+function variacion(comp) {
+  if (!comp || comp.variacion === null || comp.variacion === undefined) {
+    return '<span class="var var-neutra">— sin base previa</span>';
+  }
+  const v = comp.variacion;
+  const clase = v > 0 ? 'var-sube' : v < 0 ? 'var-baja' : 'var-neutra';
+  const flecha = v > 0 ? '▲' : v < 0 ? '▼' : '=';
+  return `<span class="var ${clase}">${flecha} ${Math.abs(v)}% vs período anterior</span>`;
+}
+
+async function cargarDashboard() {
+  const m = await api(`/admin/metricas?dias=${dias}`);
+
+  pintarAlertas(m.alertas || []);
+
+  // Flujo: lo que pasó DURANTE el período, con su comparación.
+  const flujo = [
+    { etiqueta: `Comisiones (${m.dias} días)`, valor: pesos(m.comisiones.actual), comp: m.comisiones, destacada: true },
+    { etiqueta: 'Monto transado', valor: pesos(m.montoTransado.actual), comp: m.montoTransado },
+    { etiqueta: 'Servicios creados', valor: m.serviciosCreados.actual, comp: m.serviciosCreados },
+    { etiqueta: 'Servicios terminados', valor: m.serviciosCompletados.actual, comp: m.serviciosCompletados },
+  ];
+  // Stock: una foto de ahora. No lleva período ni comparación.
+  const stock = [
     { etiqueta: 'Usuarios registrados', valor: m.usuariosTotales },
     { etiqueta: 'Clientes', valor: m.clientes },
     { etiqueta: 'Maestros', valor: m.maestros },
     { etiqueta: 'Maestros aprobados', valor: m.maestrosAprobados },
     { etiqueta: 'Maestros pendientes', valor: m.maestrosPendientes },
-    { etiqueta: 'Servicios totales', valor: m.serviciosTotales },
-    { etiqueta: 'Servicios completados', valor: m.serviciosCompletados },
     { etiqueta: 'Disputas abiertas', valor: m.disputasAbiertas },
     { etiqueta: 'Calificación promedio', valor: m.calificacionPromedio ? '⭐ ' + m.calificacionPromedio : '—' },
   ];
-  document.getElementById('tarjetas').innerHTML = tarjetas.map((t) => `
+
+  document.getElementById('tarjetas').innerHTML = flujo.map((t) => `
     <div class="tarjeta ${t.destacada ? 'destacada' : ''}">
+      <div class="tarjeta-etiqueta">${t.etiqueta}</div>
+      <div class="tarjeta-valor">${t.valor}</div>
+      ${variacion(t.comp)}
+    </div>`).join('');
+
+  document.getElementById('tarjetas-stock').innerHTML = stock.map((t) => `
+    <div class="tarjeta tarjeta-chica">
       <div class="tarjeta-etiqueta">${t.etiqueta}</div>
       <div class="tarjeta-valor">${t.valor}</div>
     </div>`).join('');
 
-  const estados = Object.entries(m.serviciosPorEstado || {}).sort((a, b) => b[1] - a[1]);
-  const maximo = estados.reduce((max, [, n]) => Math.max(max, n), 0);
-  document.getElementById('grafico-estados').innerHTML = estados.length === 0
-    ? '<p class="vacio">Todavía no hay servicios.</p>'
-    : estados.map(([estado, n]) => `
-        <div class="barra-fila">
-          <div class="barra-nombre">${txt(estado)}</div>
-          <div class="barra-pista"><div class="barra" style="width:${maximo ? (n / maximo) * 100 : 0}%"></div></div>
-          <div class="barra-valor">${n}</div>
-        </div>`).join('');
+  dibujarEvolucion(m.serie || []);
+  dibujarEstados(m.serviciosPorEstado || {});
+}
+
+function pintarAlertas(alertas) {
+  const caja = document.getElementById('alertas');
+  if (alertas.length === 0) {
+    caja.innerHTML = '<div class="alerta alerta-ok">✅ Nada pendiente por revisar.</div>';
+    return;
+  }
+  caja.innerHTML = alertas.map((a) => `
+    <div class="alerta alerta-${txt(a.severidad)}">
+      <strong>${a.cantidad}</strong> ${txt(a.mensaje)}
+    </div>`).join('');
+}
+
+/** Destruye el gráfico anterior antes de crear el nuevo (si no, se acumulan). */
+function nuevoGrafico(id, config) {
+  if (graficos[id]) graficos[id].destroy();
+  graficos[id] = new Chart(document.getElementById(id), config);
+}
+
+function dibujarEvolucion(serie) {
+  // Con 90 días, una etiqueta por día es ilegible: se muestran salteadas.
+  const paso = serie.length > 45 ? 7 : serie.length > 14 ? 3 : 1;
+  const etiquetas = serie.map((p, i) => (i % paso === 0 ? formatoDiaMes(p.fecha) : ''));
+
+  nuevoGrafico('gr-evolucion', {
+    type: 'line',
+    data: {
+      labels: etiquetas,
+      datasets: [
+        {
+          label: 'Servicios creados',
+          data: serie.map((p) => p.servicios),
+          borderColor: PALETA.primario,
+          backgroundColor: PALETA.primarioSuave,
+          fill: true,
+          tension: 0.3,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Comisiones ($)',
+          data: serie.map((p) => p.comisiones),
+          borderColor: PALETA.verde,
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          yAxisID: 'y1',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            // El eje X va con etiquetas salteadas; el tooltip sí muestra la fecha completa.
+            title: (items) => formatoDiaMes(serie[items[0].dataIndex].fecha),
+            label: (item) => item.datasetIndex === 1
+              ? `Comisiones: ${pesos(item.parsed.y)}`
+              : `Servicios: ${item.parsed.y}`,
+          },
+        },
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Servicios' } },
+        y1: {
+          beginAtZero: true,
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: 'Comisiones' },
+          ticks: { callback: (v) => pesos(v) },
+        },
+      },
+    },
+  });
+}
+
+function dibujarEstados(porEstado) {
+  const estados = Object.entries(porEstado).sort((a, b) => b[1] - a[1]);
+  const vacio = document.getElementById('estados-vacio');
+  const lienzo = document.getElementById('gr-estados');
+
+  if (estados.length === 0) {
+    vacio.textContent = 'Todavía no hay servicios.';
+    lienzo.style.display = 'none';
+    if (graficos['gr-estados']) { graficos['gr-estados'].destroy(); delete graficos['gr-estados']; }
+    return;
+  }
+  vacio.textContent = '';
+  lienzo.style.display = '';
+
+  nuevoGrafico('gr-estados', {
+    type: 'doughnut',
+    data: {
+      labels: estados.map(([e]) => e),
+      datasets: [{
+        data: estados.map(([, n]) => n),
+        backgroundColor: estados.map(([e]) => COLOR_GRAFICO_ESTADO[e] || PALETA.gris),
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'right' } },
+    },
+  });
+}
+
+/** "2026-08-15" -> "15 ago". Se parte a mano para no depender de la zona horaria. */
+function formatoDiaMes(iso) {
+  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const [, mes, dia] = iso.split('-');
+  return `${Number(dia)} ${MESES[Number(mes) - 1]}`;
 }
 
 // ---------- Maestros ----------

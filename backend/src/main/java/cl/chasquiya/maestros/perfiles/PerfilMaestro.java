@@ -95,6 +95,15 @@ public class PerfilMaestro {
         return usuarioId;
     }
 
+    public Instant getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    /** Última vez que el maestro tocó su perfil: sirve para medir cuánto lleva esperando revisión. */
+    public Instant getFechaActualizacion() {
+        return fechaActualizacion;
+    }
+
     public Set<Oficio> getOficios() {
         return oficios;
     }

@@ -49,10 +49,31 @@
       <p id="error-global" class="error"></p>
 
       <div id="vista-dashboard" class="vista">
+        <!-- Lo que espera una decisión: lo primero que se ve al entrar -->
+        <div id="alertas" class="alertas"></div>
+
+        <div class="barra-periodo">
+          <span class="periodo-titulo">Período</span>
+          <button class="periodo-btn" data-dias="7" onclick="cambiarPeriodo(7)">7 días</button>
+          <button class="periodo-btn activo" data-dias="30" onclick="cambiarPeriodo(30)">30 días</button>
+          <button class="periodo-btn" data-dias="90" onclick="cambiarPeriodo(90)">90 días</button>
+        </div>
+
         <div id="tarjetas" class="tarjetas"></div>
+
+        <div class="panel-caja">
+          <h2>Evolución</h2>
+          <div class="lienzo"><canvas id="gr-evolucion"></canvas></div>
+        </div>
+
+        <!-- Foto de ahora: no dependen del período elegido -->
+        <h2 class="titulo-seccion">Estado actual de la plataforma</h2>
+        <div id="tarjetas-stock" class="tarjetas"></div>
+
         <div class="panel-caja">
           <h2>Servicios por estado</h2>
-          <div id="grafico-estados"></div>
+          <p id="estados-vacio" class="vacio"></p>
+          <div class="lienzo lienzo-chico"><canvas id="gr-estados"></canvas></div>
         </div>
       </div>
 
@@ -78,6 +99,9 @@
     </main>
   </section>
 
+  <!-- Chart.js va copiado en el repo, no por CDN: el panel debe funcionar sin
+       internet y sin que un tercero pueda ejecutar código aquí (ver vendor/LEEME.md). -->
+  <script src="vendor/chart.umd.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

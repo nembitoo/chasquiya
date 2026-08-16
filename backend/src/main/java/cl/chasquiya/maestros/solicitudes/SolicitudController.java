@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.solicitudes.dto.AjustarPrecioRequest;
 import cl.chasquiya.maestros.solicitudes.dto.CotizacionResponse;
 import cl.chasquiya.maestros.solicitudes.dto.CotizarRequest;
 import cl.chasquiya.maestros.solicitudes.dto.PublicarSolicitudRequest;
@@ -95,6 +96,23 @@ public class SolicitudController {
     public SolicitudResponse cotizar(Authentication auth, @PathVariable Long id,
                                      @Valid @RequestBody CotizarRequest req) {
         return servicio.cotizar(idAutenticado(auth), id, req);
+    }
+
+    /** Tras ver el trabajo, el maestro propone otro precio (solo si cotizó estimado). */
+    @PostMapping("/{id}/ajuste")
+    public SolicitudResponse proponerAjuste(Authentication auth, @PathVariable Long id,
+                                            @Valid @RequestBody AjustarPrecioRequest req) {
+        return servicio.proponerAjuste(idAutenticado(auth), id, req);
+    }
+
+    @PostMapping("/{id}/ajuste/aprobar")
+    public SolicitudResponse aprobarAjuste(Authentication auth, @PathVariable Long id) {
+        return servicio.aprobarAjuste(idAutenticado(auth), id);
+    }
+
+    @PostMapping("/{id}/ajuste/rechazar")
+    public SolicitudResponse rechazarAjuste(Authentication auth, @PathVariable Long id) {
+        return servicio.rechazarAjuste(idAutenticado(auth), id);
     }
 
     @PostMapping("/{id}/iniciar")

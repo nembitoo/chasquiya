@@ -103,6 +103,9 @@ public class NotificacionService {
             case COTIZACION_RECIBIDA -> "Recibiste una cotización";
             case COTIZACION_ACEPTADA -> "Aceptaron tu cotización";
             case COTIZACION_RECHAZADA -> "No siguieron con tu cotización";
+            case AJUSTE_PROPUESTO -> "Cambió el precio del trabajo";
+            case AJUSTE_APROBADO -> "Aceptaron el precio nuevo";
+            case AJUSTE_RECHAZADO -> "No aceptaron el precio nuevo";
             case TRABAJO_INICIADO -> "El trabajo comenzó";
             case TRABAJO_COMPLETADO -> "Trabajo terminado";
             case PAGO_RECIBIDO -> "Recibiste un pago";
@@ -124,6 +127,12 @@ public class NotificacionService {
                     quien + " aceptó tu cotización. Pueden coordinar los detalles por el chat.";
             case COTIZACION_RECHAZADA ->
                     quien + " decidió no seguir con esta cotización.";
+            case AJUSTE_PROPUESTO ->
+                    quien + " revisó el trabajo y propone otro precio. Nada avanza hasta que lo revises.";
+            case AJUSTE_APROBADO ->
+                    quien + " aceptó el precio nuevo. Puedes continuar con el trabajo.";
+            case AJUSTE_RECHAZADO ->
+                    quien + " no aceptó el precio nuevo, así que el trabajo no sigue.";
             case TRABAJO_INICIADO ->
                     quien + " marcó el servicio como en curso.";
             case TRABAJO_COMPLETADO ->

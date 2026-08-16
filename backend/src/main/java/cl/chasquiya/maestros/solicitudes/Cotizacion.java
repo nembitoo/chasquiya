@@ -4,6 +4,8 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,6 +35,19 @@ public class Cotizacion {
 
     @Column(nullable = false)
     private Integer monto;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TipoCotizacion tipo = TipoCotizacion.CERRADO;
+
+    /**
+     * Lo que cobra por ir a diagnosticar. Solo en las estimadas.
+     *
+     * <p>Va aquí, en la cotización, porque el cliente tiene que conocerlo
+     * <b>antes</b> de aceptar. Un cobro que aparece después no es exigible.
+     */
+    @Column(name = "costo_visita")
+    private Integer costoVisita;
 
     private String mensaje;
 
@@ -74,6 +89,27 @@ public class Cotizacion {
 
     public void setMonto(Integer monto) {
         this.monto = monto;
+    }
+
+    public TipoCotizacion getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(TipoCotizacion tipo) {
+        this.tipo = tipo;
+    }
+
+    public Integer getCostoVisita() {
+        return costoVisita;
+    }
+
+    public void setCostoVisita(Integer costoVisita) {
+        this.costoVisita = costoVisita;
+    }
+
+    /** Un precio cerrado nunca cobra visita, aunque venga un valor por error. */
+    public int visitaCobrable() {
+        return tipo == TipoCotizacion.ESTIMADO && costoVisita != null ? costoVisita : 0;
     }
 
     public String getMensaje() {

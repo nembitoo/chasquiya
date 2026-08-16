@@ -141,6 +141,14 @@ public class PagoService {
         if (s.getMaestroId() == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El servicio todavía no tiene maestro asignado");
         }
+        /*
+         * El trabajo no se hizo: el cliente no aceptó el precio final y solo
+         * quedó la visita de diagnóstico. Se cobra ese monto, que es el que el
+         * cliente había aceptado al elegir la cotización.
+         */
+        if (s.getMontoVisitaCobrado() != null) {
+            return s.getMontoVisitaCobrado();
+        }
         return cotizaciones.findBySolicitudIdAndMaestroId(s.getId(), s.getMaestroId())
                 .map(Cotizacion::getMonto)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,

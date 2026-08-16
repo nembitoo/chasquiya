@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.solicitudes.Cotizacion;
+import cl.chasquiya.maestros.solicitudes.TipoCotizacion;
 
 /**
  * Una oferta recibida, con los datos del maestro que la hizo.
@@ -17,6 +18,10 @@ public record CotizacionResponse(
         String maestroNombre,
         boolean maestroTieneAvatar,
         int monto,
+        /** CERRADO o ESTIMADO: el cliente sabe antes de elegir si puede cambiar. */
+        TipoCotizacion tipo,
+        /** Lo que cobra por ir a diagnosticar si el trabajo no se hace. */
+        Integer costoVisita,
         String mensaje,
         double calificacionPromedio,
         long cantidadCalificaciones,
@@ -31,6 +36,8 @@ public record CotizacionResponse(
                 m == null ? "—" : m.nombre() + " " + m.apellido(),
                 m != null && m.tieneAvatar(),
                 c.getMonto(),
+                c.getTipo(),
+                c.getCostoVisita(),
                 c.getMensaje(),
                 m == null ? 0 : m.calificacionPromedio(),
                 m == null ? 0 : m.cantidadCalificaciones(),

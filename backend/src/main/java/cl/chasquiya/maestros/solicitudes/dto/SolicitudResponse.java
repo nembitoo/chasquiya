@@ -32,5 +32,10 @@ public record SolicitudResponse(
         boolean abierta,
         /** Cuántas ofertas recibió. En una abierta es lo que el cliente compara. */
         int cantidadCotizaciones,
+        /** Precio nuevo esperando que el cliente lo apruebe, si lo hay. */
+        Integer montoAjustado,
+        String mensajeAjuste,
+        /** Si el trabajo no se hizo, lo único cobrable: la visita ya acordada. */
+        Integer montoVisitaCobrado,
         Instant fechaCreacion) {
 }

@@ -54,6 +54,25 @@ public class Solicitud {
 
     private Double longitud;
 
+    /**
+     * Precio nuevo propuesto tras ver el trabajo, esperando aprobación.
+     *
+     * <p>Se guarda aparte del acordado a propósito: mientras el cliente no lo
+     * apruebe, el precio vigente sigue siendo el de la cotización original.
+     */
+    @Column(name = "monto_ajustado")
+    private Integer montoAjustado;
+
+    @Column(name = "mensaje_ajuste")
+    private String mensajeAjuste;
+
+    /**
+     * Lo único cobrable cuando el cliente rechaza el ajuste. Queda escrito para
+     * que el monto no dependa de lo que alguien afirme después.
+     */
+    @Column(name = "monto_visita_cobrado")
+    private Integer montoVisitaCobrado;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoServicio estado = EstadoServicio.SOLICITADO;
@@ -128,6 +147,30 @@ public class Solicitud {
     /** Solo al aceptar una cotización: ahí la solicitud abierta deja de serlo. */
     public void setMaestroId(Long maestroId) {
         this.maestroId = maestroId;
+    }
+
+    public Integer getMontoAjustado() {
+        return montoAjustado;
+    }
+
+    public void setMontoAjustado(Integer montoAjustado) {
+        this.montoAjustado = montoAjustado;
+    }
+
+    public String getMensajeAjuste() {
+        return mensajeAjuste;
+    }
+
+    public void setMensajeAjuste(String mensajeAjuste) {
+        this.mensajeAjuste = mensajeAjuste;
+    }
+
+    public Integer getMontoVisitaCobrado() {
+        return montoVisitaCobrado;
+    }
+
+    public void setMontoVisitaCobrado(Integer montoVisitaCobrado) {
+        this.montoVisitaCobrado = montoVisitaCobrado;
     }
 
     public Double getLatitud() {

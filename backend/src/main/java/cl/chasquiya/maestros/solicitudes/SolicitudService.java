@@ -26,6 +26,7 @@ import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.Oficio;
 import cl.chasquiya.maestros.perfiles.PerfilMaestro;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
+import cl.chasquiya.maestros.solicitudes.dto.AjustarPrecioRequest;
 import cl.chasquiya.maestros.solicitudes.dto.CotizacionResponse;
 import cl.chasquiya.maestros.solicitudes.dto.CotizarRequest;
 import cl.chasquiya.maestros.solicitudes.dto.CrearSolicitudRequest;
@@ -211,6 +212,10 @@ public class SolicitudService {
                 .orElseGet(() -> new Cotizacion(solicitudId, maestroId, req.monto(), req.mensaje()));
         c.setMonto(req.monto());
         c.setMensaje(req.mensaje());
+        c.setTipo(req.tipoOCerrado());
+        // Un precio cerrado no cobra visita: si no puede cambiar, no hay
+        // diagnóstico que cobrar aparte.
+        c.setCostoVisita(req.tipoOCerrado() == TipoCotizacion.ESTIMADO ? req.costoVisita() : null);
         cotizaciones.save(c);
 
         /*
@@ -257,6 +262,86 @@ public class SolicitudService {
         return lista.stream()
                 .map(c -> CotizacionResponse.de(c, fichas.get(c.getMaestroId())))
                 .toList();
+    }
+
+    /**
+     * El maestro fue al lugar y el trabajo resultó ser otro: propone un precio
+     * distinto. El trabajo queda detenido hasta que el cliente decida.
+     *
+     * <p>Solo aplica a cotizaciones ESTIMADAS: quien ofreció precio cerrado se
+     * comprometió a ese monto y no puede cambiarlo después.
+     */
+    public SolicitudResponse proponerAjuste(Long maestroId, Long solicitudId, AjustarPrecioRequest req) {
+        Solicitud s = deMaestro(maestroId, solicitudId);
+        Cotizacion c = cotizaciones.findBySolicitudIdAndMaestroId(solicitudId, maestroId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Este servicio no tiene una cotización tuya"));
+
+        if (c.getTipo() != TipoCotizacion.ESTIMADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ofreciste un precio cerrado: ese monto no se puede cambiar");
+        }
+        s.setMontoAjustado(req.monto());
+        s.setMensajeAjuste(req.motivo().trim());
+        SolicitudResponse r = transicionar(s, EstadoServicio.AJUSTE_PROPUESTO, maestroId);
+        notificaciones.avisar(s.getClienteId(), TipoNotificacion.AJUSTE_PROPUESTO, s.getId(), nombreDe(maestroId));
+        return r;
+    }
+
+    /** El cliente acepta el precio nuevo: pasa a ser el acordado y el trabajo sigue. */
+    public SolicitudResponse aprobarAjuste(Long clienteId, Long solicitudId) {
+        Solicitud s = deCliente(clienteId, solicitudId);
+        if (s.getEstado() != EstadoServicio.AJUSTE_PROPUESTO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este servicio no tiene un ajuste pendiente");
+        }
+        Cotizacion c = cotizaciones.findBySolicitudIdAndMaestroId(solicitudId, s.getMaestroId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "No hay cotización"));
+
+        // Recién ahora el monto nuevo reemplaza al anterior: con la aprobación.
+        c.setMonto(s.getMontoAjustado());
+        cotizaciones.save(c);
+        s.setMontoAjustado(null);
+
+        SolicitudResponse r = transicionar(s, EstadoServicio.ACEPTADO, clienteId);
+        notificaciones.avisar(s.getMaestroId(), TipoNotificacion.AJUSTE_APROBADO, s.getId(), nombreDe(clienteId));
+        return r;
+    }
+
+    /**
+     * El cliente no acepta el precio nuevo. El servicio termina aquí.
+     *
+     * <p>Si la cotización incluía un costo de visita, se cobra <b>solo eso</b>:
+     * el cliente lo aceptó al elegir esa cotización y el maestro sí se trasladó.
+     * Si no había visita acordada, no se cobra nada: un cargo que nadie aceptó
+     * antes no es exigible.
+     */
+    public SolicitudResponse rechazarAjuste(Long clienteId, Long solicitudId) {
+        Solicitud s = deCliente(clienteId, solicitudId);
+        if (s.getEstado() != EstadoServicio.AJUSTE_PROPUESTO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este servicio no tiene un ajuste pendiente");
+        }
+        int visita = cotizaciones.findBySolicitudIdAndMaestroId(solicitudId, s.getMaestroId())
+                .map(Cotizacion::visitaCobrable)
+                .orElse(0);
+        s.setMontoAjustado(null);
+
+        SolicitudResponse r;
+        if (visita > 0) {
+            /*
+             * La visita SÍ se hizo: el maestro fue y diagnosticó. Se deja el
+             * servicio como completado con ese monto para que se cobre por el
+             * mismo camino de siempre, en vez de inventar una vía de pago
+             * paralela que nadie más entiende.
+             */
+            s.setMontoVisitaCobrado(visita);
+            s.setMotivoCancelacion("No se acordó el precio final. Se cobra solo la visita de diagnóstico.");
+            r = transicionar(s, EstadoServicio.COMPLETADO, clienteId);
+        } else {
+            s.setMotivoCancelacion("El cliente no aceptó el precio final. Sin costo de visita acordado.");
+            r = transicionar(s, EstadoServicio.CANCELADO, clienteId);
+        }
+        notificaciones.avisar(s.getMaestroId(), TipoNotificacion.AJUSTE_RECHAZADO, s.getId(), nombreDe(clienteId));
+        return r;
     }
 
     public SolicitudResponse iniciar(Long maestroId, Long solicitudId) {
@@ -469,6 +554,9 @@ public class SolicitudService {
                 cantidadFotos,
                 s.estaAbierta(),
                 cantidadCotizaciones,
+                s.getMontoAjustado(),
+                s.getMensajeAjuste(),
+                s.getMontoVisitaCobrado(),
                 s.getFechaCreacion());
     }
 

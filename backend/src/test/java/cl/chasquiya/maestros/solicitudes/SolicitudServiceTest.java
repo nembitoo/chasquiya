@@ -103,7 +103,7 @@ class SolicitudServiceTest {
         Solicitud s = solicitudEn(EstadoServicio.SOLICITADO);
 
         assertEquals(EstadoServicio.COTIZADO,
-                servicio.cotizar(MAESTRO, 10L, new CotizarRequest(25000, "Incluye materiales")).estado());
+                servicio.cotizar(MAESTRO, 10L, new CotizarRequest(25000, "Incluye materiales", null, null)).estado());
         assertEquals(EstadoServicio.ACEPTADO, servicio.aceptar(CLIENTE, 10L).estado());
         assertEquals(EstadoServicio.EN_CURSO, servicio.iniciar(MAESTRO, 10L).estado());
         assertEquals(EstadoServicio.COMPLETADO, servicio.completar(MAESTRO, 10L).estado());
@@ -133,7 +133,7 @@ class SolicitudServiceTest {
         solicitudEn(EstadoServicio.SOLICITADO);
 
         assertThrows(ResponseStatusException.class,
-                () -> servicio.cotizar(CLIENTE, 10L, new CotizarRequest(1000, null)));
+                () -> servicio.cotizar(CLIENTE, 10L, new CotizarRequest(1000, null, null, null)));
     }
 
     // --- Transiciones inválidas ---
@@ -152,7 +152,7 @@ class SolicitudServiceTest {
         solicitudEn(EstadoServicio.COTIZADO);
 
         assertThrows(ResponseStatusException.class,
-                () -> servicio.cotizar(MAESTRO, 10L, new CotizarRequest(30000, null)));
+                () -> servicio.cotizar(MAESTRO, 10L, new CotizarRequest(30000, null, null, null)));
     }
 
     @Test

@@ -101,8 +101,8 @@ class SolicitudAbiertaTest {
         aprobado(MAESTRO_A, Oficio.ELECTRICIDAD);
         aprobado(MAESTRO_B, Oficio.ELECTRICIDAD);
 
-        servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, "incluye materiales"));
-        SolicitudResponse r = servicio.cotizar(MAESTRO_B, SOLICITUD, new CotizarRequest(25000, "mano de obra"));
+        servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, "incluye materiales", null, null));
+        SolicitudResponse r = servicio.cotizar(MAESTRO_B, SOLICITUD, new CotizarRequest(25000, "mano de obra", null, null));
 
         assertThat(r.estado()).isEqualTo(EstadoServicio.SOLICITADO);
         assertThat(s.estaAbierta()).isTrue();
@@ -114,7 +114,7 @@ class SolicitudAbiertaTest {
         abierta();
         aprobado(MAESTRO_A, Oficio.ELECTRICIDAD);
 
-        servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, null));
+        servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, null, null, null));
 
         verify(notificaciones).avisar(eq(CLIENTE), eq(TipoNotificacion.COTIZACION_RECIBIDA), eq(SOLICITUD), any());
     }
@@ -124,7 +124,7 @@ class SolicitudAbiertaTest {
         abierta();
         aprobado(MAESTRO_A, Oficio.PINTURA);
 
-        assertThatThrownBy(() -> servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, null)))
+        assertThatThrownBy(() -> servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, null, null, null)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("oficio");
 
@@ -138,7 +138,7 @@ class SolicitudAbiertaTest {
         pendiente.setOficios(Set.of(Oficio.ELECTRICIDAD));
         when(perfiles.findByUsuarioId(MAESTRO_A)).thenReturn(Optional.of(pendiente));
 
-        assertThatThrownBy(() -> servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, null)))
+        assertThatThrownBy(() -> servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, null, null, null)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("aprobado");
     }
@@ -147,7 +147,7 @@ class SolicitudAbiertaTest {
     void elClienteNoPuedeCotizarSuPropiaSolicitud() {
         abierta();
 
-        assertThatThrownBy(() -> servicio.cotizar(CLIENTE, SOLICITUD, new CotizarRequest(1000, null)))
+        assertThatThrownBy(() -> servicio.cotizar(CLIENTE, SOLICITUD, new CotizarRequest(1000, null, null, null)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("tu propia");
     }

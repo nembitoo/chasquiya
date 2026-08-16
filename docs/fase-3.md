@@ -30,6 +30,26 @@ key en `app.json` bajo `android.config.googleMaps.apiKey`). Es gratis, pero pide
 una cuenta con tarjeta. Hoy no hace falta: en Expo Go anda con la key de Expo, y
 en iOS usa Apple Maps, que no necesita key.
 
+### 🐞 Pendiente: los marcadores salen cortados en Android
+
+El precio dentro del marcador se ve cortado por la derecha (`$20.00` en vez de
+`$20.000`), siempre por el mismo lado. **Es cosmético: el mapa, los marcadores,
+la selección y la navegación al perfil funcionan.**
+
+Ya se descartó (no funcionó ninguno):
+
+1. Ancho fijo en vez de `minWidth` — no era medición de texto.
+2. Quitar la sombra con `elevation` del marcador.
+3. `allowFontScaling={false}` por si el sistema agrandaba la letra.
+4. Dejar `tracksViewChanges` en vivo, sin congelar la imagen.
+5. `collapsable={false}` en la vista que envuelve el marcador.
+
+**Por dónde seguir:** no insistir con la vista personalizada. La salida sin
+esta clase de problemas es usar un marcador estándar (`pinColor`, sin hijos) y
+mostrar el precio en el globo de detalle o en la tarjeta inferior, que ya
+existe. Se evita por completo el paso donde Android convierte la vista en
+imagen, que es de donde sale el bug.
+
 **Privacidad:** el mapa nunca publica la coordenada exacta del maestro (ver
 `UbicacionAproximada.java`). La ubicación que registra suele ser su casa, así que
 se lleva a una grilla de ~500 m antes de salir de la API. El marcador dice "zona

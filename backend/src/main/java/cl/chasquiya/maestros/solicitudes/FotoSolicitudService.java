@@ -11,6 +11,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.documentos.AlmacenamientoMinio;
 import cl.chasquiya.maestros.documentos.ArchivoDescarga;
+import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
+import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
 
 /**
  * Fotos del problema que el cliente adjunta a su solicitud.
@@ -34,12 +36,14 @@ public class FotoSolicitudService {
     private final FotoSolicitudRepository fotos;
     private final SolicitudRepository solicitudes;
     private final AlmacenamientoMinio almacen;
+    private final PerfilMaestroRepository perfiles;
 
     public FotoSolicitudService(FotoSolicitudRepository fotos, SolicitudRepository solicitudes,
-                                AlmacenamientoMinio almacen) {
+                                AlmacenamientoMinio almacen, PerfilMaestroRepository perfiles) {
         this.fotos = fotos;
         this.solicitudes = solicitudes;
         this.almacen = almacen;
+        this.perfiles = perfiles;
     }
 
     public List<Long> listar(Long usuarioId, Long solicitudId) {
@@ -119,9 +123,33 @@ public class FotoSolicitudService {
         return s;
     }
 
+    /**
+     * Quién puede ver las fotos.
+     *
+     * <p>En una solicitud abierta las ve <b>cualquier maestro aprobado del
+     * oficio pedido</b>: sin verlas tendría que cotizar a ciegas, que es la
+     * forma más segura de que el precio no calce con el trabajo real.
+     *
+     * <p>Una vez elegido el maestro, la solicitud deja de ser pública y solo la
+     * ven las dos partes.
+     */
     private Solicitud deParte(Long usuarioId, Long solicitudId) {
         Solicitud s = buscar(solicitudId);
-        if (!s.getClienteId().equals(usuarioId) && !s.getMaestroId().equals(usuarioId)) {
+        if (s.getClienteId().equals(usuarioId)) {
+            return s;
+        }
+        if (s.getMaestroId() != null) {
+            if (!s.getMaestroId().equals(usuarioId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta solicitud no es tuya");
+            }
+            return s;
+        }
+        // Abierta: la ve quien podría cotizarla.
+        boolean puedeCotizarla = perfiles.findByUsuarioId(usuarioId)
+                .filter(p -> p.getEstadoVerificacion() == EstadoVerificacion.APROBADO)
+                .filter(p -> p.getOficios().contains(s.getOficio()))
+                .isPresent();
+        if (!puedeCotizarla) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta solicitud no es tuya");
         }
         return s;

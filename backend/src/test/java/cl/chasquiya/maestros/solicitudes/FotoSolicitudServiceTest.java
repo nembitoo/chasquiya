@@ -32,7 +32,11 @@ class FotoSolicitudServiceTest {
     private final SolicitudRepository solicitudes = mock(SolicitudRepository.class);
     private final AlmacenamientoMinio almacen = mock(AlmacenamientoMinio.class);
 
-    private final FotoSolicitudService servicio = new FotoSolicitudService(fotos, solicitudes, almacen);
+    private final cl.chasquiya.maestros.perfiles.PerfilMaestroRepository perfiles =
+            mock(cl.chasquiya.maestros.perfiles.PerfilMaestroRepository.class);
+
+    private final FotoSolicitudService servicio =
+            new FotoSolicitudService(fotos, solicitudes, almacen, perfiles);
 
     private Solicitud solicitudEn(EstadoServicio estado) {
         Solicitud s = new Solicitud(CLIENTE, MAESTRO, Oficio.GASFITERIA, "gotera", "dir", null, null);
@@ -78,6 +82,43 @@ class FotoSolicitudServiceTest {
     @Test
     void unExtranoNoVeLasFotos() {
         assertThatThrownBy(() -> servicio.listar(INTRUSO, SOLICITUD))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("403");
+    }
+
+    /**
+     * En una solicitud abierta no hay maestro asignado. Antes esto reventaba con
+     * un 500 al comparar contra null, y el maestro no podia ver las fotos: la
+     * unica forma de cotizar era a ciegas.
+     */
+    @Test
+    void enUnaAbiertaLasVeElMaestroQuePodriaCotizarla() {
+        Solicitud abierta = new Solicitud(CLIENTE, Oficio.GASFITERIA, "gotera", "dir", null, null, null, null);
+        ReflectionTestUtils.setField(abierta, "id", SOLICITUD);
+        when(solicitudes.findById(SOLICITUD)).thenReturn(java.util.Optional.of(abierta));
+
+        cl.chasquiya.maestros.perfiles.PerfilMaestro p =
+                new cl.chasquiya.maestros.perfiles.PerfilMaestro(MAESTRO);
+        p.setEstadoVerificacion(cl.chasquiya.maestros.perfiles.EstadoVerificacion.APROBADO);
+        p.setOficios(java.util.Set.of(Oficio.GASFITERIA));
+        when(perfiles.findByUsuarioId(MAESTRO)).thenReturn(java.util.Optional.of(p));
+
+        assertThatCode(() -> servicio.listar(MAESTRO, SOLICITUD)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void enUnaAbiertaNoLasVeUnMaestroDeOtroOficio() {
+        Solicitud abierta = new Solicitud(CLIENTE, Oficio.GASFITERIA, "gotera", "dir", null, null, null, null);
+        ReflectionTestUtils.setField(abierta, "id", SOLICITUD);
+        when(solicitudes.findById(SOLICITUD)).thenReturn(java.util.Optional.of(abierta));
+
+        cl.chasquiya.maestros.perfiles.PerfilMaestro p =
+                new cl.chasquiya.maestros.perfiles.PerfilMaestro(MAESTRO);
+        p.setEstadoVerificacion(cl.chasquiya.maestros.perfiles.EstadoVerificacion.APROBADO);
+        p.setOficios(java.util.Set.of(Oficio.PINTURA));
+        when(perfiles.findByUsuarioId(MAESTRO)).thenReturn(java.util.Optional.of(p));
+
+        assertThatThrownBy(() -> servicio.listar(MAESTRO, SOLICITUD))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("403");
     }

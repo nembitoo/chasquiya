@@ -21,7 +21,7 @@ import { colores, espacio, radio, tipografia } from '../tema/tema';
 import { formatearCLP } from '../utilidades/moneda';
 
 type Props = TabProps<'SolicitudesRecibidas'>;
-type Vista = 'activos' | 'historial';
+type Vista = 'activos' | 'abiertas' | 'historial';
 
 /** Los trabajos terminados pasan al historial; el resto sigue "vivo". */
 const ESTADOS_HISTORIAL: EstadoServicio[] = ['PAGADO', 'CALIFICADO', 'CANCELADO'];
@@ -35,6 +35,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   const token = sesion?.token ?? '';
 
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [abiertas, setAbiertas] = useState<Solicitud[]>([]);
   const [noLeidos, setNoLeidos] = useState<Record<string, number>>({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -48,12 +49,16 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   const cargar = useCallback(async () => {
     setError('');
     try {
-      const [lista, pendientes] = await Promise.all([
+      const [lista, pendientes, disponibles] = await Promise.all([
         api.solicitudes.recibidas(token),
         api.mensajes.noLeidos(token).catch(() => ({})),
+        // Si el perfil no está aprobado el backend responde 403: no es un error
+        // que deba romper la pantalla, simplemente no hay trabajos disponibles.
+        api.solicitudes.abiertas(token).catch(() => [] as Solicitud[]),
       ]);
       setSolicitudes(lista);
       setNoLeidos(pendientes);
+      setAbiertas(disponibles);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron cargar las solicitudes.');
     } finally {
@@ -70,8 +75,8 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   const activos = solicitudes.filter((s) => !ESTADOS_HISTORIAL.includes(s.estado));
   const historial = solicitudes.filter((s) => ESTADOS_HISTORIAL.includes(s.estado));
   const visibles = useMemo(
-    () => (vista === 'activos' ? activos : historial),
-    [vista, activos, historial],
+    () => (vista === 'activos' ? activos : vista === 'abiertas' ? abiertas : historial),
+    [vista, activos, abiertas, historial],
   );
 
   async function accion(id: number, fn: () => Promise<Solicitud>) {
@@ -87,12 +92,17 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
     }
   }
 
-  async function enviarCotizacion(id: number) {
+  async function enviarCotizacion(id: number, esAbierta = false) {
     if (!monto || Number(monto) <= 0) {
       setError('Ingresa un monto válido.');
       return;
     }
     await accion(id, () => api.solicitudes.cotizar(token, id, Number(monto), mensaje.trim()));
+    // Las abiertas viven en otra lista: hay que recargar para que la tarjeta
+    // muestre la cotización recién enviada.
+    if (esAbierta) {
+      await cargar();
+    }
     setCotizando(null);
     setMonto('');
     setMensaje('');
@@ -108,6 +118,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
             onCambio={setVista}
             opciones={[
               { valor: 'activos', etiqueta: 'Activas', cantidad: activos.length },
+              { valor: 'abiertas', etiqueta: 'Disponibles', cantidad: abiertas.length },
               { valor: 'historial', etiqueta: 'Historial', cantidad: historial.length },
             ]}
           />
@@ -122,11 +133,20 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.lista} keyboardShouldPersistTaps="handled">
           {!!error && <Text style={styles.error}>{error}</Text>}
 
+          {vista === 'abiertas' && visibles.length > 0 && (
+            <Text style={styles.ayudaAbiertas}>
+              Trabajos publicados por clientes de tu zona. Cotizar no te compromete: el cliente
+              compara y decide.
+            </Text>
+          )}
+
           {visibles.length === 0 && !error ? (
             <Text style={styles.vacio}>
               {vista === 'activos'
                 ? 'No tienes solicitudes activas. Cuando un cliente te contacte, aparecerán aquí.'
-                : 'Aquí verás los trabajos que ya terminaste.'}
+                : vista === 'abiertas'
+                  ? 'Ahora mismo no hay trabajos publicados de tus oficios cerca tuyo. Vuelve más tarde.'
+                  : 'Aquí verás los trabajos que ya terminaste.'}
             </Text>
           ) : (
             visibles.map((s) => (
@@ -166,12 +186,16 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                   <Text style={styles.motivo}>Resolución del admin: {s.resolucionDisputa}</Text>
                 )}
 
-                <BotonChat
-                  noLeidos={noLeidos[String(s.id)] ?? 0}
-                  onPress={() =>
-                    navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: s.clienteNombre })
-                  }
-                />
+                {/* En una solicitud abierta todavía no hay relación con el
+                    cliente: el chat se abre recién si te eligen. */}
+                {!s.abierta && (
+                  <BotonChat
+                    noLeidos={noLeidos[String(s.id)] ?? 0}
+                    onPress={() =>
+                      navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: s.clienteNombre })
+                    }
+                  />
+                )}
 
                 {(s.estado === 'PAGADO' || s.estado === 'CALIFICADO') && !s.yaCalifique && (
                   <View style={styles.acciones}>
@@ -224,7 +248,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                       <Boton
                         titulo="Enviar cotización"
                         cargando={procesando === s.id}
-                        onPress={() => enviarCotizacion(s.id)}
+                        onPress={() => enviarCotizacion(s.id, s.abierta)}
                       />
                       <View style={{ height: espacio.sm }} />
                       <Boton titulo="Cancelar" variante="secundario" onPress={() => setCotizando(null)} />
@@ -234,8 +258,12 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                       <View style={{ flex: 1 }}>
                         <Boton titulo="Cotizar" onPress={() => setCotizando(s.id)} />
                       </View>
-                      <View style={{ width: espacio.sm }} />
+                      {/* En una abierta no se ofrece "Declinar": el trabajo no es
+                          tuyo, así que no hay nada que cancelar. Basta con no
+                          cotizar, y eso no se penaliza (Ley 21.431). */}
+                      {!s.abierta && <View style={{ width: espacio.sm }} />}
                       <View style={{ flex: 1 }}>
+                        {!s.abierta && (
                         <Boton
                           titulo="Declinar"
                           variante="secundario"
@@ -246,6 +274,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                             )
                           }
                         />
+                        )}
                       </View>
                     </View>
                   ))}
@@ -290,6 +319,11 @@ const styles = StyleSheet.create({
   volver: { color: colores.primario, fontSize: tipografia.cuerpo, fontWeight: '600', marginBottom: espacio.xs },
   titulo: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
   lista: { padding: espacio.lg },
+  ayudaAbiertas: {
+    fontSize: tipografia.pequeno,
+    color: colores.textoSuave,
+    marginBottom: espacio.sm,
+  },
   vacio: { textAlign: 'center', color: colores.textoSuave, marginTop: espacio.xl, paddingHorizontal: espacio.md },
   card: {
     backgroundColor: colores.blanco,

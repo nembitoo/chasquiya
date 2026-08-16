@@ -199,6 +199,28 @@ export function MisSolicitudesScreen({ navigation }: Props) {
               <GaleriaFotos solicitudId={s.id} cantidad={s.cantidadFotos} />
               <LineaTiempo estado={s.estado} />
 
+              {/* Abierta: lo que importa es cuántas ofertas llegaron, no una sola. */}
+              {s.abierta && (
+                <Pressable
+                  style={styles.abierta}
+                  onPress={() =>
+                    navigation.navigate('Cotizaciones', {
+                      solicitudId: s.id,
+                      descripcion: s.descripcion,
+                    })
+                  }>
+                  <Icono nombre="pricetags-outline" tamano="md" color={colores.primario} />
+                  <Text style={styles.abiertaTexto}>
+                    {s.cantidadCotizaciones === 0
+                      ? 'Publicada, esperando cotizaciones'
+                      : `${s.cantidadCotizaciones} cotización${s.cantidadCotizaciones === 1 ? '' : 'es'} · toca para comparar`}
+                  </Text>
+                  {s.cantidadCotizaciones > 0 && (
+                    <Icono nombre="chevron-forward" tamano="md" color={colores.primario} />
+                  )}
+                </Pressable>
+              )}
+
               {s.cotizacionMonto != null && (
                 <View style={styles.cotizacion}>
                   <Text style={styles.cotizacionMonto}>
@@ -340,6 +362,16 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm },
   oficio: { ...t.pequeno, color: colores.primario },
   descripcion: { ...t.cuerpo, marginTop: espacio.sm },
+  abierta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.xs,
+    backgroundColor: colores.primarioSuave,
+    borderRadius: radio.sm,
+    padding: espacio.sm,
+    marginTop: espacio.sm,
+  },
+  abiertaTexto: { ...t.pequenoFuerte, color: colores.primario, flex: 1 },
   cotizacion: {
     marginTop: espacio.sm,
     backgroundColor: colores.primarioSuave,

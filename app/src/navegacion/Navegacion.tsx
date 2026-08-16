@@ -31,7 +31,9 @@ import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
 import { MisDatosScreen } from '../pantallas/MisDatosScreen';
 import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
 import { NotificacionesScreen } from '../pantallas/NotificacionesScreen';
+import { CotizacionesScreen } from '../pantallas/CotizacionesScreen';
 import { NuevaSolicitudScreen } from '../pantallas/NuevaSolicitudScreen';
+import { PublicarSolicitudScreen } from '../pantallas/PublicarSolicitudScreen';
 import { PagoScreen } from '../pantallas/PagoScreen';
 import { PerfilMaestroScreen } from '../pantallas/PerfilMaestroScreen';
 import { PerfilScreen } from '../pantallas/PerfilScreen';
@@ -58,6 +60,10 @@ export type RootStackParamList = {
     /** Datos de un servicio anterior, para "volver a contratar". */
     precargar?: { descripcion: string; direccion: string };
   };
+  /** Publicar un trabajo sin elegir maestro. */
+  PublicarSolicitud: undefined;
+  /** Ofertas recibidas por una solicitud abierta, para comparar y elegir. */
+  Cotizaciones: { solicitudId: number; descripcion: string };
   Pago: { solicitudId: number };
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
   PerfilMaestro: undefined;
@@ -216,6 +222,8 @@ export function Navegacion() {
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="MaestroPublico" component={MaestroPublicoScreen} />
             <Stack.Screen name="NuevaSolicitud" component={NuevaSolicitudScreen} />
+            <Stack.Screen name="PublicarSolicitud" component={PublicarSolicitudScreen} />
+            <Stack.Screen name="Cotizaciones" component={CotizacionesScreen} />
             <Stack.Screen name="Pago" component={PagoScreen} />
             <Stack.Screen name="Calificar" component={CalificarScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />

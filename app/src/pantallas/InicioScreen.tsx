@@ -182,6 +182,12 @@ export function InicioScreen({ navigation }: Props) {
             )}
 
             <AccesoRapido
+              icono="megaphone"
+              titulo="Publicar un trabajo"
+              descripcion="Recibe varios precios y elige el que más te convenga"
+              onPress={() => navigation.navigate('PublicarSolicitud')}
+            />
+            <AccesoRapido
               icono="search"
               titulo="Buscar maestros cerca de ti"
               descripcion="Filtra por oficio y distancia"

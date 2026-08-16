@@ -5,7 +5,9 @@ import {
   Bandeja,
   Calificacion,
   CalificarData,
+  Cotizacion,
   CrearSolicitudData,
+  PublicarSolicitudData,
   CrearTicketData,
   Direccion,
   DireccionData,
@@ -192,13 +194,23 @@ export const api = {
     // Cliente
     crear: (token: string, datos: CrearSolicitudData) =>
       pedir<Solicitud>('/solicitudes', { method: 'POST', body: JSON.stringify(datos) }, token),
+    /** Publica el trabajo sin elegir maestro: varios podrán cotizarlo. */
+    publicarAbierta: (token: string, datos: PublicarSolicitudData) =>
+      pedir<Solicitud>('/solicitudes/abierta', { method: 'POST', body: JSON.stringify(datos) }, token),
     mias: (token: string) => pedir<Solicitud[]>('/solicitudes/mias', {}, token),
+    /** Ofertas recibidas, de la más barata a la más cara. */
+    cotizaciones: (token: string, id: number) =>
+      pedir<Cotizacion[]>(`/solicitudes/${id}/cotizaciones`, {}, token),
+    aceptarCotizacion: (token: string, id: number, cotizacionId: number) =>
+      pedir<Solicitud>(`/solicitudes/${id}/cotizaciones/${cotizacionId}/aceptar`, { method: 'POST' }, token),
     aceptar: (token: string, id: number) =>
       pedir<Solicitud>(`/solicitudes/${id}/aceptar`, { method: 'POST' }, token),
     rechazar: (token: string, id: number) =>
       pedir<Solicitud>(`/solicitudes/${id}/rechazar`, { method: 'POST' }, token),
     // Maestro
     recibidas: (token: string) => pedir<Solicitud[]>('/solicitudes/recibidas', {}, token),
+    /** Trabajos publicados que este maestro puede cotizar. */
+    abiertas: (token: string) => pedir<Solicitud[]>('/solicitudes/abiertas', {}, token),
     cotizar: (token: string, id: number, monto: number, mensaje: string) =>
       pedir<Solicitud>(
         `/solicitudes/${id}/cotizar`,

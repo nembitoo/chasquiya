@@ -128,6 +128,10 @@ export type Solicitud = {
   yaCalifique: boolean;
   /** Fotos del problema adjuntas; el contenido se pide aparte. */
   cantidadFotos: number;
+  /** Publicada sin maestro: varios pueden cotizarla y el cliente elige. */
+  abierta: boolean;
+  /** Cuántas ofertas recibió. En una abierta es lo que el cliente compara. */
+  cantidadCotizaciones: number;
   fechaCreacion: string;
 };
 
@@ -294,6 +298,32 @@ export type CrearTicketData = {
   asunto: string;
   mensaje: string;
   solicitudId?: number | null;
+};
+
+/** Una oferta recibida, con los datos del maestro que la hizo. */
+export type Cotizacion = {
+  id: number;
+  maestroId: number;
+  maestroNombre: string;
+  maestroTieneAvatar: boolean;
+  monto: number;
+  mensaje: string | null;
+  calificacionPromedio: number;
+  cantidadCalificaciones: number;
+  trabajosCompletados: number;
+  aniosExperiencia: number;
+  fechaCreacion: string;
+};
+
+/** Trabajo publicado sin elegir maestro. */
+export type PublicarSolicitudData = {
+  oficio: Oficio;
+  descripcion: string;
+  direccion: string;
+  fechaPreferida?: string | null;
+  presupuestoEstimado?: number | null;
+  latitud?: number | null;
+  longitud?: number | null;
 };
 
 /** Foto del problema adjunta a una solicitud (solo el id; el contenido va aparte). */

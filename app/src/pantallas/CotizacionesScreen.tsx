@@ -104,7 +104,11 @@ export function CotizacionesScreen({ route, navigation }: Props) {
             <View key={c.id} style={styles.tarjeta}>
               {c.id === masBarata && (
                 <View style={styles.cinta}>
-                  <Text style={styles.cintaTexto}>Más económica</Text>
+                  <Text style={styles.cintaTexto}>
+                    {/* Un estimado puede subir: llamarlo "la más económica" a
+                        secas sería vender algo que todavía no está firme. */}
+                    {c.tipo === 'CERRADO' ? 'Más económica' : 'La más baja por ahora'}
+                  </Text>
                 </View>
               )}
 
@@ -123,6 +127,34 @@ export function CotizacionesScreen({ route, navigation }: Props) {
                 </View>
                 <Text style={styles.monto}>{formatearCLP(c.monto)}</Text>
               </View>
+
+              {/* Un estimado y un precio cerrado no son comparables sin decirlo:
+                  el cliente tiene que saber cuál puede cambiar. */}
+              <View style={styles.filaTipo}>
+                <View style={[styles.sello, c.tipo === 'CERRADO' ? styles.selloFirme : styles.selloEstimado]}>
+                  <Text
+                    style={[
+                      styles.selloTexto,
+                      c.tipo === 'CERRADO' ? styles.selloTextoFirme : styles.selloTextoEstimado,
+                    ]}>
+                    {c.tipo === 'CERRADO' ? 'Precio cerrado' : 'Estimado'}
+                  </Text>
+                </View>
+                <Text style={styles.tipoAyuda}>
+                  {c.tipo === 'CERRADO'
+                    ? 'No cambia'
+                    : c.costoVisita
+                      ? `Puede cambiar tras revisar · visita ${formatearCLP(c.costoVisita)}`
+                      : 'Puede cambiar tras revisar'}
+                </Text>
+              </View>
+
+              {c.tipo === 'ESTIMADO' && !!c.costoVisita && (
+                <Text style={styles.explicacionVisita}>
+                  La visita se descuenta si haces el trabajo con él. Solo la pagas si no aceptas el
+                  precio final.
+                </Text>
+              )}
 
               <View style={styles.filaDatos}>
                 <Text style={styles.dato}>{c.trabajosCompletados} trabajos hechos</Text>
@@ -159,6 +191,15 @@ export function CotizacionesScreen({ route, navigation }: Props) {
               Se cerrará la búsqueda por {formatearCLP(confirmando?.monto ?? 0)} y podrán coordinar
               por el chat. A los demás maestros les avisaremos que no siguieron.
             </Text>
+            {confirmando?.tipo === 'ESTIMADO' && (
+              <Text style={styles.modalAviso}>
+                Es un precio estimado: puede cambiar tras revisar el trabajo, y tendrías que
+                aprobar el monto nuevo.
+                {confirmando.costoVisita
+                  ? ` Si no lo apruebas, pagas solo la visita (${formatearCLP(confirmando.costoVisita)}).`
+                  : ' Si no lo apruebas, no pagas nada.'}
+              </Text>
+            )}
             <Boton titulo="Sí, elegir" onPress={aceptar} cargando={aceptando} />
             <Boton titulo="Volver a comparar" variante="secundario" onPress={() => setConfirmando(null)} />
           </View>
@@ -194,6 +235,15 @@ const styles = StyleSheet.create({
   cintaTexto: { ...t.etiqueta, color: colores.exitoTexto, fontWeight: '700' },
   filaTop: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm },
   monto: { ...t.h2, color: colores.primario },
+  filaTipo: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs, marginTop: espacio.sm },
+  sello: { borderRadius: 999, paddingHorizontal: espacio.sm, paddingVertical: 2 },
+  selloFirme: { backgroundColor: colores.exitoFondo },
+  selloEstimado: { backgroundColor: colores.alertaFondo },
+  selloTexto: { ...t.etiqueta, fontWeight: '700' },
+  selloTextoFirme: { color: colores.exitoTexto },
+  selloTextoEstimado: { color: colores.alertaTexto },
+  tipoAyuda: { ...t.etiqueta, color: colores.textoSuave, flex: 1 },
+  explicacionVisita: { ...t.etiqueta, color: colores.textoTenue, marginTop: espacio.xxs },
   filaDatos: { flexDirection: 'row', alignItems: 'center', gap: espacio.xxs, marginTop: espacio.xs },
   dato: { ...t.pequeno },
   separador: { ...t.pequeno, color: colores.textoTenue },
@@ -209,4 +259,12 @@ const styles = StyleSheet.create({
     gap: espacio.xs,
   },
   modalTexto: { ...t.pequeno, marginBottom: espacio.sm },
+  modalAviso: {
+    ...t.pequeno,
+    color: colores.alertaTexto,
+    backgroundColor: colores.alertaFondo,
+    borderRadius: radio.sm,
+    padding: espacio.sm,
+    marginBottom: espacio.sm,
+  },
 });

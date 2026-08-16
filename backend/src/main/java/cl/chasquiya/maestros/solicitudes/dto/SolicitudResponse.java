@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import cl.chasquiya.maestros.perfiles.Oficio;
 import cl.chasquiya.maestros.solicitudes.EstadoServicio;
+import cl.chasquiya.maestros.solicitudes.TipoCotizacion;
 
 /** Solicitud vista desde la app (incluye la contraparte y la cotización si existe). */
 public record SolicitudResponse(
@@ -24,6 +25,9 @@ public record SolicitudResponse(
         String resolucionDisputa,
         Integer cotizacionMonto,
         String cotizacionMensaje,
+        /** CERRADO o ESTIMADO: define si el precio todavía puede cambiar. */
+        TipoCotizacion cotizacionTipo,
+        Integer cotizacionCostoVisita,
         /** Si quien consulta ya dejó su calificación en este servicio. */
         boolean yaCalifique,
         /** Fotos del problema adjuntas; el contenido se pide aparte. */

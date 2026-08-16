@@ -9,6 +9,8 @@ export const ESTADO_INFO: Record<EstadoServicio, { texto: string; fondo: string;
   SOLICITADO: { texto: 'Solicitud enviada', fondo: '#FEF3C7', color: '#92400E' },
   COTIZADO: { texto: 'Cotizado', fondo: '#DBEAFE', color: '#1E40AF' },
   ACEPTADO: { texto: 'Aceptado', fondo: '#E0E7FF', color: '#3730A3' },
+  // Ámbar: el trabajo está detenido esperando una decisión, no avanzando.
+  AJUSTE_PROPUESTO: { texto: 'Precio por confirmar', fondo: '#FEF3C7', color: '#92400E' },
   EN_CURSO: { texto: 'En ejecución', fondo: '#FEF3C7', color: '#92400E' },
   COMPLETADO: { texto: 'Completado ✓', fondo: '#DCFCE7', color: '#166534' },
   PAGADO: { texto: 'Pagado', fondo: '#DCFCE7', color: '#166534' },

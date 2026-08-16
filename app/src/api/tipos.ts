@@ -88,6 +88,8 @@ export type EstadoServicio =
   | 'SOLICITADO'
   | 'COTIZADO'
   | 'ACEPTADO'
+  /** El maestro propuso otro precio y el trabajo espera la decisión del cliente. */
+  | 'AJUSTE_PROPUESTO'
   | 'EN_CURSO'
   | 'COMPLETADO'
   | 'PAGADO'
@@ -132,6 +134,14 @@ export type Solicitud = {
   abierta: boolean;
   /** Cuántas ofertas recibió. En una abierta es lo que el cliente compara. */
   cantidadCotizaciones: number;
+  /** CERRADO o ESTIMADO: define si el precio todavía puede cambiar. */
+  cotizacionTipo: TipoCotizacion | null;
+  cotizacionCostoVisita: number | null;
+  /** Precio nuevo esperando que el cliente lo apruebe, si lo hay. */
+  montoAjustado: number | null;
+  mensajeAjuste: string | null;
+  /** Si el trabajo no se hizo, lo único cobrable: la visita ya acordada. */
+  montoVisitaCobrado: number | null;
   fechaCreacion: string;
 };
 
@@ -300,6 +310,12 @@ export type CrearTicketData = {
   solicitudId?: number | null;
 };
 
+/**
+ * Qué tan firme es el precio.
+ * CERRADO no cambia; ESTIMADO puede ajustarse tras ver el trabajo.
+ */
+export type TipoCotizacion = 'CERRADO' | 'ESTIMADO';
+
 /** Una oferta recibida, con los datos del maestro que la hizo. */
 export type Cotizacion = {
   id: number;
@@ -307,6 +323,9 @@ export type Cotizacion = {
   maestroNombre: string;
   maestroTieneAvatar: boolean;
   monto: number;
+  tipo: TipoCotizacion;
+  /** Lo que cobra por ir a diagnosticar si el trabajo no se hace. */
+  costoVisita: number | null;
   mensaje: string | null;
   calificacionPromedio: number;
   cantidadCalificaciones: number;

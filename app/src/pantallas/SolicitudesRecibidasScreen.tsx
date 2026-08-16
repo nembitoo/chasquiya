@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { EstadoServicio, Solicitud } from '../api/tipos';
+import { EstadoServicio, Solicitud, TipoCotizacion } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { BotonChat } from '../componentes/BotonChat';
 import { Dato } from '../componentes/base/Dato';
@@ -44,6 +44,11 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
   const [cotizando, setCotizando] = useState<number | null>(null);
   const [monto, setMonto] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [tipo, setTipo] = useState<TipoCotizacion>('CERRADO');
+  const [costoVisita, setCostoVisita] = useState('');
+  const [ajustando, setAjustando] = useState<number | null>(null);
+  const [montoAjuste, setMontoAjuste] = useState('');
+  const [motivoAjuste, setMotivoAjuste] = useState('');
   const [vista, setVista] = useState<Vista>('activos');
 
   const cargar = useCallback(async () => {
@@ -92,12 +97,38 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
     }
   }
 
+  async function enviarAjuste(id: number) {
+    if (!montoAjuste || Number(montoAjuste) <= 0) {
+      setError('Ingresa el monto nuevo.');
+      return;
+    }
+    if (!motivoAjuste.trim()) {
+      setError('Explica por qué cambia el precio: el cliente tiene que entenderlo.');
+      return;
+    }
+    await accion(id, () =>
+      api.solicitudes.proponerAjuste(token, id, Number(montoAjuste), motivoAjuste.trim()),
+    );
+    setAjustando(null);
+    setMontoAjuste('');
+    setMotivoAjuste('');
+  }
+
   async function enviarCotizacion(id: number, esAbierta = false) {
     if (!monto || Number(monto) <= 0) {
       setError('Ingresa un monto válido.');
       return;
     }
-    await accion(id, () => api.solicitudes.cotizar(token, id, Number(monto), mensaje.trim()));
+    await accion(id, () =>
+      api.solicitudes.cotizar(
+        token,
+        id,
+        Number(monto),
+        mensaje.trim(),
+        tipo,
+        tipo === 'ESTIMADO' && costoVisita ? Number(costoVisita) : null,
+      ),
+    );
     // Las abiertas viven en otra lista: hay que recargar para que la tarjeta
     // muestre la cotización recién enviada.
     if (esAbierta) {
@@ -106,6 +137,8 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
     setCotizando(null);
     setMonto('');
     setMensaje('');
+    setCostoVisita('');
+    setTipo('CERRADO');
   }
 
   return (
@@ -233,12 +266,43 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                 {s.estado === 'SOLICITADO' &&
                   (cotizando === s.id ? (
                     <View style={styles.formulario}>
+                      {/* Comprometerse a un precio o avisar que es estimado
+                          cambia todo para el cliente: se elige explícito. */}
+                      <Text style={styles.etiquetaTipo}>Tu precio</Text>
+                      <View style={styles.tipos}>
+                        {(['CERRADO', 'ESTIMADO'] as const).map((tp) => (
+                          <Pressable
+                            key={tp}
+                            onPress={() => setTipo(tp)}
+                            style={[styles.tipoOpcion, tipo === tp && styles.tipoOpcionActiva]}>
+                            <Text style={[styles.tipoTitulo, tipo === tp && styles.tipoTituloActivo]}>
+                              {tp === 'CERRADO' ? 'Precio cerrado' : 'Estimado'}
+                            </Text>
+                            <Text style={styles.tipoAyuda}>
+                              {tp === 'CERRADO'
+                                ? 'No cambia. Te comprometes a ese monto.'
+                                : 'Puedes ajustarlo tras ver el trabajo.'}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+
                       <CampoTexto
-                        etiqueta="Monto (CLP)"
+                        etiqueta={tipo === 'CERRADO' ? 'Monto (CLP)' : 'Monto estimado (CLP)'}
                         value={monto}
                         onChangeText={setMonto}
                         keyboardType="number-pad"
                       />
+
+                      {tipo === 'ESTIMADO' && (
+                        <CampoTexto
+                          etiqueta="Costo de la visita (CLP, opcional)"
+                          value={costoVisita}
+                          onChangeText={setCostoVisita}
+                          keyboardType="number-pad"
+                          ayuda="Se descuenta si el trabajo se hace. Solo se cobra si el cliente no acepta el precio final. Déjalo vacío si no cobras la visita."
+                        />
+                      )}
                       <CampoTexto
                         etiqueta="Mensaje (opcional)"
                         value={mensaje}
@@ -279,15 +343,66 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                     </View>
                   ))}
 
-                {s.estado === 'ACEPTADO' && (
-                  <View style={styles.acciones}>
-                    <View style={{ flex: 1 }}>
-                      <Boton
-                        titulo="Iniciar trabajo"
-                        cargando={procesando === s.id}
-                        onPress={() => accion(s.id, () => api.solicitudes.iniciar(token, s.id))}
+                {s.estado === 'ACEPTADO' &&
+                  (ajustando === s.id ? (
+                    <View style={styles.formulario}>
+                      <Text style={styles.etiquetaTipo}>Precio nuevo</Text>
+                      <CampoTexto
+                        etiqueta="Monto (CLP)"
+                        value={montoAjuste}
+                        onChangeText={setMontoAjuste}
+                        keyboardType="number-pad"
                       />
+                      <CampoTexto
+                        etiqueta="¿Por qué cambia?"
+                        value={motivoAjuste}
+                        onChangeText={setMotivoAjuste}
+                        placeholder="Ej: el tablero estaba quemado, hay que cambiarlo entero"
+                      />
+                      <Text style={styles.avisoAjuste}>
+                        El trabajo queda detenido hasta que el cliente lo apruebe. Si no acepta,
+                        cobras solo la visita que habías informado.
+                      </Text>
+                      <Boton
+                        titulo="Enviar precio nuevo"
+                        cargando={procesando === s.id}
+                        onPress={() => enviarAjuste(s.id)}
+                      />
+                      <View style={{ height: espacio.sm }} />
+                      <Boton titulo="Cancelar" variante="secundario" onPress={() => setAjustando(null)} />
                     </View>
+                  ) : (
+                    <View style={styles.acciones}>
+                      <View style={{ flex: 1 }}>
+                        <Boton
+                          titulo="Iniciar trabajo"
+                          cargando={procesando === s.id}
+                          onPress={() => accion(s.id, () => api.solicitudes.iniciar(token, s.id))}
+                        />
+                      </View>
+                      {/* Solo quien cotizó estimado puede reajustar: un precio
+                          cerrado es un compromiso. */}
+                      {s.cotizacionTipo === 'ESTIMADO' && (
+                        <>
+                          <View style={{ width: espacio.sm }} />
+                          <View style={{ flex: 1 }}>
+                            <Boton
+                              titulo="Ajustar precio"
+                              variante="secundario"
+                              onPress={() => setAjustando(s.id)}
+                            />
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  ))}
+
+                {s.estado === 'AJUSTE_PROPUESTO' && (
+                  <View style={styles.ajustePendiente}>
+                    <Text style={styles.ajusteTitulo}>
+                      Esperando respuesta: {formatearCLP(s.montoAjustado ?? 0)}
+                    </Text>
+                    {!!s.mensajeAjuste && <Text style={styles.dato}>{s.mensajeAjuste}</Text>}
                   </View>
                 )}
 
@@ -319,6 +434,37 @@ const styles = StyleSheet.create({
   volver: { color: colores.primario, fontSize: tipografia.cuerpo, fontWeight: '600', marginBottom: espacio.xs },
   titulo: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
   lista: { padding: espacio.lg },
+  etiquetaTipo: {
+    fontSize: tipografia.pequeno,
+    color: colores.textoSuave,
+    fontWeight: '600',
+    marginBottom: espacio.xs,
+  },
+  tipos: { flexDirection: 'row', gap: espacio.sm, marginBottom: espacio.md },
+  tipoOpcion: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderRadius: radio.sm,
+    padding: espacio.sm,
+    backgroundColor: colores.superficie,
+  },
+  tipoOpcionActiva: { borderColor: colores.primario, backgroundColor: colores.primarioSuave },
+  tipoTitulo: { fontSize: tipografia.cuerpo, fontWeight: '700', color: colores.texto },
+  tipoTituloActivo: { color: colores.primario },
+  tipoAyuda: { fontSize: tipografia.pequeno, color: colores.textoSuave, marginTop: 2 },
+  avisoAjuste: {
+    fontSize: tipografia.pequeno,
+    color: colores.textoSuave,
+    marginBottom: espacio.sm,
+  },
+  ajustePendiente: {
+    backgroundColor: colores.alertaFondo,
+    borderRadius: radio.sm,
+    padding: espacio.sm,
+    marginTop: espacio.sm,
+  },
+  ajusteTitulo: { fontSize: tipografia.cuerpo, fontWeight: '700', color: colores.alertaTexto },
   ayudaAbiertas: {
     fontSize: tipografia.pequeno,
     color: colores.textoSuave,

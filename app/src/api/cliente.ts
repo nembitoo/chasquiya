@@ -28,6 +28,7 @@ import {
   ResumenPago,
   Solicitud,
   Ticket,
+  TipoCotizacion,
   Usuario,
 } from './tipos';
 
@@ -211,12 +212,30 @@ export const api = {
     recibidas: (token: string) => pedir<Solicitud[]>('/solicitudes/recibidas', {}, token),
     /** Trabajos publicados que este maestro puede cotizar. */
     abiertas: (token: string) => pedir<Solicitud[]>('/solicitudes/abiertas', {}, token),
-    cotizar: (token: string, id: number, monto: number, mensaje: string) =>
+    cotizar: (
+      token: string,
+      id: number,
+      monto: number,
+      mensaje: string,
+      tipo: TipoCotizacion = 'CERRADO',
+      costoVisita: number | null = null,
+    ) =>
       pedir<Solicitud>(
         `/solicitudes/${id}/cotizar`,
-        { method: 'POST', body: JSON.stringify({ monto, mensaje }) },
+        { method: 'POST', body: JSON.stringify({ monto, mensaje, tipo, costoVisita }) },
         token,
       ),
+    /** Tras ver el trabajo: propone otro precio (solo si cotizó estimado). */
+    proponerAjuste: (token: string, id: number, monto: number, motivo: string) =>
+      pedir<Solicitud>(
+        `/solicitudes/${id}/ajuste`,
+        { method: 'POST', body: JSON.stringify({ monto, motivo }) },
+        token,
+      ),
+    aprobarAjuste: (token: string, id: number) =>
+      pedir<Solicitud>(`/solicitudes/${id}/ajuste/aprobar`, { method: 'POST' }, token),
+    rechazarAjuste: (token: string, id: number) =>
+      pedir<Solicitud>(`/solicitudes/${id}/ajuste/rechazar`, { method: 'POST' }, token),
     iniciar: (token: string, id: number) =>
       pedir<Solicitud>(`/solicitudes/${id}/iniciar`, { method: 'POST' }, token),
     completar: (token: string, id: number) =>

@@ -550,6 +550,8 @@ public class SolicitudService {
                 s.getPresupuestoEstimado(), s.getEstado(), s.getMotivoCancelacion(), s.getResolucionDisputa(),
                 cot.map(Cotizacion::getMonto).orElse(null),
                 cot.map(Cotizacion::getMensaje).orElse(null),
+                cot.map(Cotizacion::getTipo).orElse(null),
+                cot.map(Cotizacion::getCostoVisita).orElse(null),
                 yaCalifique,
                 cantidadFotos,
                 s.estaAbierta(),

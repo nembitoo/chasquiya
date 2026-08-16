@@ -226,11 +226,61 @@ export function MisSolicitudesScreen({ navigation }: Props) {
                   <Text style={styles.cotizacionMonto}>
                     {vista === 'historial' ? 'Total: ' : 'Cotización: '}
                     {formatearCLP(s.cotizacionMonto)}
+                    {s.cotizacionTipo === 'ESTIMADO' && ' (estimado)'}
                   </Text>
+                  {s.cotizacionTipo === 'ESTIMADO' && !!s.cotizacionCostoVisita && (
+                    <Text style={styles.cotizacionMensaje}>
+                      Visita {formatearCLP(s.cotizacionCostoVisita)} · se descuenta si el trabajo se
+                      hace
+                    </Text>
+                  )}
                   {!!s.cotizacionMensaje && (
                     <Text style={styles.cotizacionMensaje}>{s.cotizacionMensaje}</Text>
                   )}
                 </View>
+              )}
+
+              {/* El trabajo está detenido: el cliente decide si acepta el precio nuevo. */}
+              {s.estado === 'AJUSTE_PROPUESTO' && (
+                <View style={styles.ajuste}>
+                  <Text style={styles.ajusteTitulo}>
+                    Nuevo precio: {formatearCLP(s.montoAjustado ?? 0)}
+                  </Text>
+                  {!!s.mensajeAjuste && <Text style={styles.ajusteMotivo}>{s.mensajeAjuste}</Text>}
+                  <Text style={styles.ajusteAyuda}>
+                    {s.cotizacionCostoVisita
+                      ? `Si no aceptas, el trabajo no se hace y pagas solo la visita (${formatearCLP(
+                          s.cotizacionCostoVisita,
+                        )}), que ya habías aceptado.`
+                      : 'Si no aceptas, el trabajo no se hace y no pagas nada.'}
+                  </Text>
+                  <View style={styles.acciones}>
+                    <View style={{ flex: 1 }}>
+                      <Boton
+                        titulo="Aceptar precio"
+                        tamano="sm"
+                        cargando={procesando === s.id}
+                        onPress={() => accion(s.id, () => api.solicitudes.aprobarAjuste(token, s.id))}
+                      />
+                    </View>
+                    <View style={{ width: espacio.sm }} />
+                    <View style={{ flex: 1 }}>
+                      <Boton
+                        titulo="No aceptar"
+                        variante="secundario"
+                        tamano="sm"
+                        deshabilitado={procesando === s.id}
+                        onPress={() => accion(s.id, () => api.solicitudes.rechazarAjuste(token, s.id))}
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {s.montoVisitaCobrado != null && (
+                <Text style={styles.soloVisita}>
+                  El trabajo no se realizó. Se cobra solo la visita de diagnóstico.
+                </Text>
               )}
 
               {!!s.motivoCancelacion && <Text style={styles.motivo}>{s.motivoCancelacion}</Text>}
@@ -362,6 +412,16 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm },
   oficio: { ...t.pequeno, color: colores.primario },
   descripcion: { ...t.cuerpo, marginTop: espacio.sm },
+  ajuste: {
+    backgroundColor: colores.alertaFondo,
+    borderRadius: radio.sm,
+    padding: espacio.md,
+    marginTop: espacio.sm,
+  },
+  ajusteTitulo: { ...t.cuerpoFuerte, color: colores.alertaTexto },
+  ajusteMotivo: { ...t.pequeno, color: colores.alertaTexto, marginTop: 2 },
+  ajusteAyuda: { ...t.etiqueta, color: colores.alertaTexto, marginTop: espacio.xs },
+  soloVisita: { ...t.pequeno, color: colores.textoSuave, marginTop: espacio.xs, fontStyle: 'italic' },
   abierta: {
     flexDirection: 'row',
     alignItems: 'center',

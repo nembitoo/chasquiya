@@ -29,6 +29,7 @@ import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
 import { MisDatosScreen } from '../pantallas/MisDatosScreen';
+import { MisServiciosScreen } from '../pantallas/MisServiciosScreen';
 import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
 import { NotificacionesScreen } from '../pantallas/NotificacionesScreen';
 import { CotizacionesScreen } from '../pantallas/CotizacionesScreen';
@@ -59,6 +60,11 @@ export type RootStackParamList = {
     oficios: Oficio[];
     /** Datos de un servicio anterior, para "volver a contratar". */
     precargar?: { descripcion: string; direccion: string };
+    /**
+     * Servicio del catálogo que el cliente eligió. Con precio fijo, la
+     * cotización sale sola al enviar la solicitud.
+     */
+    servicio?: { id: number; titulo: string; precio: number; precioFijo: boolean; oficio: Oficio };
   };
   /** Publicar un trabajo sin elegir maestro. */
   PublicarSolicitud: undefined;
@@ -67,6 +73,8 @@ export type RootStackParamList = {
   Pago: { solicitudId: number };
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
   PerfilMaestro: undefined;
+  /** Catálogo del maestro: qué hace y cuánto cobra. */
+  MisServicios: undefined;
   Agenda: undefined;
   Ayuda: undefined;
   Favoritos: undefined;
@@ -227,6 +235,7 @@ export function Navegacion() {
             <Stack.Screen name="Pago" component={PagoScreen} />
             <Stack.Screen name="Calificar" component={CalificarScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
+            <Stack.Screen name="MisServicios" component={MisServiciosScreen} />
             <Stack.Screen name="Agenda" component={AgendaScreen} />
             <Stack.Screen name="Ayuda" component={AyudaScreen} />
             <Stack.Screen name="Favoritos" component={FavoritosScreen} />

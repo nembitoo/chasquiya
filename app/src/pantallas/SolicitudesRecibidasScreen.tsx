@@ -84,6 +84,19 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
     [vista, activos, abiertas, historial],
   );
 
+  /**
+   * Abre el formulario limpio. Si la solicitud salió de su catálogo, el monto
+   * llega precargado con lo que él mismo publicó: es un punto de partida, no
+   * una obligación — puede cambiarlo antes de enviar.
+   */
+  function abrirCotizacion(s: Solicitud) {
+    setMonto(s.precioCatalogo != null ? String(s.precioCatalogo) : '');
+    setMensaje('');
+    setTipo('CERRADO');
+    setCostoVisita('');
+    setCotizando(s.id);
+  }
+
   async function accion(id: number, fn: () => Promise<Solicitud>) {
     setError('');
     setProcesando(id);
@@ -320,7 +333,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                   ) : (
                     <View style={styles.acciones}>
                       <View style={{ flex: 1 }}>
-                        <Boton titulo="Cotizar" onPress={() => setCotizando(s.id)} />
+                        <Boton titulo="Cotizar" onPress={() => abrirCotizacion(s)} />
                       </View>
                       {/* En una abierta no se ofrece "Declinar": el trabajo no es
                           tuyo, así que no hay nada que cancelar. Basta con no
@@ -342,6 +355,32 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                       </View>
                     </View>
                   ))}
+
+                {/*
+                  * Cotizado y esperando al cliente. Un pedido del catálogo con
+                  * precio fijo entra directo aquí, sin pasar por "Cotizar", así
+                  * que sin esta salida el maestro quedaría atado a un trabajo
+                  * que nunca aceptó. Declinar no se penaliza (Ley 21.431).
+                  */}
+                {s.estado === 'COTIZADO' && (
+                  <>
+                    <Text style={styles.nota}>Esperando que el cliente acepte tu precio.</Text>
+                    <View style={styles.acciones}>
+                      <View style={{ flex: 1 }}>
+                        <Boton
+                          titulo="Ya no puedo tomarlo"
+                          variante="secundario"
+                          deshabilitado={procesando === s.id}
+                          onPress={() =>
+                            accion(s.id, () =>
+                              api.solicitudes.cancelar(token, s.id, 'El maestro no puede tomar el trabajo'),
+                            )
+                          }
+                        />
+                      </View>
+                    </View>
+                  </>
+                )}
 
                 {s.estado === 'ACEPTADO' &&
                   (ajustando === s.id ? (

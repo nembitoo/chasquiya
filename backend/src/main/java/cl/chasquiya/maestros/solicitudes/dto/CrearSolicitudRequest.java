@@ -13,5 +13,10 @@ public record CrearSolicitudRequest(
         @NotBlank @Size(max = 1000) String descripcion,
         @NotBlank @Size(max = 255) String direccion,
         @Size(max = 30) String fechaPreferida,
-        @PositiveOrZero Integer presupuestoEstimado) {
+        @PositiveOrZero Integer presupuestoEstimado,
+        /**
+         * Servicio del catálogo del maestro, si el cliente pidió uno. Opcional:
+         * cuando viene, el oficio y el precio salen del catálogo y no de aquí.
+         */
+        Long servicioId) {
 }

@@ -64,6 +64,7 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
     ...(rol === 'MAESTRO'
       ? [
           { icono: 'briefcase-outline' as NombreIcono, titulo: 'Mi perfil profesional', onPress: () => navigation.navigate('PerfilMaestro') },
+          { icono: 'pricetags-outline' as NombreIcono, titulo: 'Mis servicios y precios', onPress: () => navigation.navigate('MisServicios') },
           { icono: 'calendar-outline' as NombreIcono, titulo: 'Mi agenda', onPress: () => navigation.navigate('Agenda') },
         ]
       : []),

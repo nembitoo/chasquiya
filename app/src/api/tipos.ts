@@ -105,6 +105,38 @@ export type CrearSolicitudData = {
   direccion: string;
   fechaPreferida: string | null;
   presupuestoEstimado: number | null;
+  /** Servicio del catálogo que se está pidiendo, si el cliente eligió uno. */
+  servicioId?: number | null;
+};
+
+/**
+ * Un servicio con precio publicado por un maestro.
+ *
+ * Los precios los pone él, no la plataforma: fijar tarifas sería tratarlo como
+ * empleado, y es independiente (Ley 21.431).
+ */
+export type ServicioCatalogo = {
+  id: number;
+  maestroId: number;
+  oficio: Oficio;
+  titulo: string;
+  descripcion: string | null;
+  precio: number;
+  /** true = se compromete a ese monto y la cotización sale sola; false = es un "desde". */
+  precioFijo: boolean;
+  /** "por punto", "la hora"... Cada oficio se mide distinto. */
+  unidad: string | null;
+  activo: boolean;
+};
+
+/** Lo que el maestro envía para publicar o corregir un servicio suyo. */
+export type ServicioCatalogoData = {
+  oficio: Oficio;
+  titulo: string;
+  descripcion: string | null;
+  precio: number;
+  precioFijo: boolean;
+  unidad: string | null;
 };
 
 /** Una solicitud vista desde la app. */
@@ -142,6 +174,11 @@ export type Solicitud = {
   mensajeAjuste: string | null;
   /** Si el trabajo no se hizo, lo único cobrable: la visita ya acordada. */
   montoVisitaCobrado: number | null;
+  /**
+   * Precio que el maestro tiene publicado hoy para el servicio del que nació
+   * esta solicitud. Solo para precargarle el monto al cotizar.
+   */
+  precioCatalogo: number | null;
   fechaCreacion: string;
 };
 

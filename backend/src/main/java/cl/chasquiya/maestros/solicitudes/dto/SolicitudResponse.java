@@ -41,5 +41,11 @@ public record SolicitudResponse(
         String mensajeAjuste,
         /** Si el trabajo no se hizo, lo único cobrable: la visita ya acordada. */
         Integer montoVisitaCobrado,
+        /**
+         * Precio que el maestro tiene publicado hoy para el servicio del que
+         * nació esta solicitud, si nació de uno. Sirve para precargarle el monto
+         * al cotizar; el precio que vale sigue siendo el de la cotización.
+         */
+        Integer precioCatalogo,
         Instant fechaCreacion) {
 }

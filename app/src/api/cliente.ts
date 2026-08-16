@@ -26,6 +26,8 @@ import {
   RegistroData,
   Reputacion,
   ResumenPago,
+  ServicioCatalogo,
+  ServicioCatalogoData,
   Solicitud,
   Ticket,
   TipoCotizacion,
@@ -247,6 +249,23 @@ export const api = {
         { method: 'POST', body: JSON.stringify({ motivo }) },
         token,
       ),
+  },
+
+  catalogo: {
+    /** Lo que ve un cliente en el perfil del maestro: solo lo publicado. */
+    deMaestro: (token: string, maestroId: number) =>
+      pedir<ServicioCatalogo[]>(`/catalogo/${maestroId}`, {}, token),
+    /** El catálogo propio del maestro, con los pausados incluidos. */
+    mios: (token: string) => pedir<ServicioCatalogo[]>('/mi-catalogo', {}, token),
+    crear: (token: string, datos: ServicioCatalogoData) =>
+      pedir<ServicioCatalogo>('/mi-catalogo', { method: 'POST', body: JSON.stringify(datos) }, token),
+    actualizar: (token: string, id: number, datos: ServicioCatalogoData) =>
+      pedir<ServicioCatalogo>(`/mi-catalogo/${id}`, { method: 'PUT', body: JSON.stringify(datos) }, token),
+    /** Publicar o pausar sin perder lo escrito. */
+    alternar: (token: string, id: number) =>
+      pedir<ServicioCatalogo>(`/mi-catalogo/${id}/alternar`, { method: 'POST' }, token),
+    eliminar: (token: string, id: number) =>
+      pedir<null>(`/mi-catalogo/${id}`, { method: 'DELETE' }, token),
   },
 
   usuarios: {

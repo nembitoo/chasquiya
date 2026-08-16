@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -14,10 +16,13 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.catalogo.CatalogoService;
+import cl.chasquiya.maestros.catalogo.ServicioMaestro;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
 import cl.chasquiya.maestros.perfiles.PerfilMaestro;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
@@ -50,8 +55,11 @@ class SolicitudServiceTest {
     private final cl.chasquiya.maestros.descubrimiento.DescubrimientoService descubrimiento =
             mock(cl.chasquiya.maestros.descubrimiento.DescubrimientoService.class);
 
+    private final CatalogoService catalogo = mock(CatalogoService.class);
+
     private final SolicitudService servicio =
-            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones, notificaciones, fotos, descubrimiento);
+            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones, notificaciones,
+                    fotos, descubrimiento, catalogo);
 
     @BeforeEach
     void setUp() {
@@ -82,7 +90,7 @@ class SolicitudServiceTest {
         when(perfiles.findByUsuarioId(MAESTRO)).thenReturn(Optional.of(maestroAprobado()));
 
         SolicitudResponse r = servicio.crear(CLIENTE, new CrearSolicitudRequest(
-                MAESTRO, Oficio.ELECTRICIDAD, "Se cortó la luz", "Av. Siempre Viva 742", null, 20000));
+                MAESTRO, Oficio.ELECTRICIDAD, "Se cortó la luz", "Av. Siempre Viva 742", null, 20000, null));
 
         assertEquals(EstadoServicio.SOLICITADO, r.estado());
     }
@@ -93,7 +101,63 @@ class SolicitudServiceTest {
         when(perfiles.findByUsuarioId(MAESTRO)).thenReturn(Optional.of(new PerfilMaestro(MAESTRO)));
 
         assertThrows(ResponseStatusException.class, () -> servicio.crear(CLIENTE, new CrearSolicitudRequest(
-                MAESTRO, Oficio.ELECTRICIDAD, "Hola", "Calle 1", null, null)));
+                MAESTRO, Oficio.ELECTRICIDAD, "Hola", "Calle 1", null, null, null)));
+    }
+
+    // --- Pedir del catálogo del maestro (Fase 5) ---
+
+    /** Un servicio del catálogo, tal como lo publicó el maestro. */
+    private ServicioMaestro delCatalogo(Oficio oficio, int precio, boolean precioFijo) {
+        ServicioMaestro s = new ServicioMaestro(MAESTRO, oficio, "Cambio de enchufe",
+                "Incluye el enchufe", precio, precioFijo, null);
+        when(catalogo.paraSolicitar(7L, MAESTRO)).thenReturn(s);
+        return s;
+    }
+
+    private CrearSolicitudRequest pidiendoElServicio7() {
+        return new CrearSolicitudRequest(MAESTRO, Oficio.ELECTRICIDAD, "El del catálogo",
+                "Av. Siempre Viva 742", null, null, 7L);
+    }
+
+    @Test
+    void unServicioDePrecioFijoLlegaYaCotizadoConEseMonto() {
+        when(perfiles.findByUsuarioId(MAESTRO)).thenReturn(Optional.of(maestroAprobado()));
+        delCatalogo(Oficio.ELECTRICIDAD, 25000, true);
+
+        SolicitudResponse r = servicio.crear(CLIENTE, pidiendoElServicio7());
+
+        // El maestro ya se comprometió al publicarlo: no tiene que cotizar de nuevo.
+        assertEquals(EstadoServicio.COTIZADO, r.estado());
+        ArgumentCaptor<Cotizacion> captor = ArgumentCaptor.forClass(Cotizacion.class);
+        verify(cotizaciones).save(captor.capture());
+        assertEquals(25000, captor.getValue().getMonto().intValue());
+        // Lo publicado como precio fijo no se puede reajustar después.
+        assertEquals(TipoCotizacion.CERRADO, captor.getValue().getTipo());
+    }
+
+    @Test
+    void unServicioDesdeNoSeCotizaSolo() {
+        when(perfiles.findByUsuarioId(MAESTRO)).thenReturn(Optional.of(maestroAprobado()));
+        delCatalogo(Oficio.ELECTRICIDAD, 25000, false);
+
+        SolicitudResponse r = servicio.crear(CLIENTE, pidiendoElServicio7());
+
+        // Es un "desde": el precio de verdad lo pone el maestro al cotizar.
+        assertEquals(EstadoServicio.SOLICITADO, r.estado());
+        verify(cotizaciones, never()).save(any());
+    }
+
+    @Test
+    void elOficioLoDecideElCatalogoNoElCliente() {
+        when(perfiles.findByUsuarioId(MAESTRO)).thenReturn(Optional.of(maestroAprobado()));
+        // El servicio publicado es de gasfitería, aunque el cliente mande otra cosa.
+        delCatalogo(Oficio.GASFITERIA, 25000, false);
+
+        servicio.crear(CLIENTE, pidiendoElServicio7());
+
+        ArgumentCaptor<Solicitud> captor = ArgumentCaptor.forClass(Solicitud.class);
+        verify(solicitudes).save(captor.capture());
+        assertEquals(Oficio.GASFITERIA, captor.getValue().getOficio());
     }
 
     // --- Camino feliz ---

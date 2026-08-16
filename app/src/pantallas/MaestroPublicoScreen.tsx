@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { Calificacion, MaestroPublico } from '../api/tipos';
+import { Calificacion, MaestroPublico, ServicioCatalogo } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { Estrellas } from '../componentes/Estrellas';
 import { Icono } from '../componentes/base/Icono';
@@ -12,6 +12,7 @@ import { OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, radio, tipografia } from '../tema/tema';
+import { formatearCLP } from '../utilidades/moneda';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MaestroPublico'>;
 
@@ -26,6 +27,7 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
 
   const [maestro, setMaestro] = useState<MaestroPublico | null>(null);
   const [resenas, setResenas] = useState<Calificacion[]>([]);
+  const [servicios, setServicios] = useState<ServicioCatalogo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
@@ -33,12 +35,15 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        const [m, r] = await Promise.all([
+        const [m, r, s] = await Promise.all([
           api.descubrimiento.maestro(token, usuarioId),
           api.calificaciones.resenasDe(token, usuarioId).catch(() => []),
+          // El catálogo es opcional: sin él el perfil se ve igual.
+          api.catalogo.deMaestro(token, usuarioId).catch(() => []),
         ]);
         setMaestro(m);
         setResenas(r);
+        setServicios(s);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'No se pudo cargar el maestro.');
       } finally {
@@ -110,6 +115,59 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
               valor={maestro.tarifaReferencial ? `$${maestro.tarifaReferencial}` : '—'}
             />
           </View>
+
+          {servicios.length > 0 && (
+            <>
+              <Text style={styles.seccion}>Servicios y precios</Text>
+              {servicios.map((s) => (
+                <View key={s.id} style={styles.servicio}>
+                  <View style={styles.servicioTop}>
+                    <Text style={styles.servicioTitulo}>{s.titulo}</Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.servicioPrecio}>
+                        {s.precioFijo ? '' : 'desde '}
+                        {formatearCLP(s.precio)}
+                      </Text>
+                      {!!s.unidad && <Text style={styles.servicioUnidad}>{s.unidad}</Text>}
+                    </View>
+                  </View>
+
+                  {/* Un precio fijo y un "desde" no son lo mismo: decirlo evita
+                      que el cliente crea que ya sabe lo que va a pagar. */}
+                  <View style={[styles.sello, s.precioFijo ? styles.selloFirme : styles.selloDesde]}>
+                    <Text
+                      style={[
+                        styles.selloTexto,
+                        s.precioFijo ? styles.selloTextoFirme : styles.selloTextoDesde,
+                      ]}>
+                      {s.precioFijo ? 'Precio fijo' : 'Precio de referencia'}
+                    </Text>
+                  </View>
+
+                  {!!s.descripcion && <Text style={styles.servicioDetalle}>{s.descripcion}</Text>}
+
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() =>
+                      navigation.navigate('NuevaSolicitud', {
+                        maestroId: maestro.usuarioId,
+                        maestroNombre: `${maestro.nombre} ${maestro.apellido}`,
+                        oficios: maestro.oficios,
+                        servicio: {
+                          id: s.id,
+                          titulo: s.titulo,
+                          precio: s.precio,
+                          precioFijo: s.precioFijo,
+                          oficio: s.oficio,
+                        },
+                      })
+                    }>
+                    <Text style={styles.servicioPedir}>Pedir este servicio ›</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </>
+          )}
 
           {!!maestro.descripcion && (
             <>
@@ -193,6 +251,37 @@ const styles = StyleSheet.create({
   datoEtiqueta: { color: colores.textoSuave, fontSize: tipografia.pequeno },
   datoValor: { color: colores.texto, fontWeight: '700', marginTop: espacio.xs },
   seccion: { fontSize: tipografia.subtitulo, fontWeight: '700', color: colores.texto, marginTop: espacio.lg },
+  servicio: {
+    backgroundColor: colores.blanco,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    padding: espacio.md,
+    marginTop: espacio.sm,
+  },
+  servicioTop: { flexDirection: 'row', alignItems: 'flex-start', gap: espacio.sm },
+  servicioTitulo: { flex: 1, fontWeight: '700', color: colores.texto, fontSize: tipografia.cuerpo },
+  servicioPrecio: { fontWeight: '800', color: colores.primario, fontSize: tipografia.cuerpo },
+  servicioUnidad: { fontSize: tipografia.pequeno, color: colores.textoSuave },
+  sello: {
+    alignSelf: 'flex-start',
+    borderRadius: radio.completo,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: 2,
+    marginTop: espacio.xs,
+  },
+  selloFirme: { backgroundColor: colores.exitoFondo },
+  selloDesde: { backgroundColor: colores.alertaFondo },
+  selloTexto: { fontSize: tipografia.pequeno, fontWeight: '700' },
+  selloTextoFirme: { color: colores.exitoTexto },
+  selloTextoDesde: { color: colores.alertaTexto },
+  servicioDetalle: { color: colores.textoSuave, fontSize: tipografia.pequeno, marginTop: espacio.xs },
+  servicioPedir: {
+    color: colores.primario,
+    fontWeight: '700',
+    fontSize: tipografia.pequeno,
+    marginTop: espacio.sm,
+  },
   descripcion: { color: colores.texto, marginTop: espacio.sm, lineHeight: 22 },
   filaEstrellas: { marginTop: espacio.sm },
   resena: {

@@ -15,6 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.calificaciones.CalificacionRepository;
+import cl.chasquiya.maestros.catalogo.CatalogoService;
 import cl.chasquiya.maestros.descubrimiento.DescubrimientoService;
 import cl.chasquiya.maestros.notificaciones.NotificacionService;
 import cl.chasquiya.maestros.perfiles.Oficio;
@@ -43,9 +44,10 @@ class AjustePrecioTest {
     private final NotificacionService notificaciones = mock(NotificacionService.class);
     private final FotoSolicitudRepository fotos = mock(FotoSolicitudRepository.class);
     private final DescubrimientoService descubrimiento = mock(DescubrimientoService.class);
+    private final CatalogoService catalogo = mock(CatalogoService.class);
 
     private final SolicitudService servicio = new SolicitudService(solicitudes, cotizaciones, perfiles,
-            usuarios, calificaciones, notificaciones, fotos, descubrimiento);
+            usuarios, calificaciones, notificaciones, fotos, descubrimiento, catalogo);
 
     @BeforeEach
     void setUp() {

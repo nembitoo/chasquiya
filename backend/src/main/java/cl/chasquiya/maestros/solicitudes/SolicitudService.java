@@ -18,6 +18,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.calificaciones.Calificacion;
 import cl.chasquiya.maestros.calificaciones.CalificacionRepository;
+import cl.chasquiya.maestros.catalogo.CatalogoService;
+import cl.chasquiya.maestros.catalogo.ServicioMaestro;
 import cl.chasquiya.maestros.descubrimiento.DescubrimientoService;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.notificaciones.NotificacionService;
@@ -51,6 +53,7 @@ public class SolicitudService {
     private final NotificacionService notificaciones;
     private final FotoSolicitudRepository fotos;
     private final DescubrimientoService descubrimiento;
+    private final CatalogoService catalogo;
 
     /** Radio para ofrecer trabajos abiertos a un maestro. */
     private static final double RADIO_ABIERTAS_M = 25_000;
@@ -58,9 +61,11 @@ public class SolicitudService {
     public SolicitudService(SolicitudRepository solicitudes, CotizacionRepository cotizaciones,
                             PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
                             CalificacionRepository calificaciones, NotificacionService notificaciones,
-                            FotoSolicitudRepository fotos, DescubrimientoService descubrimiento) {
+                            FotoSolicitudRepository fotos, DescubrimientoService descubrimiento,
+                            CatalogoService catalogo) {
         this.fotos = fotos;
         this.descubrimiento = descubrimiento;
+        this.catalogo = catalogo;
         this.solicitudes = solicitudes;
         this.cotizaciones = cotizaciones;
         this.perfiles = perfiles;
@@ -80,11 +85,48 @@ public class SolicitudService {
                 .filter(p -> p.getEstadoVerificacion() == EstadoVerificacion.APROBADO)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Maestro no disponible"));
 
-        Solicitud s = new Solicitud(clienteId, req.maestroId(), req.oficio(), req.descripcion().trim(),
+        /*
+         * Si el cliente pidió algo del catálogo, el oficio y el precio salen de
+         * ahí: son datos que puso el maestro. Creerle al cliente permitiría
+         * pedir "instalación de llave" al precio de otro servicio.
+         */
+        ServicioMaestro servicio = req.servicioId() == null
+                ? null
+                : catalogo.paraSolicitar(req.servicioId(), req.maestroId());
+
+        Solicitud s = new Solicitud(clienteId, req.maestroId(),
+                servicio != null ? servicio.getOficio() : req.oficio(), req.descripcion().trim(),
                 req.direccion().trim(), req.fechaPreferida(), req.presupuestoEstimado());
+        if (servicio != null) {
+            s.setServicioId(servicio.getId());
+        }
         solicitudes.save(s);
+
+        if (servicio != null && servicio.isPrecioFijo()) {
+            cotizarDesdeCatalogo(s, servicio, clienteId);
+        }
         notificaciones.avisar(s.getMaestroId(), TipoNotificacion.SOLICITUD_NUEVA, s.getId(), nombreDe(clienteId));
         return aResponse(s, clienteId);
+    }
+
+    /**
+     * Un servicio de precio fijo llega ya cotizado: el maestro se comprometió a
+     * ese monto al publicarlo, así que no tiene sentido hacerlo escribir de
+     * nuevo el mismo número y al cliente esperarlo.
+     *
+     * <p>Aun así el trabajo NO queda cerrado: el cliente todavía tiene que
+     * aceptar, y el maestro puede cancelar mientras tanto. Que la app lo dejara
+     * atado a un trabajo que no eligió sería tratarlo como empleado
+     * (Ley 21.431).
+     */
+    private void cotizarDesdeCatalogo(Solicitud s, ServicioMaestro servicio, Long clienteId) {
+        Cotizacion c = new Cotizacion(s.getId(), s.getMaestroId(), servicio.getPrecio(),
+                "Precio publicado en el catálogo: " + servicio.getTitulo());
+        // Cerrada, nunca estimada: lo que se publicó como precio fijo no puede
+        // reajustarse después (Ley 19.496).
+        c.setTipo(TipoCotizacion.CERRADO);
+        cotizaciones.save(c);
+        transicionar(s, EstadoServicio.COTIZADO, clienteId);
     }
 
     /**
@@ -506,11 +548,17 @@ public class SolicitudService {
         Map<Long, Integer> fotosPorSolicitud = new HashMap<>();
         fotos.findBySolicitudIdIn(ids).forEach(f -> fotosPorSolicitud.merge(f.getSolicitudId(), 1, Integer::sum));
 
+        Map<Long, Integer> preciosCatalogo = catalogo.preciosDe(lista.stream()
+                .map(Solicitud::getServicioId)
+                .filter(Objects::nonNull)
+                .distinct().toList());
+
         return lista.stream()
                 .map(s -> {
                     List<Cotizacion> suyas = cotsPorSolicitud.getOrDefault(s.getId(), List.of());
                     return construir(s, laDelMaestro(s, suyas), suyas.size(), personas,
-                            yaCalificadas.contains(s.getId()), fotosPorSolicitud.getOrDefault(s.getId(), 0));
+                            yaCalificadas.contains(s.getId()), fotosPorSolicitud.getOrDefault(s.getId(), 0),
+                            preciosCatalogo.get(s.getServicioId()));
                 })
                 .toList();
     }
@@ -525,8 +573,11 @@ public class SolicitudService {
                 && calificaciones.existsBySolicitudIdAndAutorId(s.getId(), usuarioActual);
 
         List<Cotizacion> suyas = cotizaciones.findBySolicitudIdOrderByMontoAsc(s.getId());
+        Integer precioCatalogo = s.getServicioId() == null
+                ? null
+                : catalogo.preciosDe(List.of(s.getServicioId())).get(s.getServicioId());
         return construir(s, laDelMaestro(s, suyas), suyas.size(), personas, yaCalifico,
-                (int) fotos.countBySolicitudId(s.getId()));
+                (int) fotos.countBySolicitudId(s.getId()), precioCatalogo);
     }
 
     /**
@@ -541,7 +592,8 @@ public class SolicitudService {
     }
 
     private SolicitudResponse construir(Solicitud s, Optional<Cotizacion> cot, int cantidadCotizaciones,
-                                        Map<Long, Usuario> personas, boolean yaCalifique, int cantidadFotos) {
+                                        Map<Long, Usuario> personas, boolean yaCalifique, int cantidadFotos,
+                                        Integer precioCatalogo) {
         return new SolicitudResponse(
                 s.getId(),
                 s.getClienteId(), nombreDe(personas.get(s.getClienteId())), tieneAvatar(personas.get(s.getClienteId())),
@@ -559,6 +611,7 @@ public class SolicitudService {
                 s.getMontoAjustado(),
                 s.getMensajeAjuste(),
                 s.getMontoVisitaCobrado(),
+                precioCatalogo,
                 s.getFechaCreacion());
     }
 

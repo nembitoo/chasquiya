@@ -55,6 +55,14 @@ public class Solicitud {
     private Double longitud;
 
     /**
+     * De qué servicio del catálogo nació, si nació de uno. Es solo trazabilidad:
+     * el precio ya quedó congelado en la cotización, así que editar el catálogo
+     * después no cambia nada de lo acordado.
+     */
+    @Column(name = "servicio_id")
+    private Long servicioId;
+
+    /**
      * Precio nuevo propuesto tras ver el trabajo, esperando aprobación.
      *
      * <p>Se guarda aparte del acordado a propósito: mientras el cliente no lo
@@ -171,6 +179,14 @@ public class Solicitud {
 
     public void setMontoVisitaCobrado(Integer montoVisitaCobrado) {
         this.montoVisitaCobrado = montoVisitaCobrado;
+    }
+
+    public Long getServicioId() {
+        return servicioId;
+    }
+
+    public void setServicioId(Long servicioId) {
+        this.servicioId = servicioId;
     }
 
     public Double getLatitud() {

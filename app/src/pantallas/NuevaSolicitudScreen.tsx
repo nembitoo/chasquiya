@@ -35,13 +35,16 @@ type FotoElegida = { uri: string; nombre: string; tipo: string };
 const MAX_FOTOS = 5;
 
 export function NuevaSolicitudScreen({ route, navigation }: Props) {
-  const { maestroId, maestroNombre, oficios, precargar } = route.params;
+  const { maestroId, maestroNombre, oficios, precargar, servicio } = route.params;
   const { sesion } = useAuth();
   const token = sesion?.token ?? '';
   const insets = useSafeAreaInsets();
 
-  const [oficio, setOficio] = useState<Oficio | null>(oficios.length === 1 ? oficios[0] : null);
-  const [descripcion, setDescripcion] = useState(precargar?.descripcion ?? '');
+  // Si viene de un servicio del catálogo, el oficio ya está decidido por él.
+  const [oficio, setOficio] = useState<Oficio | null>(
+    servicio ? servicio.oficio : oficios.length === 1 ? oficios[0] : null,
+  );
+  const [descripcion, setDescripcion] = useState(precargar?.descripcion ?? servicio?.titulo ?? '');
   const [direccion, setDireccion] = useState(precargar?.direccion ?? '');
   const [fecha, setFecha] = useState<Date | null>(null);
   const [presupuesto, setPresupuesto] = useState('');
@@ -124,6 +127,7 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
         direccion: direccion.trim(),
         fechaPreferida: fecha ? aIsoLocal(fecha) : null,
         presupuestoEstimado: presupuesto ? Number(presupuesto) : null,
+        servicioId: servicio?.id ?? null,
       });
 
       // Las fotos se suben después: recién ahora existe la solicitud a la que pertenecen.
@@ -162,21 +166,46 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
         )}
       </View>
 
+      {/* Qué se está pidiendo del catálogo y a qué precio: el cliente tiene que
+          verlo antes de enviar, no después. */}
+      {!!servicio && (
+        <View style={styles.tarjetaServicio}>
+          <View style={styles.filaServicio}>
+            <Text style={styles.servicioTitulo}>{servicio.titulo}</Text>
+            <Text style={styles.servicioPrecio}>
+              {servicio.precioFijo ? '' : 'desde '}
+              {formatearCLP(servicio.precio)}
+            </Text>
+          </View>
+          <Text style={styles.servicioAyuda}>
+            {servicio.precioFijo
+              ? 'Precio publicado por el maestro. Al enviar, tu solicitud llega ya cotizada a ese monto y tú decides si la aceptas.'
+              : 'Es un precio de referencia. El maestro te enviará el precio real cuando vea el detalle.'}
+          </Text>
+        </View>
+      )}
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={styles.etiqueta}>Tipo de servicio</Text>
-          <View style={styles.pills}>
-            {OFICIOS.filter((o) => oficios.includes(o.valor)).map((o) => (
-              <Pressable
-                key={o.valor}
-                onPress={() => setOficio(o.valor)}
-                style={[styles.pildora, oficio === o.valor && styles.pildoraActiva]}>
-                <Text style={[styles.pildoraTexto, oficio === o.valor && styles.pildoraTextoActivo]}>
-                  {o.etiqueta}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          {/* Con un servicio del catálogo el oficio ya viene decidido: elegir
+              otro solo generaría una solicitud que no calza con el precio. */}
+          {!servicio && (
+            <>
+              <Text style={styles.etiqueta}>Tipo de servicio</Text>
+              <View style={styles.pills}>
+                {OFICIOS.filter((o) => oficios.includes(o.valor)).map((o) => (
+                  <Pressable
+                    key={o.valor}
+                    onPress={() => setOficio(o.valor)}
+                    style={[styles.pildora, oficio === o.valor && styles.pildoraActiva]}>
+                    <Text style={[styles.pildoraTexto, oficio === o.valor && styles.pildoraTextoActivo]}>
+                      {o.etiqueta}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
 
           <CampoTexto
             etiqueta="Describe el problema"
@@ -224,12 +253,15 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
             valor={fecha}
             onCambio={setFecha}
           />
-          <CampoTexto
-            etiqueta="Presupuesto estimado (CLP, opcional)"
-            value={presupuesto}
-            onChangeText={setPresupuesto}
-            keyboardType="number-pad"
-          />
+          {/* Sobra cuando el precio ya viene del catálogo. */}
+          {!servicio && (
+            <CampoTexto
+              etiqueta="Presupuesto estimado (CLP, opcional)"
+              value={presupuesto}
+              onChangeText={setPresupuesto}
+              keyboardType="number-pad"
+            />
+          )}
 
           <Text style={styles.etiqueta}>Fotos del problema (opcional)</Text>
           <Text style={styles.ayudaFotos}>
@@ -261,7 +293,9 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
 
           <Boton titulo="Revisar y enviar" onPress={revisar} cargando={enviando} />
           <Text style={styles.nota}>
-            El maestro recibirá tu solicitud y podrá enviarte una cotización. Podrás aceptarla o rechazarla.
+            {servicio?.precioFijo
+              ? 'Tu solicitud llega con el precio publicado. El maestro puede no tomarla; si la toma, tú aceptas y coordinan.'
+              : 'El maestro recibirá tu solicitud y podrá enviarte una cotización. Podrás aceptarla o rechazarla.'}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -285,10 +319,21 @@ export function NuevaSolicitudScreen({ route, navigation }: Props) {
               etiqueta="Fecha"
               valor={fecha ? formatearFechaHoraTexto(aIsoLocal(fecha)) : 'A convenir'}
             />
-            <FilaResumen
-              etiqueta="Presupuesto"
-              valor={presupuesto ? formatearCLP(Number(presupuesto)) : 'Sin presupuesto estimado'}
-            />
+            {servicio ? (
+              <FilaResumen
+                etiqueta="Precio"
+                valor={
+                  servicio.precioFijo
+                    ? `${formatearCLP(servicio.precio)} (precio fijo)`
+                    : `desde ${formatearCLP(servicio.precio)} (lo confirma el maestro)`
+                }
+              />
+            ) : (
+              <FilaResumen
+                etiqueta="Presupuesto"
+                valor={presupuesto ? formatearCLP(Number(presupuesto)) : 'Sin presupuesto estimado'}
+              />
+            )}
             <FilaResumen
               etiqueta="Fotos"
               valor={fotos.length === 0 ? 'Ninguna' : `${fotos.length} adjunta(s)`}
@@ -395,6 +440,19 @@ const styles = StyleSheet.create({
   titulo: { fontSize: tipografia.titulo, fontWeight: '800', color: colores.texto },
   subtitulo: { color: colores.textoSuave, marginTop: 2 },
   precargado: { color: colores.primario, fontSize: tipografia.pequeno, marginTop: espacio.xs },
+  tarjetaServicio: {
+    marginHorizontal: espacio.lg,
+    marginTop: espacio.md,
+    padding: espacio.md,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.primario,
+    backgroundColor: colores.primarioSuave,
+  },
+  filaServicio: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm },
+  servicioTitulo: { flex: 1, fontWeight: '700', color: colores.texto, fontSize: tipografia.cuerpo },
+  servicioPrecio: { fontWeight: '800', color: colores.primario, fontSize: tipografia.cuerpo },
+  servicioAyuda: { fontSize: tipografia.pequeno, color: colores.textoSuave, marginTop: espacio.xs },
   scroll: { padding: espacio.lg },
   etiqueta: {
     fontSize: tipografia.pequeno,

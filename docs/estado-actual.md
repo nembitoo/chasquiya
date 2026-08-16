@@ -4,7 +4,7 @@
 > conversación nueva: esto es lo que hay, lo que falta y lo que **no** hay que
 > romper.
 >
-> Última actualización: agosto 2026 · 19 migraciones · 142 tests verdes.
+> Última actualización: agosto 2026 · 20 migraciones · 152 tests verdes.
 
 ## Qué es
 
@@ -58,6 +58,11 @@ del maestro, soporte con tickets, y mapa de maestros.
 - **Cotización honesta**: precio `CERRADO` o `ESTIMADO`, costo de visita
   declarado por adelantado, y ajuste de precio que el cliente debe aprobar.
 
+**Fase 5 (catálogo con precio):** cada maestro publica sus servicios con su
+precio, marcados como **precio fijo** o **desde**. El cliente los ve en el
+perfil y los pide directo; si es precio fijo, la solicitud llega ya cotizada a
+ese monto y el maestro no tiene que responder nada.
+
 ## Decisiones que NO hay que romper
 
 Estas se tomaron por razones legales o de producto. Cambiarlas sin entenderlas
@@ -70,6 +75,13 @@ penaliza rechazar trabajos, no fija tarifas. Por eso:
 - Publicar una solicitud abierta **no empuja avisos** uno por uno: aparece en su
   lista de trabajos disponibles.
 - La reputación es informativa, nunca sanción automática.
+- **El catálogo de precios es del maestro, no de la plataforma.** No existe un
+  tarifario de ChasquiYa!: cada uno publica sus servicios y sus montos, y solo
+  de los oficios que tiene en su perfil.
+- Un pedido de **precio fijo** entra ya cotizado, pero **no** queda cerrado: el
+  cliente todavía acepta y el maestro puede declinar desde "Solicitudes"
+  (estado `COTIZADO`). Sin esa salida, la app lo estaría atando a un trabajo
+  que nunca eligió.
 
 **Ley 19.496 — protección del consumidor.**
 - **Nada se cobra si no estaba en la cotización que el cliente aceptó.** El
@@ -97,7 +109,6 @@ atajos.
 
 | Pendiente | Valor | Esfuerzo |
 |---|---|---|
-| Catálogo de servicios con precio | ⭐ Alto | Medio |
 | Chat con fotos | Medio | Muy bajo (la infraestructura ya está) |
 | Insignias de verificación en el perfil | Medio | Bajo |
 | Verificación de correo al registrarse | Medio | Medio |

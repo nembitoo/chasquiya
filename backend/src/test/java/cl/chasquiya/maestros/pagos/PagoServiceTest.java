@@ -48,7 +48,7 @@ class PagoServiceTest {
         ReflectionTestUtils.setField(s, "id", 10L);
         s.setEstado(estado);
         when(solicitudes.findById(10L)).thenReturn(Optional.of(s));
-        when(cotizaciones.findBySolicitudId(10L)).thenReturn(Optional.of(new Cotizacion(10L, 30000, "ok")));
+        when(cotizaciones.findBySolicitudIdAndMaestroId(10L, MAESTRO)).thenReturn(Optional.of(new Cotizacion(10L, MAESTRO, 30000, "ok")));
         when(pagos.findBySolicitudId(10L)).thenReturn(Optional.empty());
         return s;
     }
@@ -101,7 +101,7 @@ class PagoServiceTest {
     @Test
     void sinCotizacionNoSePuedeCobrar() {
         solicitudEn(EstadoServicio.COMPLETADO);
-        when(cotizaciones.findBySolicitudId(10L)).thenReturn(Optional.empty());
+        when(cotizaciones.findBySolicitudIdAndMaestroId(10L, MAESTRO)).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class, () -> servicio.pagar(CLIENTE, 10L));
     }

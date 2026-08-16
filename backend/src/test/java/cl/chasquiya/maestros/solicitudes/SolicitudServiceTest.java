@@ -47,13 +47,16 @@ class SolicitudServiceTest {
 
     private final FotoSolicitudRepository fotos = mock(FotoSolicitudRepository.class);
 
+    private final cl.chasquiya.maestros.descubrimiento.DescubrimientoService descubrimiento =
+            mock(cl.chasquiya.maestros.descubrimiento.DescubrimientoService.class);
+
     private final SolicitudService servicio =
-            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones, notificaciones, fotos);
+            new SolicitudService(solicitudes, cotizaciones, perfiles, usuarios, calificaciones, notificaciones, fotos, descubrimiento);
 
     @BeforeEach
     void setUp() {
         when(usuarios.findAllById(any())).thenReturn(List.of());
-        when(cotizaciones.findBySolicitudId(any())).thenReturn(Optional.empty());
+        when(cotizaciones.findBySolicitudIdOrderByMontoAsc(any())).thenReturn(List.of());
         when(fotos.findBySolicitudIdIn(any())).thenReturn(List.of());
     }
 

@@ -1,8 +1,11 @@
 package cl.chasquiya.maestros.solicitudes;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -15,12 +18,18 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.calificaciones.Calificacion;
 import cl.chasquiya.maestros.calificaciones.CalificacionRepository;
+import cl.chasquiya.maestros.descubrimiento.DescubrimientoService;
+import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.notificaciones.NotificacionService;
 import cl.chasquiya.maestros.notificaciones.TipoNotificacion;
 import cl.chasquiya.maestros.perfiles.EstadoVerificacion;
+import cl.chasquiya.maestros.perfiles.Oficio;
+import cl.chasquiya.maestros.perfiles.PerfilMaestro;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
+import cl.chasquiya.maestros.solicitudes.dto.CotizacionResponse;
 import cl.chasquiya.maestros.solicitudes.dto.CotizarRequest;
 import cl.chasquiya.maestros.solicitudes.dto.CrearSolicitudRequest;
+import cl.chasquiya.maestros.solicitudes.dto.PublicarSolicitudRequest;
 import cl.chasquiya.maestros.solicitudes.dto.SolicitudResponse;
 import cl.chasquiya.maestros.usuarios.Usuario;
 import cl.chasquiya.maestros.usuarios.UsuarioRepository;
@@ -40,12 +49,17 @@ public class SolicitudService {
     private final CalificacionRepository calificaciones;
     private final NotificacionService notificaciones;
     private final FotoSolicitudRepository fotos;
+    private final DescubrimientoService descubrimiento;
+
+    /** Radio para ofrecer trabajos abiertos a un maestro. */
+    private static final double RADIO_ABIERTAS_M = 25_000;
 
     public SolicitudService(SolicitudRepository solicitudes, CotizacionRepository cotizaciones,
                             PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
                             CalificacionRepository calificaciones, NotificacionService notificaciones,
-                            FotoSolicitudRepository fotos) {
+                            FotoSolicitudRepository fotos, DescubrimientoService descubrimiento) {
         this.fotos = fotos;
+        this.descubrimiento = descubrimiento;
         this.solicitudes = solicitudes;
         this.cotizaciones = cotizaciones;
         this.perfiles = perfiles;
@@ -72,11 +86,94 @@ public class SolicitudService {
         return aResponse(s, clienteId);
     }
 
+    /**
+     * Publica un trabajo sin elegir maestro: lo verán los maestros del oficio
+     * que estén cerca y podrán cotizarlo.
+     */
+    public SolicitudResponse publicarAbierta(Long clienteId, PublicarSolicitudRequest req) {
+        Solicitud s = new Solicitud(clienteId, req.oficio(), req.descripcion().trim(),
+                req.direccion().trim(), req.fechaPreferida(), req.presupuestoEstimado(),
+                req.latitud(), req.longitud());
+        solicitudes.save(s);
+        // No se avisa a nadie en particular: la solicitud aparece en la lista de
+        // trabajos disponibles de cada maestro. Empujarla uno por uno seria
+        // presionar a responder, que es justo lo que no queremos (Ley 21.431).
+        return aResponse(s, clienteId);
+    }
+
+    /**
+     * El cliente elige una de las cotizaciones recibidas. Ahí la solicitud deja
+     * de estar abierta: ese maestro pasa a ser el del servicio.
+     */
+    public SolicitudResponse aceptarCotizacion(Long clienteId, Long solicitudId, Long cotizacionId) {
+        Solicitud s = deCliente(clienteId, solicitudId);
+        Cotizacion elegida = cotizaciones.findById(cotizacionId)
+                .filter(c -> c.getSolicitudId().equals(solicitudId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cotización no encontrada"));
+
+        if (!s.estaAbierta() && !s.getMaestroId().equals(elegida.getMaestroId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este servicio ya tiene un maestro asignado");
+        }
+        s.setMaestroId(elegida.getMaestroId());
+
+        /*
+         * Una solicitud abierta se queda en SOLICITADO mientras junta ofertas, y
+         * la máquina de estados no permite saltar de ahí a ACEPTADO. Hace bien:
+         * aceptar sin un precio acordado no debería existir.
+         *
+         * Elegir una cotización es, justamente, quedar cotizado y luego aceptar.
+         * Así el flujo abierto pasa por los mismos estados que el directo, en vez
+         * de abrir un atajo en la regla más crítica del sistema.
+         */
+        if (s.getEstado() == EstadoServicio.SOLICITADO) {
+            transicionar(s, EstadoServicio.COTIZADO, clienteId);
+        }
+        SolicitudResponse r = transicionar(s, EstadoServicio.ACEPTADO, clienteId);
+
+        notificaciones.avisar(elegida.getMaestroId(), TipoNotificacion.COTIZACION_ACEPTADA,
+                s.getId(), nombreDe(clienteId));
+        // A los demás se les avisa que no siguieron. Enterarse es mejor que
+        // quedar esperando, y el aviso no juzga su trabajo.
+        for (Cotizacion otra : cotizaciones.findBySolicitudIdOrderByMontoAsc(solicitudId)) {
+            if (!otra.getId().equals(elegida.getId())) {
+                notificaciones.avisar(otra.getMaestroId(), TipoNotificacion.COTIZACION_RECHAZADA,
+                        s.getId(), nombreDe(clienteId));
+            }
+        }
+        return r;
+    }
+
     public SolicitudResponse aceptar(Long clienteId, Long solicitudId) {
         Solicitud s = deCliente(clienteId, solicitudId);
+        if (s.estaAbierta()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Esta solicitud está abierta: elige una de las cotizaciones que recibiste");
+        }
         SolicitudResponse r = transicionar(s, EstadoServicio.ACEPTADO, clienteId);
         notificaciones.avisar(s.getMaestroId(), TipoNotificacion.COTIZACION_ACEPTADA, s.getId(), nombreDe(clienteId));
         return r;
+    }
+
+    /** Trabajos abiertos que un maestro puede cotizar. */
+    public List<SolicitudResponse> abiertasPara(Long maestroId) {
+        PerfilMaestro perfil = perfiles.findByUsuarioId(maestroId)
+                .filter(p -> p.getEstadoVerificacion() == EstadoVerificacion.APROBADO)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Tu perfil tiene que estar aprobado para ver trabajos disponibles"));
+
+        boolean tieneUbicacion = perfil.getLatitud() != null && perfil.getLongitud() != null;
+        List<Solicitud> encontradas = new ArrayList<>();
+        for (Oficio oficio : perfil.getOficios()) {
+            encontradas.addAll(tieneUbicacion
+                    ? solicitudes.buscarAbiertasCerca(oficio.name(), perfil.getLatitud(),
+                            perfil.getLongitud(), RADIO_ABIERTAS_M, maestroId)
+                    : solicitudes.buscarAbiertasPorOficio(oficio.name(), maestroId));
+        }
+        // Un maestro con varios oficios podría ver la misma solicitud dos veces.
+        List<Solicitud> unicas = encontradas.stream()
+                .collect(Collectors.toMap(Solicitud::getId, Function.identity(), (a, b) -> a, LinkedHashMap::new))
+                .values().stream().toList();
+        return aResponses(unicas, maestroId);
     }
 
     /** El cliente rechaza la cotización: la solicitud queda cancelada. */
@@ -93,19 +190,73 @@ public class SolicitudService {
 
     // --- Acciones del maestro ---
 
+    /**
+     * El maestro ofrece su precio. Sirve para los dos caminos: una solicitud
+     * dirigida a él, o una abierta donde compite con otros.
+     */
     public SolicitudResponse cotizar(Long maestroId, Long solicitudId, CotizarRequest req) {
-        Solicitud s = deMaestro(maestroId, solicitudId);
-        if (s.getEstado() != EstadoServicio.SOLICITADO) {
+        Solicitud s = buscar(solicitudId);
+
+        if (s.estaAbierta()) {
+            exigirPuedeCotizarAbierta(maestroId, s);
+        } else if (!s.getMaestroId().equals(maestroId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta solicitud no es tuya");
+        }
+        if (s.getEstado() != EstadoServicio.SOLICITADO && s.getEstado() != EstadoServicio.COTIZADO) {
             throw transicionInvalida(s.getEstado(), EstadoServicio.COTIZADO);
         }
-        Cotizacion c = cotizaciones.findBySolicitudId(solicitudId)
-                .orElseGet(() -> new Cotizacion(solicitudId, req.monto(), req.mensaje()));
+
+        // Una cotización por maestro: si ya tenía, la corrige.
+        Cotizacion c = cotizaciones.findBySolicitudIdAndMaestroId(solicitudId, maestroId)
+                .orElseGet(() -> new Cotizacion(solicitudId, maestroId, req.monto(), req.mensaje()));
         c.setMonto(req.monto());
         c.setMensaje(req.mensaje());
         cotizaciones.save(c);
-        SolicitudResponse r = transicionar(s, EstadoServicio.COTIZADO, maestroId);
+
+        /*
+         * En una solicitud abierta el estado se queda en SOLICITADO: sigue
+         * recibiendo ofertas. Pasarla a COTIZADO con la primera cerraría la
+         * competencia y dejaría al cliente sin nada que comparar.
+         */
+        SolicitudResponse r = s.estaAbierta()
+                ? aResponse(s, maestroId)
+                : transicionar(s, EstadoServicio.COTIZADO, maestroId);
+
         notificaciones.avisar(s.getClienteId(), TipoNotificacion.COTIZACION_RECIBIDA, s.getId(), nombreDe(maestroId));
         return r;
+    }
+
+    /** Solo un maestro aprobado y del oficio pedido puede ofertar. */
+    private void exigirPuedeCotizarAbierta(Long maestroId, Solicitud s) {
+        if (s.getClienteId().equals(maestroId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No puedes cotizar tu propia solicitud");
+        }
+        PerfilMaestro perfil = perfiles.findByUsuarioId(maestroId)
+                .filter(p -> p.getEstadoVerificacion() == EstadoVerificacion.APROBADO)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Tu perfil tiene que estar aprobado para cotizar"));
+        if (!perfil.getOficios().contains(s.getOficio())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Esta solicitud es de un oficio que no tienes en tu perfil");
+        }
+    }
+
+    /** Las cotizaciones que recibió una solicitud, para que el cliente compare. */
+    public List<CotizacionResponse> cotizacionesDe(Long clienteId, Long solicitudId) {
+        deCliente(clienteId, solicitudId);
+        List<Cotizacion> lista = cotizaciones.findBySolicitudIdOrderByMontoAsc(solicitudId);
+        if (lista.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Double> sinDistancia = Map.of();
+        Map<Long, MaestroCercanoResponse> fichas = descubrimiento
+                .fichasDe(lista.stream().map(Cotizacion::getMaestroId).distinct().toList(), clienteId, sinDistancia)
+                .stream()
+                .collect(Collectors.toMap(MaestroCercanoResponse::usuarioId, Function.identity()));
+
+        return lista.stream()
+                .map(c -> CotizacionResponse.de(c, fichas.get(c.getMaestroId())))
+                .toList();
     }
 
     public SolicitudResponse iniciar(Long maestroId, Long solicitudId) {
@@ -247,11 +398,18 @@ public class SolicitudService {
             return List.of();
         }
         List<Long> ids = lista.stream().map(Solicitud::getId).toList();
-        Map<Long, Cotizacion> cotPorSolicitud = cotizaciones.findBySolicitudIdIn(ids).stream()
-                .collect(Collectors.toMap(Cotizacion::getSolicitudId, Function.identity()));
+
+        // Una solicitud abierta tiene VARIAS cotizaciones: se agrupan y luego se
+        // elige la del maestro asignado. Antes esto era un mapa 1 a 1 y con dos
+        // ofertas habría reventado.
+        Map<Long, List<Cotizacion>> cotsPorSolicitud = cotizaciones.findBySolicitudIdIn(ids).stream()
+                .collect(Collectors.groupingBy(Cotizacion::getSolicitudId));
+
         Map<Long, Usuario> personas = usuarios
                 .findAllById(lista.stream()
                         .flatMap(s -> Stream.of(s.getClienteId(), s.getMaestroId()))
+                        // El maestro es null mientras la solicitud está abierta.
+                        .filter(Objects::nonNull)
                         .distinct().toList()).stream()
                 .collect(Collectors.toMap(Usuario::getId, Function.identity()));
         Set<Long> yaCalificadas = usuarioActual == null
@@ -264,22 +422,41 @@ public class SolicitudService {
         fotos.findBySolicitudIdIn(ids).forEach(f -> fotosPorSolicitud.merge(f.getSolicitudId(), 1, Integer::sum));
 
         return lista.stream()
-                .map(s -> construir(s, Optional.ofNullable(cotPorSolicitud.get(s.getId())), personas,
-                        yaCalificadas.contains(s.getId()), fotosPorSolicitud.getOrDefault(s.getId(), 0)))
+                .map(s -> {
+                    List<Cotizacion> suyas = cotsPorSolicitud.getOrDefault(s.getId(), List.of());
+                    return construir(s, laDelMaestro(s, suyas), suyas.size(), personas,
+                            yaCalificadas.contains(s.getId()), fotosPorSolicitud.getOrDefault(s.getId(), 0));
+                })
                 .toList();
     }
 
     private SolicitudResponse aResponse(Solicitud s, Long usuarioActual) {
-        Map<Long, Usuario> personas = usuarios.findAllById(List.of(s.getClienteId(), s.getMaestroId())).stream()
+        List<Long> partes = s.getMaestroId() == null
+                ? List.of(s.getClienteId())
+                : List.of(s.getClienteId(), s.getMaestroId());
+        Map<Long, Usuario> personas = usuarios.findAllById(partes).stream()
                 .collect(Collectors.toMap(Usuario::getId, Function.identity()));
         boolean yaCalifico = usuarioActual != null
                 && calificaciones.existsBySolicitudIdAndAutorId(s.getId(), usuarioActual);
-        return construir(s, cotizaciones.findBySolicitudId(s.getId()), personas, yaCalifico,
+
+        List<Cotizacion> suyas = cotizaciones.findBySolicitudIdOrderByMontoAsc(s.getId());
+        return construir(s, laDelMaestro(s, suyas), suyas.size(), personas, yaCalifico,
                 (int) fotos.countBySolicitudId(s.getId()));
     }
 
-    private SolicitudResponse construir(Solicitud s, Optional<Cotizacion> cot, Map<Long, Usuario> personas,
-                                        boolean yaCalifique, int cantidadFotos) {
+    /**
+     * La cotización que vale para el servicio: la del maestro asignado. Mientras
+     * la solicitud sigue abierta no hay ninguna "acordada", solo candidatas.
+     */
+    private Optional<Cotizacion> laDelMaestro(Solicitud s, List<Cotizacion> cots) {
+        if (s.getMaestroId() == null) {
+            return Optional.empty();
+        }
+        return cots.stream().filter(c -> c.getMaestroId().equals(s.getMaestroId())).findFirst();
+    }
+
+    private SolicitudResponse construir(Solicitud s, Optional<Cotizacion> cot, int cantidadCotizaciones,
+                                        Map<Long, Usuario> personas, boolean yaCalifique, int cantidadFotos) {
         return new SolicitudResponse(
                 s.getId(),
                 s.getClienteId(), nombreDe(personas.get(s.getClienteId())), tieneAvatar(personas.get(s.getClienteId())),
@@ -290,6 +467,8 @@ public class SolicitudService {
                 cot.map(Cotizacion::getMensaje).orElse(null),
                 yaCalifique,
                 cantidadFotos,
+                s.estaAbierta(),
+                cantidadCotizaciones,
                 s.getFechaCreacion());
     }
 

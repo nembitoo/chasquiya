@@ -28,5 +28,9 @@ public record SolicitudResponse(
         boolean yaCalifique,
         /** Fotos del problema adjuntas; el contenido se pide aparte. */
         int cantidadFotos,
+        /** Publicada sin maestro: varios pueden cotizarla y el cliente elige. */
+        boolean abierta,
+        /** Cuántas ofertas recibió. En una abierta es lo que el cliente compara. */
+        int cantidadCotizaciones,
         Instant fechaCreacion) {
 }

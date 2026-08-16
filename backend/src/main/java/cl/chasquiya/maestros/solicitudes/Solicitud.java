@@ -26,7 +26,11 @@ public class Solicitud {
     @Column(name = "cliente_id", nullable = false)
     private Long clienteId;
 
-    @Column(name = "maestro_id", nullable = false)
+    /**
+     * Null mientras la solicitud está abierta: se fija cuando el cliente acepta
+     * una de las cotizaciones que recibió.
+     */
+    @Column(name = "maestro_id")
     private Long maestroId;
 
     @Enumerated(EnumType.STRING)
@@ -44,6 +48,11 @@ public class Solicitud {
 
     @Column(name = "presupuesto_estimado")
     private Integer presupuestoEstimado;
+
+    /** Dónde es el trabajo, para ofrecerlo a los maestros que tenga cerca. Opcional. */
+    private Double latitud;
+
+    private Double longitud;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -76,6 +85,20 @@ public class Solicitud {
         this.presupuestoEstimado = presupuestoEstimado;
     }
 
+    /** Solicitud abierta: sin maestro y con la ubicación del trabajo. */
+    public Solicitud(Long clienteId, Oficio oficio, String descripcion, String direccion,
+                     String fechaPreferida, Integer presupuestoEstimado,
+                     Double latitud, Double longitud) {
+        this(clienteId, null, oficio, descripcion, direccion, fechaPreferida, presupuestoEstimado);
+        this.latitud = latitud;
+        this.longitud = longitud;
+    }
+
+    /** Sigue abierta mientras nadie fue elegido. */
+    public boolean estaAbierta() {
+        return maestroId == null;
+    }
+
     @PrePersist
     void alCrear() {
         Instant ahora = Instant.now();
@@ -100,6 +123,19 @@ public class Solicitud {
 
     public Long getMaestroId() {
         return maestroId;
+    }
+
+    /** Solo al aceptar una cotización: ahí la solicitud abierta deja de serlo. */
+    public void setMaestroId(Long maestroId) {
+        this.maestroId = maestroId;
+    }
+
+    public Double getLatitud() {
+        return latitud;
+    }
+
+    public Double getLongitud() {
+        return longitud;
     }
 
     public Oficio getOficio() {

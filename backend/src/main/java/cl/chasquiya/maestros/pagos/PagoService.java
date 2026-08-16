@@ -136,8 +136,12 @@ public class PagoService {
         return salida.size() > 6 ? salida.subList(salida.size() - 6, salida.size()) : salida;
     }
 
+    /** Se paga la cotización DEL MAESTRO ASIGNADO, no cualquiera de las recibidas. */
     private int montoAcordado(Solicitud s) {
-        return cotizaciones.findBySolicitudId(s.getId())
+        if (s.getMaestroId() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El servicio todavía no tiene maestro asignado");
+        }
+        return cotizaciones.findBySolicitudIdAndMaestroId(s.getId(), s.getMaestroId())
                 .map(Cotizacion::getMonto)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "El servicio no tiene una cotización acordada"));

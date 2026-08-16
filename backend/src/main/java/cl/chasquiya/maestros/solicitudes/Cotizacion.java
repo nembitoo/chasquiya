@@ -10,7 +10,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-/** Cotización que el maestro hace sobre una solicitud (una por solicitud). */
+/**
+ * Precio que un maestro ofrece por una solicitud.
+ *
+ * <p>Una solicitud puede tener varias: en una solicitud abierta compiten
+ * distintos maestros y el cliente elige. Cada maestro tiene una sola, que puede
+ * corregir mientras el cliente no haya decidido.
+ */
 @Entity
 @Table(name = "cotizaciones")
 public class Cotizacion {
@@ -19,8 +25,11 @@ public class Cotizacion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "solicitud_id", nullable = false, unique = true)
+    @Column(name = "solicitud_id", nullable = false)
     private Long solicitudId;
+
+    @Column(name = "maestro_id", nullable = false)
+    private Long maestroId;
 
     @Column(nullable = false)
     private Integer monto;
@@ -33,8 +42,9 @@ public class Cotizacion {
     protected Cotizacion() {
     }
 
-    public Cotizacion(Long solicitudId, Integer monto, String mensaje) {
+    public Cotizacion(Long solicitudId, Long maestroId, Integer monto, String mensaje) {
         this.solicitudId = solicitudId;
+        this.maestroId = maestroId;
         this.monto = monto;
         this.mensaje = mensaje;
     }
@@ -52,6 +62,10 @@ public class Cotizacion {
 
     public Long getSolicitudId() {
         return solicitudId;
+    }
+
+    public Long getMaestroId() {
+        return maestroId;
     }
 
     public Integer getMonto() {

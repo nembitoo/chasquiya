@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.solicitudes.dto.CotizacionResponse;
 import cl.chasquiya.maestros.solicitudes.dto.CotizarRequest;
+import cl.chasquiya.maestros.solicitudes.dto.PublicarSolicitudRequest;
 import cl.chasquiya.maestros.solicitudes.dto.CrearSolicitudRequest;
 import cl.chasquiya.maestros.solicitudes.dto.SolicitudResponse;
 import cl.chasquiya.maestros.usuarios.UsuarioRepository;
@@ -41,9 +43,29 @@ public class SolicitudController {
         return servicio.crear(idAutenticado(auth), req);
     }
 
+    /** Publica el trabajo sin elegir maestro: varios podrán cotizarlo. */
+    @PostMapping("/abierta")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SolicitudResponse publicarAbierta(Authentication auth,
+                                             @Valid @RequestBody PublicarSolicitudRequest req) {
+        return servicio.publicarAbierta(idAutenticado(auth), req);
+    }
+
     @GetMapping("/mias")
     public List<SolicitudResponse> mias(Authentication auth) {
         return servicio.misSolicitudesComoCliente(idAutenticado(auth));
+    }
+
+    /** Las ofertas recibidas, para comparar antes de elegir. */
+    @GetMapping("/{id}/cotizaciones")
+    public List<CotizacionResponse> cotizaciones(Authentication auth, @PathVariable Long id) {
+        return servicio.cotizacionesDe(idAutenticado(auth), id);
+    }
+
+    @PostMapping("/{id}/cotizaciones/{cotizacionId}/aceptar")
+    public SolicitudResponse aceptarCotizacion(Authentication auth, @PathVariable Long id,
+                                               @PathVariable Long cotizacionId) {
+        return servicio.aceptarCotizacion(idAutenticado(auth), id, cotizacionId);
     }
 
     @PostMapping("/{id}/aceptar")
@@ -61,6 +83,12 @@ public class SolicitudController {
     @GetMapping("/recibidas")
     public List<SolicitudResponse> recibidas(Authentication auth) {
         return servicio.misSolicitudesComoMaestro(idAutenticado(auth));
+    }
+
+    /** Trabajos publicados por clientes que este maestro puede cotizar. */
+    @GetMapping("/abiertas")
+    public List<SolicitudResponse> abiertas(Authentication auth) {
+        return servicio.abiertasPara(idAutenticado(auth));
     }
 
     @PostMapping("/{id}/cotizar")

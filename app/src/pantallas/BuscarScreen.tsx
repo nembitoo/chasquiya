@@ -402,18 +402,31 @@ const styles = StyleSheet.create({
    * la fila desaparecia. Asi mide exactamente lo que ocupa su contenido.
    */
   chips: { marginTop: espacio.sm, flexGrow: 0 },
-  chipsContenido: { paddingHorizontal: margenPantalla, gap: espacio.xs, alignItems: 'center' },
+  /*
+   * El paddingVertical no es estetico: el ScrollView horizontal mide justo lo
+   * que miden las pildoras, y sin este aire recorta el borde de 1 px de arriba
+   * y abajo. Quedaban solo los arcos laterales, como parentesis; en las grises
+   * no se notaba y en la activa, con borde rojo, saltaba a la vista.
+   */
+  chipsContenido: {
+    paddingHorizontal: margenPantalla,
+    paddingVertical: 3,
+    gap: espacio.xs,
+    alignItems: 'center',
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: espacio.xxs,
     borderRadius: radio.completo,
     borderWidth: 1,
     borderColor: colores.borde,
     backgroundColor: colores.superficie,
-    paddingHorizontal: espacio.sm + 2,
+    paddingHorizontal: espacio.md,
     paddingVertical: espacio.xxs + 2,
-    minHeight: 34,
+    minHeight: 36,
+    minWidth: 76,
   },
   chipActivo: { borderColor: colores.primario, backgroundColor: colores.primarioSuave },
   chipTexto: { ...t.pequenoFuerte, color: colores.textoSuave },

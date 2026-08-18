@@ -22,6 +22,9 @@ const ESTILO: Record<TipoNotificacion, { icono: NombreIcono; color: string }> = 
   COTIZACION_RECIBIDA: { icono: 'pricetag', color: colores.primario },
   COTIZACION_ACEPTADA: { icono: 'checkmark-circle', color: colores.exito },
   COTIZACION_RECHAZADA: { icono: 'close-circle', color: colores.textoTenue },
+  AJUSTE_PROPUESTO: { icono: 'swap-horizontal', color: colores.alerta },
+  AJUSTE_APROBADO: { icono: 'checkmark-circle', color: colores.exito },
+  AJUSTE_RECHAZADO: { icono: 'close-circle', color: colores.error },
   TRABAJO_INICIADO: { icono: 'construct', color: colores.primario },
   TRABAJO_COMPLETADO: { icono: 'checkmark-done-circle', color: colores.exito },
   PAGO_RECIBIDO: { icono: 'cash', color: colores.exito },
@@ -67,13 +70,33 @@ export function NotificacionesScreen({ navigation }: Props) {
       setNoLeidas((prev) => Math.max(0, prev - 1));
       api.notificaciones.leer(token, n.id).catch(() => undefined);
     }
+    irADonde(n);
+  }
+
+  /**
+   * A donde lleva cada aviso.
+   *
+   * Antes solo se miraba si traia solicitudId, y eso fallaba en los dos
+   * extremos: "Te calificaron" aterrizaba en la lista de solicitudes ACTIVAS,
+   * donde ese trabajo ya no esta porque quedo en el historial; y cualquier
+   * aviso sin solicitud mandaba al perfil profesional, una pantalla que un
+   * cliente ni siquiera tiene.
+   */
+  function irADonde(n: Notificacion) {
+    if (n.tipo === 'CALIFICACION_RECIBIDA') {
+      navigation.navigate('MisCalificaciones');
+      return;
+    }
+    if (n.tipo === 'VERIFICACION_APROBADA' || n.tipo === 'VERIFICACION_RECHAZADA') {
+      navigation.navigate('PerfilMaestro');
+      return;
+    }
     if (n.solicitudId) {
       navigation.navigate('Tabs', {
         screen: esMaestro ? 'SolicitudesRecibidas' : 'MisSolicitudes',
       });
-    } else {
-      navigation.navigate('PerfilMaestro');
     }
+    // Sin destino claro no se navega: mejor quedarse que mandar a otra parte.
   }
 
   async function marcarTodas() {

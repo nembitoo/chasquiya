@@ -2,18 +2,19 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import React, { useCallback, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
 import { MaestroCercano, Solicitud } from '../api/tipos';
 import { EstadoBadge } from '../componentes/EstadoBadge';
+import { Estrellas } from '../componentes/Estrellas';
 import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
 import { Campanita } from '../componentes/dominio/Campanita';
-import { TarjetaMaestro } from '../componentes/dominio/TarjetaMaestro';
 import { SkeletonLista } from '../componentes/feedback/Skeleton';
-import { OFICIOS } from '../datos/oficios';
+import { COLOR_OFICIO, NOMBRE_OFICIO, OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { TabProps } from '../navegacion/Navegacion';
 import { colores, espacio, margenPantalla, radio, sombra, texto as t } from '../tema/tema';
@@ -31,6 +32,21 @@ export function InicioScreen({ navigation }: Props) {
   const { sesion } = useAuth();
   const rol = sesion?.rol;
   const token = sesion?.token ?? '';
+  const insets = useSafeAreaInsets();
+
+  /*
+   * El degradado pasa por detras de la barra de estado, asi que sus iconos
+   * tienen que ir en claro. Se devuelve a oscuro al salir de Inicio: las
+   * pestanas quedan montadas y si no, en Buscar los iconos se volverian
+   * invisibles sobre el fondo blanco.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (rol !== 'CLIENTE') return;
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, [rol]),
+  );
 
   const [cercanos, setCercanos] = useState<MaestroCercano[]>([]);
   const [recientes, setRecientes] = useState<Solicitud[]>([]);
@@ -121,12 +137,14 @@ export function InicioScreen({ navigation }: Props) {
     }, [cargar]),
   );
 
+  // El cliente no lleva borde superior: el degradado tiene que llegar al borde
+  // de la pantalla, y el espacio de la barra de estado lo pone el degradado.
   return (
-    <SafeAreaView style={styles.contenedor} edges={['top']}>
+    <SafeAreaView style={styles.contenedor} edges={rol === 'CLIENTE' ? [] : ['top']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Saludo. Para el cliente va sobre un degradado que sangra a los
             bordes; para los demas roles se mantiene sobre el fondo claro. */}
-        <Envoltura degradado={rol === 'CLIENTE'}>
+        <Envoltura degradado={rol === 'CLIENTE'} alturaBarra={insets.top}>
           <View style={styles.cabecera}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.saludo, rol === 'CLIENTE' && styles.textoSobreColor]}>
@@ -146,7 +164,7 @@ export function InicioScreen({ navigation }: Props) {
               </View>
             )}
           </View>
-          <Campanita />
+          <Campanita color={rol === 'CLIENTE' ? colores.textoInverso : colores.texto} />
           {/* El perfil dejo de ser una pestana: se abre desde aqui, como ventana. */}
           <Pressable
             onPress={() => navigation.navigate('Perfil')}
@@ -201,11 +219,12 @@ export function InicioScreen({ navigation }: Props) {
                   key={o.valor}
                   style={({ pressed }) => [styles.categoria, pressed && styles.presionado]}
                   onPress={() => navigation.navigate('Buscar')}>
-                  <View style={styles.categoriaIcono}>
+                  <View
+                    style={[styles.categoriaIcono, { backgroundColor: COLOR_OFICIO[o.valor].fondo }]}>
                     <Icono
                       nombre={(ICONO_OFICIO[o.valor] ?? 'ellipsis-horizontal') as NombreIcono}
                       tamano="lg"
-                      color={colores.primario}
+                      color={COLOR_OFICIO[o.valor].icono}
                     />
                   </View>
                   <Text style={styles.categoriaTexto} numberOfLines={1}>
@@ -228,7 +247,7 @@ export function InicioScreen({ navigation }: Props) {
                     </Pressable>
                   </View>
                   {cercanos.map((m) => (
-                    <TarjetaMaestro
+                    <FilaMaestro
                       key={m.usuarioId}
                       maestro={m}
                       onPress={() => navigation.navigate('MaestroPublico', { usuarioId: m.usuarioId })}
@@ -411,7 +430,15 @@ function AccesoRapido({
  * contenido del scroll vive con padding, y sin esto quedaria una franja de
  * fondo claro a cada lado.
  */
-function Envoltura({ degradado, children }: { degradado: boolean; children: React.ReactNode }) {
+function Envoltura({
+  degradado,
+  alturaBarra,
+  children,
+}: {
+  degradado: boolean;
+  alturaBarra: number;
+  children: React.ReactNode;
+}) {
   if (!degradado) {
     return <>{children}</>;
   }
@@ -420,9 +447,56 @@ function Envoltura({ degradado, children }: { degradado: boolean; children: Reac
       colors={[colores.primario, colores.primarioActivo]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.degradado}>
+      style={[styles.degradado, { paddingTop: alturaBarra + espacio.md }]}>
       {children}
     </LinearGradient>
+  );
+}
+
+/**
+ * Maestro en el home: fila compacta, con Contactar a la derecha.
+ *
+ * En Buscar se usa la tarjeta grande, que muestra precio y servicio. Aqui la
+ * lista es un aperitivo -tres nombres- y una tarjeta por cada uno ocupaba media
+ * pantalla.
+ */
+function FilaMaestro({
+  maestro,
+  onPress,
+  onContactar,
+}: {
+  maestro: MaestroCercano;
+  onPress: () => void;
+  onContactar: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.filaMaestro, pressed && styles.presionado]}>
+      <AvatarUsuario
+        usuarioId={maestro.usuarioId}
+        nombre={`${maestro.nombre} ${maestro.apellido}`}
+        tieneAvatar={maestro.tieneAvatar}
+        tamano={48}
+      />
+      <View style={{ flex: 1 }}>
+        <Text style={t.cuerpoFuerte} numberOfLines={1}>
+          {maestro.nombre} {maestro.apellido}
+        </Text>
+        <Estrellas valor={maestro.calificacionPromedio} cantidad={maestro.cantidadCalificaciones} />
+        <Text style={styles.filaMaestroOficio} numberOfLines={1}>
+          {maestro.oficios.map((o) => NOMBRE_OFICIO[o] ?? o).join(' · ')}
+          {maestro.distanciaKm > 0 ? ` · a ${maestro.distanciaKm} km` : ''}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onContactar}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.contactar, pressed && styles.presionado]}>
+        <Text style={styles.contactarTexto}>Contactar</Text>
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -476,13 +550,32 @@ const styles = StyleSheet.create({
     marginHorizontal: -margenPantalla,
     marginTop: -margenPantalla,
     paddingHorizontal: margenPantalla,
-    paddingTop: margenPantalla,
-    paddingBottom: espacio.md,
-    marginBottom: espacio.md,
+    /* Sobra alto a proposito: la tarjeta de publicar se monta sobre este borde,
+       como en la referencia. */
+    paddingBottom: espacio.xl + espacio.lg,
     borderBottomLeftRadius: radio.xl,
     borderBottomRightRadius: radio.xl,
   },
   textoSobreColor: { color: colores.textoInverso },
+  filaMaestro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.superficie,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    padding: espacio.sm + 2,
+    marginBottom: espacio.sm,
+  },
+  filaMaestroOficio: { ...t.etiqueta, color: colores.textoSuave },
+  contactar: {
+    backgroundColor: colores.primario,
+    borderRadius: radio.completo,
+    paddingHorizontal: espacio.md,
+    paddingVertical: espacio.xs + 2,
+  },
+  contactarTexto: { ...t.pequenoFuerte, color: colores.textoInverso },
   subtituloSobreColor: { color: 'rgba(255,255,255,0.85)' },
 
   /* --- Publicar un trabajo, la accion principal del cliente --- */
@@ -490,16 +583,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: espacio.sm,
-    backgroundColor: colores.primarioSuave,
+    backgroundColor: colores.superficie,
     borderRadius: radio.md,
     padding: espacio.md,
+    /* Negativo: sube la tarjeta para que pise el borde del degradado. */
+    marginTop: -(espacio.xl + espacio.xs),
     marginBottom: espacio.md,
+    ...sombra.nivel2,
   },
   publicarIcono: {
     width: 48,
     height: 48,
     borderRadius: radio.completo,
-    backgroundColor: colores.superficie,
+    backgroundColor: colores.primarioSuave,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -14,7 +14,7 @@ import { Icono } from '../base/Icono';
  * Se refresca al volver a la pantalla: sin WebSocket ni polling en segundo plano,
  * que para esto no se justifica y gastaría batería.
  */
-export function Campanita() {
+export function Campanita({ color = colores.texto }: { color?: string } = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { sesion } = useAuth();
   const token = sesion?.token ?? '';
@@ -45,7 +45,7 @@ export function Campanita() {
         noLeidas > 0 ? `Notificaciones, ${noLeidas} sin leer` : 'Notificaciones'
       }
       style={({ pressed }) => [styles.boton, pressed && styles.presionado]}>
-      <Icono nombre="notifications-outline" tamano="lg" color={colores.texto} />
+      <Icono nombre="notifications-outline" tamano="lg" color={color} />
       {noLeidas > 0 && (
         <View style={styles.globo}>
           <Text style={styles.globoTexto}>{noLeidas > 9 ? '9+' : noLeidas}</Text>
@@ -73,6 +73,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 9,
     backgroundColor: colores.error,
+    borderWidth: 1.5,
+    borderColor: colores.superficie,
     alignItems: 'center',
     justifyContent: 'center',
   },

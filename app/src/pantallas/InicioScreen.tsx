@@ -218,7 +218,7 @@ export function InicioScreen({ navigation }: Props) {
                 <Pressable
                   key={o.valor}
                   style={({ pressed }) => [styles.categoria, pressed && styles.presionado]}
-                  onPress={() => navigation.navigate('Buscar')}>
+                  onPress={() => navigation.navigate('Buscar', { oficio: o.valor })}>
                   <View
                     style={[styles.categoriaIcono, { backgroundColor: COLOR_OFICIO[o.valor].fondo }]}>
                     <Icono

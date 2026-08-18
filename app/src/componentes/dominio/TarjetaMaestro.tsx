@@ -45,8 +45,13 @@ export function TarjetaMaestro({ maestro, onPress, onFavorito, onContactar, most
             <Text style={styles.nombre} numberOfLines={1}>
               {maestro.nombre} {maestro.apellido}
             </Text>
-            {mostrarDistancia && maestro.distanciaKm > 0 && (
-              <Text style={styles.distancia}>{maestro.distanciaKm} km</Text>
+            {/* La distancia viene redondeada a un decimal: quien esta a menos de
+                50 m daba 0.0 y, al pedir "> 0", se quedaba sin distancia. Es
+                justo el maestro mas cercano el que no la mostraba. */}
+            {mostrarDistancia && (
+              <Text style={styles.distancia}>
+                {maestro.distanciaKm > 0 ? `${maestro.distanciaKm} km` : 'muy cerca'}
+              </Text>
             )}
           </View>
 

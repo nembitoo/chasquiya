@@ -97,7 +97,8 @@ export type RootStackParamList = {
 /** Pestañas inferiores. Cada rol ve un subconjunto. */
 export type TabParamList = {
   Inicio: undefined;
-  Buscar: undefined;
+  /** Con oficio, la busqueda abre ya filtrada por esa categoria. */
+  Buscar: { oficio?: Oficio } | undefined;
   MisSolicitudes: undefined;
   SolicitudesRecibidas: undefined;
   Ingresos: undefined;

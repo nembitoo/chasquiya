@@ -32,7 +32,7 @@ const RADIOS = [5, 10, 25, 50];
 const PRECIOS = [10000, 20000, 30000, 50000];
 const NOTAS = [3, 4, 4.5];
 
-export function BuscarScreen({ navigation }: Props) {
+export function BuscarScreen({ navigation, route }: Props) {
   const { sesion } = useAuth();
   const token = sesion?.token ?? '';
 
@@ -48,6 +48,18 @@ export function BuscarScreen({ navigation }: Props) {
   const [maestros, setMaestros] = useState<MaestroCercano[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+
+  /*
+   * Si venimos de tocar una categoria en el inicio, la busqueda abre filtrada.
+   * El parametro se limpia despues de aplicarlo: si no, volver a tocar la misma
+   * categoria no dispararia nada, porque el valor no habria cambiado.
+   */
+  useEffect(() => {
+    const desdeInicio = route.params?.oficio;
+    if (!desdeInicio) return;
+    setOficio(desdeInicio);
+    navigation.setParams({ oficio: undefined });
+  }, [route.params?.oficio, navigation]);
 
   // Ubicación, una sola vez al abrir.
   useEffect(() => {
@@ -167,23 +179,23 @@ export function BuscarScreen({ navigation }: Props) {
         <Text style={styles.contador}>
           {cargando ? 'Buscando…' : `${visibles.length} ${visibles.length === 1 ? 'maestro' : 'maestros'}`}
         </Text>
-        {/* Lista o mapa: la misma búsqueda vista de dos maneras. */}
+        {/* Lista o mapa: la misma busqueda vista de dos maneras. Solo iconos:
+            con texto, los tres controles no caben en un telefono y quedaban
+            apretados unos contra otros. */}
         <View style={styles.selectorVista}>
           {(['lista', 'mapa'] as const).map((v) => (
             <Pressable
               key={v}
               onPress={() => setVista(v)}
               accessibilityRole="button"
+              accessibilityLabel={v === 'lista' ? 'Ver en lista' : 'Ver en mapa'}
               accessibilityState={{ selected: vista === v }}
               style={[styles.selectorBoton, vista === v && styles.selectorBotonActivo]}>
               <Icono
                 nombre={v === 'lista' ? 'list' : 'map'}
-                tamano="sm"
+                tamano="md"
                 color={vista === v ? colores.textoInverso : colores.textoSuave}
               />
-              <Text style={[styles.selectorTexto, vista === v && styles.selectorTextoActivo]}>
-                {v === 'lista' ? 'Lista' : 'Mapa'}
-              </Text>
             </Pressable>
           ))}
         </View>
@@ -373,11 +385,10 @@ const styles = StyleSheet.create({
     marginRight: espacio.xs,
   },
   selectorBoton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: espacio.xxs,
-    paddingHorizontal: espacio.sm,
-    paddingVertical: espacio.xxs,
+    justifyContent: 'center',
+    width: 40,
+    height: 30,
     borderRadius: 999,
   },
   selectorBotonActivo: { backgroundColor: colores.primario },
@@ -397,12 +408,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: espacio.xxs,
     borderRadius: radio.completo,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colores.borde,
     backgroundColor: colores.superficie,
     paddingHorizontal: espacio.sm + 2,
-    paddingVertical: espacio.xs,
-    minHeight: 38,
+    paddingVertical: espacio.xxs + 2,
+    minHeight: 34,
   },
   chipActivo: { borderColor: colores.primario, backgroundColor: colores.primarioSuave },
   chipTexto: { ...t.pequenoFuerte, color: colores.textoSuave },
@@ -414,8 +425,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: margenPantalla,
     paddingVertical: espacio.sm,
   },
-  contador: { ...t.pequeno },
-  botonFiltros: { flexDirection: 'row', alignItems: 'center', gap: espacio.xxs },
+  contador: { ...t.pequeno, flex: 1 },
+  botonFiltros: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.xxs,
+    borderWidth: 1,
+    borderColor: colores.primarioBorde,
+    borderRadius: radio.completo,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: espacio.xxs + 1,
+  },
   botonFiltrosTexto: { ...t.pequenoFuerte, color: colores.primario },
   contadorFiltros: {
     minWidth: 18,

@@ -81,6 +81,17 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
   return (
     <SafeAreaView style={styles.contenedor} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        {/* Se abre como ventana desde el avatar de Inicio, asi que necesita
+            su propia salida. */}
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar"
+          style={styles.cerrar}>
+          <Icono nombre="close" tamano="lg" color={colores.texto} />
+        </Pressable>
+
         <View style={styles.cabecera}>
           <Pressable onPress={cambiarFoto} disabled={subiendo} accessibilityLabel="Cambiar foto de perfil">
             <AvatarUsuario
@@ -140,6 +151,7 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   scroll: { padding: margenPantalla, paddingBottom: espacio.xl },
+  cerrar: { alignSelf: 'flex-end', padding: espacio.xxs },
   cabecera: { alignItems: 'center', marginBottom: espacio.lg },
   nombre: { marginTop: espacio.sm },
   chipRol: {

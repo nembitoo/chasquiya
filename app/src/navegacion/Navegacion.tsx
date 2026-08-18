@@ -73,6 +73,12 @@ export type RootStackParamList = {
   Cotizaciones: { solicitudId: number; descripcion: string };
   Pago: { solicitudId: number };
   Calificar: { solicitudId: number; contraparteNombre: string; esMaestro: boolean };
+  /**
+   * Ya no es una pestana: se abre como ventana desde el avatar de Inicio.
+   * Asi la barra inferior queda para lo que uno hace a diario, no para la
+   * configuracion.
+   */
+  Perfil: undefined;
   PerfilMaestro: undefined;
   /** Catálogo del maestro: qué hace y cuánto cobra. */
   MisServicios: undefined;
@@ -98,7 +104,6 @@ export type TabParamList = {
   Admin: undefined;
   AdminDisputas: undefined;
   Chats: undefined;
-  Perfil: undefined;
 };
 
 /** Props de una pantalla que vive en una pestaña (puede navegar también a la pila). */
@@ -204,11 +209,6 @@ function Pestanas() {
         />
       )}
 
-      <Tab.Screen
-        name="Perfil"
-        component={PerfilScreen}
-        options={{ tabBarIcon: iconoPestana('person') }}
-      />
     </Tab.Navigator>
   );
 }
@@ -237,6 +237,11 @@ export function Navegacion() {
             <Stack.Screen name="Cotizaciones" component={CotizacionesScreen} />
             <Stack.Screen name="Pago" component={PagoScreen} />
             <Stack.Screen name="Calificar" component={CalificarScreen} />
+            <Stack.Screen
+              name="Perfil"
+              component={PerfilScreen}
+              options={{ presentation: 'modal' }}
+            />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="MisServicios" component={MisServiciosScreen} />
             <Stack.Screen name="MisCalificaciones" component={MisCalificacionesScreen} />

@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import React, { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
@@ -19,6 +19,13 @@ import { colores, espacio, margenPantalla, radio, sombra, texto as t } from '../
 
 type Props = TabProps<'Inicio'>;
 
+/** Lo mas urgente que le conviene hacer al maestro. `ir` null = solo informa. */
+type Consejo = {
+  texto: string;
+  accion: string | null;
+  ir: 'PerfilMaestro' | 'MisServicios' | null;
+};
+
 export function InicioScreen({ navigation }: Props) {
   const { sesion } = useAuth();
   const rol = sesion?.rol;
@@ -29,7 +36,57 @@ export function InicioScreen({ navigation }: Props) {
   const [comuna, setComuna] = useState('');
   const [cargando, setCargando] = useState(rol === 'CLIENTE');
 
+  /** Los tres numeros que le importan al maestro al abrir la app. */
+  const [resumen, setResumen] = useState({ disponibles: 0, enCurso: 0, promedio: 0 });
+  const [consejo, setConsejo] = useState<Consejo | null>(null);
+
+  /**
+   * Que le conviene hacer ahora al maestro. Uno solo, el mas urgente, y si no
+   * hay nada pendiente la tarjeta no aparece: un consejo fijo que dice
+   * "completa tu perfil" cuando ya lo completaste es ruido.
+   */
+  const cargarConsejo = useCallback(async () => {
+    const perfil = await api.perfilMaestro.obtener(token).catch(() => null);
+    if (!perfil) {
+      setConsejo({ texto: 'Crea tu perfil profesional para poder recibir trabajos.', accion: 'Crear perfil', ir: 'PerfilMaestro' });
+      return;
+    }
+    const documentos = await api.documentos.mios(token).catch(() => []);
+    if (documentos.length === 0) {
+      setConsejo({ texto: 'Sube tus documentos para que podamos verificarte.', accion: 'Subir', ir: 'PerfilMaestro' });
+      return;
+    }
+    if (perfil.estadoVerificacion === 'PENDIENTE') {
+      setConsejo({ texto: 'Tu perfil esta en revision. Te avisamos apenas haya novedades.', accion: null, ir: null });
+      return;
+    }
+    const catalogo = await api.catalogo.mios(token).catch(() => []);
+    if (catalogo.filter((c) => c.activo).length === 0) {
+      setConsejo({ texto: 'Publica tus servicios con precio: sin catalogo no apareces en las busquedas.', accion: 'Publicar', ir: 'MisServicios' });
+      return;
+    }
+    setConsejo(null);
+  }, [token]);
+
+  const cargarMaestro = useCallback(async () => {
+    const [abiertas, recibidas, reputacion] = await Promise.all([
+      api.solicitudes.abiertas(token).catch(() => []),
+      api.solicitudes.recibidas(token).catch(() => []),
+      sesion?.id ? api.calificaciones.reputacionDe(token, sesion.id).catch(() => null) : null,
+    ]);
+    setResumen({
+      disponibles: abiertas.length,
+      enCurso: recibidas.filter((s) => s.estado === 'ACEPTADO' || s.estado === 'EN_CURSO').length,
+      promedio: reputacion?.promedio ?? 0,
+    });
+    await cargarConsejo();
+  }, [token, sesion?.id, cargarConsejo]);
+
   const cargar = useCallback(async () => {
+    if (rol === 'MAESTRO') {
+      await cargarMaestro();
+      return;
+    }
     if (rol !== 'CLIENTE') return;
     // Cada bloque falla por su cuenta: si no hay GPS igual se ven los servicios.
     try {
@@ -55,7 +112,7 @@ export function InicioScreen({ navigation }: Props) {
       /* sin servicios todavía */
     }
     setCargando(false);
-  }, [rol, token]);
+  }, [rol, token, cargarMaestro]);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,12 +142,19 @@ export function InicioScreen({ navigation }: Props) {
             )}
           </View>
           <Campanita />
-          <AvatarUsuario
-            usuarioId={sesion?.id}
-            nombre={sesion?.nombre}
-            tieneAvatar={sesion?.tieneAvatar}
-            tamano={44}
-          />
+          {/* El perfil dejo de ser una pestana: se abre desde aqui, como ventana. */}
+          <Pressable
+            onPress={() => navigation.navigate('Perfil')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir mi perfil">
+            <AvatarUsuario
+              usuarioId={sesion?.id}
+              nombre={sesion?.nombre}
+              tieneAvatar={sesion?.tieneAvatar}
+              tamano={44}
+            />
+          </Pressable>
         </View>
 
         {rol === 'CLIENTE' && (
@@ -204,30 +268,76 @@ export function InicioScreen({ navigation }: Props) {
 
         {rol === 'MAESTRO' && (
           <>
-            <AccesoRapido
-              icono="file-tray-full"
-              titulo="Solicitudes recibidas"
-              descripcion="Cotiza y gestiona tus trabajos"
-              onPress={() => navigation.navigate('SolicitudesRecibidas')}
-            />
-            <AccesoRapido
-              icono="calendar"
-              titulo="Mi agenda"
-              descripcion="Los trabajos que aceptaste, por fecha"
-              onPress={() => navigation.navigate('Agenda')}
-            />
-            <AccesoRapido
-              icono="cash"
-              titulo="Mis ingresos"
-              descripcion="Revisa lo que has ganado"
-              onPress={() => navigation.navigate('Ingresos')}
-            />
-            <AccesoRapido
-              icono="briefcase"
-              titulo="Mi perfil profesional"
-              descripcion="Oficios, tarifas y documentos"
-              onPress={() => navigation.navigate('PerfilMaestro')}
-            />
+            {/* Lo primero: cuanto trabajo hay esperandolo y como va */}
+            <View style={styles.destacada}>
+              <View style={styles.destacadaFila}>
+                <View style={styles.destacadaTexto}>
+                  <Text style={styles.destacadaEtiqueta}>
+                    {resumen.disponibles > 0 ? '¡Sigue creciendo!' : 'Todo al día'}
+                  </Text>
+                  <Text style={styles.destacadaTitulo}>
+                    {resumen.disponibles > 0
+                      ? `Tienes ${resumen.disponibles} ${resumen.disponibles === 1 ? 'trabajo disponible' : 'trabajos disponibles'}`
+                      : 'Sin trabajos nuevos por ahora'}
+                  </Text>
+                  <Pressable
+                    style={styles.destacadaBoton}
+                    onPress={() => navigation.navigate('SolicitudesRecibidas')}>
+                    <Text style={styles.destacadaBotonTexto}>Ver solicitudes</Text>
+                  </Pressable>
+                </View>
+
+                {/* La ilustracion trae su propio fondo rosado claro; la tarjeta
+                    usa ese mismo tono para que no se vea donde termina la
+                    imagen. */}
+                <Image
+                  source={require('../../assets/maestro-inicio.png')}
+                  style={styles.destacadaImagen}
+                  resizeMode="contain"
+                />
+              </View>
+
+              {/* Abajo y a lo ancho: en un telefono no caben tres columnas, y
+                  apretados "Calificacion" se partia por la mitad. */}
+              <View style={styles.destacadaNumeros}>
+                <Numero icono="briefcase" valor={String(resumen.enCurso)} etiqueta="Trabajos en curso" />
+                <Numero
+                  icono="star"
+                  valor={resumen.promedio > 0 ? resumen.promedio.toFixed(1) : '—'}
+                  etiqueta="Calificación promedio"
+                />
+              </View>
+            </View>
+
+            <View style={styles.grillaAccesos}>
+              <TarjetaAcceso icono="file-tray-full" titulo="Solicitudes recibidas" descripcion="Cotiza y gestiona tus trabajos" onPress={() => navigation.navigate('SolicitudesRecibidas')} />
+              <TarjetaAcceso icono="calendar" titulo="Mi agenda" descripcion="Los trabajos que aceptaste, por fecha" onPress={() => navigation.navigate('Agenda')} />
+              <TarjetaAcceso icono="cash" titulo="Mis ingresos" descripcion="Revisa lo que has ganado" onPress={() => navigation.navigate('Ingresos')} />
+              <TarjetaAcceso icono="star" titulo="Mis calificaciones" descripcion="Revisa las opiniones de tus clientes" onPress={() => navigation.navigate('MisCalificaciones')} />
+              <TarjetaAcceso icono="pricetags" titulo="Mis servicios y precios" descripcion="Gestiona tus servicios y tarifas" onPress={() => navigation.navigate('MisServicios')} />
+              <TarjetaAcceso icono="briefcase" titulo="Mi perfil profesional" descripcion="Oficios, zona y documentos" onPress={() => navigation.navigate('PerfilMaestro')} />
+            </View>
+
+            {/* Solo aparece si de verdad hay algo pendiente que hacer. */}
+            {!!consejo && (
+              <View style={styles.consejo}>
+                <View style={styles.consejoIcono}>
+                  <Icono nombre="trending-up" tamano="lg" color={colores.primario} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={t.cuerpoFuerte}>Consejo para hoy</Text>
+                  <Text style={styles.consejoTexto}>{consejo.texto}</Text>
+                </View>
+                {!!consejo.accion && !!consejo.ir && (
+                  <Pressable
+                    style={styles.consejoBoton}
+                    onPress={() => navigation.navigate(consejo.ir as 'PerfilMaestro' | 'MisServicios')}>
+                    <Text style={styles.consejoBotonTexto}>{consejo.accion}</Text>
+                    <Icono nombre="chevron-forward" tamano="sm" color={colores.primario} />
+                  </Pressable>
+                )}
+              </View>
+            )}
           </>
         )}
 
@@ -280,11 +390,150 @@ function AccesoRapido({
   );
 }
 
+/** Un numero del resumen: valor grande arriba, que significa abajo. */
+function Numero({ icono, valor, etiqueta }: { icono: NombreIcono; valor: string; etiqueta: string }) {
+  return (
+    <View style={styles.numero}>
+      <View style={styles.numeroIcono}>
+        <Icono nombre={icono} tamano="md" color={colores.primario} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.numeroValor}>{valor}</Text>
+        <Text style={styles.numeroEtiqueta}>{etiqueta}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Acceso de la grilla: media pantalla de ancho, para que entren dos por fila. */
+function TarjetaAcceso({
+  icono,
+  titulo,
+  descripcion,
+  onPress,
+}: {
+  icono: NombreIcono;
+  titulo: string;
+  descripcion: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.tarjetaAcceso, pressed && styles.tarjetaAccesoPresionada]}>
+      <View style={styles.tarjetaAccesoIcono}>
+        <Icono nombre={icono} tamano="lg" color={colores.primario} />
+      </View>
+      <Text style={styles.tarjetaAccesoTitulo} numberOfLines={2}>{titulo}</Text>
+      <Text style={styles.tarjetaAccesoDescripcion} numberOfLines={2}>{descripcion}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
   scroll: { padding: margenPantalla, paddingBottom: espacio.xl },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm, marginBottom: espacio.lg },
   saludo: { ...t.h2 },
+
+  /* --- Tarjeta destacada del maestro --- */
+  destacada: {
+    /* Este rosa sale del propio recorte de la ilustracion: si la tarjeta usara
+       otro tono se veria el rectangulo de la imagen. */
+    backgroundColor: '#FDF5F6',
+    borderRadius: radio.lg,
+    padding: espacio.md,
+    marginBottom: espacio.md,
+  },
+  destacadaFila: { flexDirection: 'row', alignItems: 'center' },
+  destacadaTexto: { flex: 1 },
+  destacadaEtiqueta: { ...t.pequenoFuerte, color: colores.primario },
+  destacadaTitulo: { ...t.h3, marginTop: 2, marginBottom: espacio.sm },
+  destacadaBoton: {
+    alignSelf: 'flex-start',
+    backgroundColor: colores.primario,
+    borderRadius: radio.completo,
+    paddingHorizontal: espacio.md,
+    paddingVertical: espacio.sm,
+  },
+  destacadaBotonTexto: { ...t.pequenoFuerte, color: colores.textoInverso },
+  destacadaImagen: { width: 112, height: 138, marginRight: -espacio.xs },
+  destacadaNumeros: { flexDirection: 'row', gap: espacio.sm, marginTop: espacio.sm },
+  numero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.xs,
+    backgroundColor: colores.superficie,
+    borderRadius: radio.md,
+    padding: espacio.sm,
+    flex: 1,
+  },
+  numeroIcono: {
+    width: 30,
+    height: 30,
+    borderRadius: radio.sm,
+    backgroundColor: colores.primarioSuave,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numeroValor: { ...t.h3 },
+  numeroEtiqueta: { ...t.etiqueta, color: colores.textoSuave },
+
+  /* --- Grilla de accesos --- */
+  grillaAccesos: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm },
+  tarjetaAcceso: {
+    /* 48% y no 50%: el resto lo ocupa el `gap` entre columnas. */
+    width: '48%',
+    backgroundColor: colores.superficie,
+    borderRadius: radio.md,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    padding: espacio.md,
+    ...sombra.nivel1,
+  },
+  tarjetaAccesoPresionada: { opacity: 0.7 },
+  tarjetaAccesoIcono: {
+    width: 40,
+    height: 40,
+    borderRadius: radio.sm,
+    backgroundColor: colores.primarioSuave,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: espacio.sm,
+  },
+  tarjetaAccesoTitulo: { ...t.cuerpoFuerte },
+  tarjetaAccesoDescripcion: { ...t.etiqueta, color: colores.textoSuave, marginTop: 2 },
+
+  /* --- Consejo --- */
+  consejo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.primarioSuave,
+    borderRadius: radio.md,
+    padding: espacio.md,
+    marginTop: espacio.md,
+  },
+  consejoIcono: {
+    width: 44,
+    height: 44,
+    borderRadius: radio.completo,
+    backgroundColor: colores.superficie,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  consejoTexto: { ...t.etiqueta, color: colores.textoSuave, marginTop: 2 },
+  consejoBoton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: colores.superficie,
+    borderRadius: radio.completo,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: espacio.xs,
+  },
+  consejoBotonTexto: { ...t.pequenoFuerte, color: colores.primario },
   buscador: {
     flexDirection: 'row',
     alignItems: 'center',

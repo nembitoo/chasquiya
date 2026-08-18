@@ -14,7 +14,7 @@ import { Card } from '../componentes/base/Card';
 import { Dato } from '../componentes/base/Dato';
 import { GaleriaFotos } from '../componentes/dominio/GaleriaFotos';
 import { LineaTiempo } from '../componentes/dominio/LineaTiempo';
-import { Icono } from '../componentes/base/Icono';
+import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
 import { Segmentos } from '../componentes/base/Segmentos';
 import { EmptyState } from '../componentes/feedback/EmptyState';
 import { SkeletonLista } from '../componentes/feedback/Skeleton';
@@ -174,17 +174,35 @@ export function MisSolicitudesScreen({ navigation }: Props) {
 
           {visibles.map((s) => (
             <Card key={s.id}>
-              {/* Cabecera: maestro + estado */}
+              {/*
+                Cabecera: maestro + estado. Una solicitud abierta todavía NO
+                tiene maestro, así que mostrar su avatar dejaba un círculo vacío
+                y un guion donde debería ir un nombre. Ahí la identidad de la
+                tarjeta es el oficio que se publicó.
+              */}
               <View style={styles.cardTop}>
-                <AvatarUsuario
-                  usuarioId={s.maestroId}
-                  nombre={s.maestroNombre}
-                  tieneAvatar={s.maestroTieneAvatar}
-                  tamano={40}
-                />
+                {s.abierta ? (
+                  <View style={styles.iconoPublicada}>
+                    <Icono
+                      nombre={(ICONO_OFICIO[s.oficio] ?? 'megaphone-outline') as NombreIcono}
+                      tamano="md"
+                      color={colores.primario}
+                    />
+                  </View>
+                ) : (
+                  <AvatarUsuario
+                    usuarioId={s.maestroId}
+                    nombre={s.maestroNombre}
+                    tieneAvatar={s.maestroTieneAvatar}
+                    tamano={40}
+                  />
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={t.cuerpoFuerte} numberOfLines={1}>
-                    {s.maestroNombre}
+                    {/* Corto a propósito: el badge de estado le come el ancho y
+                        "Publicada a varios maestros" se cortaba a la mitad. El
+                        detalle lo da el aviso de más abajo. */}
+                    {s.abierta ? 'Varios maestros' : s.maestroNombre}
                   </Text>
                   <Text style={styles.oficio}>{NOMBRE_OFICIO[s.oficio] ?? s.oficio}</Text>
                 </View>
@@ -347,12 +365,16 @@ export function MisSolicitudesScreen({ navigation }: Props) {
 
               {/* --- Enlaces secundarios --- */}
               <View style={styles.secundarias}>
-                <BotonChat
-                  noLeidos={noLeidos[String(s.id)] ?? 0}
-                  onPress={() =>
-                    navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: s.maestroNombre })
-                  }
-                />
+                {/* En una solicitud abierta no hay con quién chatear: el chat se
+                    abre recién cuando eliges una cotización. */}
+                {!s.abierta && (
+                  <BotonChat
+                    noLeidos={noLeidos[String(s.id)] ?? 0}
+                    onPress={() =>
+                      navigation.navigate('Chat', { solicitudId: s.id, contraparteNombre: s.maestroNombre })
+                    }
+                  />
+                )}
                 {(s.estado === 'SOLICITADO' || s.estado === 'ACEPTADO') && (
                   <Pressable
                     hitSlop={8}
@@ -410,6 +432,15 @@ const styles = StyleSheet.create({
   buscadorInput: { ...t.cuerpo, flex: 1, paddingVertical: 0 },
   lista: { padding: margenPantalla, paddingTop: espacio.md },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm },
+  /** Reemplaza al avatar cuando todavía no hay maestro asignado. */
+  iconoPublicada: {
+    width: 40,
+    height: 40,
+    borderRadius: radio.completo,
+    backgroundColor: colores.primarioSuave,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   oficio: { ...t.pequeno, color: colores.primario },
   descripcion: { ...t.cuerpo, marginTop: espacio.sm },
   ajuste: {

@@ -110,10 +110,8 @@ export function MaestroPublicoScreen({ route, navigation }: Props) {
             <Dato etiqueta="Experiencia" valor={`${maestro.aniosExperiencia} años`} />
             <Dato etiqueta="Trabajos" valor={`${maestro.trabajosCompletados}`} />
             <Dato etiqueta="Zona" valor={maestro.zonaCobertura ?? '—'} />
-            <Dato
-              etiqueta="Tarifa ref."
-              valor={maestro.tarifaReferencial ? `$${maestro.tarifaReferencial}` : '—'}
-            />
+            {/* Sin "tarifa referencial": los precios están abajo, cada uno con
+                el servicio al que corresponde. */}
           </View>
 
           {servicios.length > 0 && (

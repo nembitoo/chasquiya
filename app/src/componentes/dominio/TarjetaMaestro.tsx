@@ -82,25 +82,46 @@ export function TarjetaMaestro({ maestro, onPress, onFavorito, mostrarDistancia 
       </View>
 
       <View style={styles.pie}>
-        <Text style={styles.precio}>
-          {maestro.tarifaReferencial ? `Desde ${formatearCLP(maestro.tarifaReferencial)}` : 'Precio a convenir'}
-        </Text>
-        <Text style={styles.separador}>·</Text>
-        <Text style={styles.dato}>{maestro.aniosExperiencia} años exp.</Text>
-        {maestro.trabajosCompletados > 0 && (
-          <>
-            <Text style={styles.separador}>·</Text>
-            <Text style={styles.dato}>{maestro.trabajosCompletados} trabajos</Text>
-          </>
+        {/* El precio es del oficio que se está buscando, y va con el nombre del
+            servicio: un monto suelto haría creer que ESE es el precio de
+            cualquier trabajo. */}
+        <View style={styles.filaPrecio}>
+          <Text style={styles.precio}>
+            {maestro.precio == null
+              ? 'Precio a convenir'
+              : maestro.precioFijo
+                ? formatearCLP(maestro.precio)
+                : `Desde ${formatearCLP(maestro.precio)}`}
+          </Text>
+          {maestro.precio != null && maestro.precioFijo && (
+            <View style={styles.sello}>
+              <Text style={styles.selloTexto}>Precio fijo</Text>
+            </View>
+          )}
+        </View>
+        {!!maestro.precioServicio && (
+          <Text style={styles.servicio} numberOfLines={1}>
+            {maestro.precioServicio}
+          </Text>
         )}
-        {!!maestro.zonaCobertura && (
-          <>
-            <Text style={styles.separador}>·</Text>
-            <Text style={styles.dato} numberOfLines={1}>
-              {maestro.zonaCobertura}
-            </Text>
-          </>
-        )}
+
+        <View style={styles.filaDatos}>
+          <Text style={styles.dato}>{maestro.aniosExperiencia} años exp.</Text>
+          {maestro.trabajosCompletados > 0 && (
+            <>
+              <Text style={styles.separador}>·</Text>
+              <Text style={styles.dato}>{maestro.trabajosCompletados} trabajos</Text>
+            </>
+          )}
+          {!!maestro.zonaCobertura && (
+            <>
+              <Text style={styles.separador}>·</Text>
+              <Text style={styles.dato} numberOfLines={1}>
+                {maestro.zonaCobertura}
+              </Text>
+            </>
+          )}
+        </View>
       </View>
     </Pressable>
   );
@@ -126,15 +147,22 @@ const styles = StyleSheet.create({
   oficio: { ...t.pequeno, color: colores.primario, flex: 1 },
   filaEstrellas: { marginTop: 2 },
   pie: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espacio.xxs,
     marginTop: espacio.sm,
     paddingTop: espacio.sm,
     borderTopWidth: 1,
     borderTopColor: colores.borde,
   },
-  precio: { ...t.pequenoFuerte },
+  filaPrecio: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs },
+  precio: { ...t.cuerpoFuerte, color: colores.primario },
+  sello: {
+    backgroundColor: colores.exitoFondo,
+    borderRadius: radio.completo,
+    paddingHorizontal: espacio.xs,
+    paddingVertical: 1,
+  },
+  selloTexto: { ...t.etiqueta, color: colores.exitoTexto, fontWeight: '700' },
+  servicio: { ...t.etiqueta, color: colores.textoSuave, marginTop: 1 },
+  filaDatos: { flexDirection: 'row', alignItems: 'center', gap: espacio.xxs, marginTop: espacio.xs },
   dato: { ...t.pequeno, flexShrink: 1 },
   separador: { ...t.pequeno, color: colores.textoTenue },
 });

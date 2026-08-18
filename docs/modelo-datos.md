@@ -13,7 +13,8 @@ Clientes, maestros y admins comparten tabla; los distingue `rol`.
 ## perfiles_maestro (Hito 2)
 Datos profesionales de un maestro. Un usuario MAESTRO tiene 0 o 1 perfil.
 - `id`, `usuario_id` (FK único → usuarios)
-- `descripcion`, `anios_experiencia`, `tarifa_referencial` (CLP), `zona_cobertura`
+- `descripcion`, `anios_experiencia`, `zona_cobertura`
+  (la `tarifa_referencial` se eliminó en V21: los precios viven en `servicios_maestro`)
 - `latitud`, `longitud`: coordenadas que ingresa el maestro
 - `ubicacion`: `geography(Point,4326)` — **columna GENERADA por PostGIS** a partir de lat/lon.
   Es la base para "maestros cercanos" (Hito 3). Java escribe lat/lon; Postgres calcula el punto.

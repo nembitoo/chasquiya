@@ -12,7 +12,6 @@ public record PerfilMaestroResponse(
         Set<Oficio> oficios,
         String descripcion,
         int aniosExperiencia,
-        Integer tarifaReferencial,
         String zonaCobertura,
         Double latitud,
         Double longitud,

@@ -46,9 +46,6 @@ public class PerfilMaestro {
     @Column(name = "anios_experiencia", nullable = false)
     private int aniosExperiencia;
 
-    @Column(name = "tarifa_referencial")
-    private Integer tarifaReferencial;
-
     @Column(name = "zona_cobertura")
     private String zonaCobertura;
 
@@ -126,14 +123,6 @@ public class PerfilMaestro {
 
     public void setAniosExperiencia(int aniosExperiencia) {
         this.aniosExperiencia = aniosExperiencia;
-    }
-
-    public Integer getTarifaReferencial() {
-        return tarifaReferencial;
-    }
-
-    public void setTarifaReferencial(Integer tarifaReferencial) {
-        this.tarifaReferencial = tarifaReferencial;
     }
 
     public String getZonaCobertura() {

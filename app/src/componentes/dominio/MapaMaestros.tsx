@@ -131,7 +131,9 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
                   // Sin esto, un teléfono con letra grande agranda el texto pero
                   // no la caja del marcador, y el precio sale cortado.
                   allowFontScaling={false}>
-                  {m.tarifaReferencial ? formatearCLP(m.tarifaReferencial) : 'A convenir'}
+                  {/* El precio del oficio filtrado: si el cliente cambia de
+                      gasfitería a electricidad, cambia el número del pin. */}
+                  {m.precio == null ? 'A convenir' : formatearCLP(m.precio)}
                 </Text>
               </View>
             </View>

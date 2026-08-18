@@ -4,7 +4,7 @@
 > conversación nueva: esto es lo que hay, lo que falta y lo que **no** hay que
 > romper.
 >
-> Última actualización: agosto 2026 · 20 migraciones · 152 tests verdes.
+> Última actualización: agosto 2026 · 21 migraciones · 159 tests verdes.
 
 ## Qué es
 
@@ -63,6 +63,12 @@ precio, marcados como **precio fijo** o **desde**. El cliente los ve en el
 perfil y los pide directo; si es precio fijo, la solicitud llega ya cotizada a
 ese monto y el maestro no tiene que responder nada.
 
+**Fase 5b (el catálogo manda):** se eliminó la "tarifa referencial" del perfil.
+El precio que ve el cliente es siempre el del **oficio que está buscando**: si
+filtra gasfitería ve lo que ese maestro cobra por gasfitería, y si cambia a
+electricidad cambia el número. Sin catálogo publicado, el maestro no aparece en
+la búsqueda ni puede cotizar trabajos abiertos.
+
 ## Decisiones que NO hay que romper
 
 Estas se tomaron por razones legales o de producto. Cambiarlas sin entenderlas
@@ -82,6 +88,13 @@ penaliza rechazar trabajos, no fija tarifas. Por eso:
   cliente todavía acepta y el maestro puede declinar desde "Solicitudes"
   (estado `COTIZADO`). Sin esa salida, la app lo estaría atando a un trabajo
   que nunca eligió.
+- **No existe un precio general del maestro.** Cada precio vive en un servicio
+  del catálogo y se muestra junto al nombre de ese servicio: un monto suelto
+  haría creer al cliente que ESE es el precio de cualquier trabajo.
+- **Para aparecer hay que tener precios publicados de ese oficio**, tanto en la
+  búsqueda y el mapa como para cotizar trabajos abiertos. No es fijar tarifas
+  —los montos los pone él—, es el mismo tipo de requisito que estar verificado.
+  El filtro va dentro de la consulta PostGIS, no después del `LIMIT 50`.
 
 **Ley 19.496 — protección del consumidor.**
 - **Nada se cobra si no estaba en la cotización que el cliente aceptó.** El

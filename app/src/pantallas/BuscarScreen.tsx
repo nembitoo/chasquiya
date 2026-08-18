@@ -216,7 +216,10 @@ export function BuscarScreen({ navigation }: Props) {
           descripcion={
             busqueda
               ? `Ningún maestro cercano coincide con "${texto.trim()}".`
-              : 'No hay maestros aprobados con esos filtros. Prueba ampliando la distancia o cambiando de categoría.'
+              : // Aparecen solo los que tienen precios publicados, así que el
+                // vacío se explica: no es que no haya maestros, es que ninguno
+                // publicó todavía lo que cobra por esto.
+                'Todavía no hay maestros con precios publicados para esta categoría cerca tuyo. Prueba ampliando la distancia o cambiando de categoría.'
           }
           accion={{
             titulo: busqueda ? 'Limpiar búsqueda' : 'Limpiar filtros',

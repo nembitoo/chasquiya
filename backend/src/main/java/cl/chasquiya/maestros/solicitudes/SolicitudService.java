@@ -204,9 +204,18 @@ public class SolicitudService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Tu perfil tiene que estar aprobado para ver trabajos disponibles"));
 
+        /*
+         * Solo los oficios donde tiene precios publicados. Mostrarle trabajos
+         * que después no va a poder cotizar sería un callejón sin salida.
+         */
+        Set<Oficio> publicados = catalogo.oficiosPublicados(maestroId);
+
         boolean tieneUbicacion = perfil.getLatitud() != null && perfil.getLongitud() != null;
         List<Solicitud> encontradas = new ArrayList<>();
         for (Oficio oficio : perfil.getOficios()) {
+            if (!publicados.contains(oficio)) {
+                continue;
+            }
             encontradas.addAll(tieneUbicacion
                     ? solicitudes.buscarAbiertasCerca(oficio.name(), perfil.getLatitud(),
                             perfil.getLongitud(), RADIO_ABIERTAS_M, maestroId)
@@ -273,7 +282,7 @@ public class SolicitudService {
         return r;
     }
 
-    /** Solo un maestro aprobado y del oficio pedido puede ofertar. */
+    /** Solo un maestro aprobado, del oficio pedido y con precios publicados puede ofertar. */
     private void exigirPuedeCotizarAbierta(Long maestroId, Solicitud s) {
         if (s.getClienteId().equals(maestroId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No puedes cotizar tu propia solicitud");
@@ -285,6 +294,12 @@ public class SolicitudService {
         if (!perfil.getOficios().contains(s.getOficio())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Esta solicitud es de un oficio que no tienes en tu perfil");
+        }
+        // Para competir por un trabajo hay que tener precios publicados de ese
+        // oficio: es lo que el cliente usa para comparar antes de elegir.
+        if (!catalogo.oficiosPublicados(maestroId).contains(s.getOficio())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Publica un servicio de este oficio en tu catálogo para poder cotizar");
         }
     }
 
@@ -556,9 +571,14 @@ public class SolicitudService {
         return lista.stream()
                 .map(s -> {
                     List<Cotizacion> suyas = cotsPorSolicitud.getOrDefault(s.getId(), List.of());
+                    // Una solicitud abierta no nació de un catálogo: su servicioId
+                    // es null, y Map.of() lanza NPE si le piden esa clave.
+                    Integer precioCatalogo = s.getServicioId() == null
+                            ? null
+                            : preciosCatalogo.get(s.getServicioId());
                     return construir(s, laDelMaestro(s, suyas), suyas.size(), personas,
                             yaCalificadas.contains(s.getId()), fotosPorSolicitud.getOrDefault(s.getId(), 0),
-                            preciosCatalogo.get(s.getServicioId()));
+                            precioCatalogo);
                 })
                 .toList();
     }

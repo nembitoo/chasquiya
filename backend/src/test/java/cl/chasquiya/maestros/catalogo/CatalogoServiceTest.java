@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -104,6 +105,44 @@ class CatalogoServiceTest {
 
         assertThat(servicio.alternar(MAESTRO, 7L).activo()).isFalse();
         assertThat(s.getTitulo()).isEqualTo("Cambio de enchufe");
+    }
+
+    // --- El precio que ve el cliente ---
+
+    /**
+     * El precio de la tarjeta depende del oficio que el cliente esté buscando.
+     * Un maestro que hace dos cosas cobra distinto por cada una.
+     */
+    @Test
+    void elPrecioEsElMasBaratoDelOficioBuscado() {
+        when(servicios.findByMaestroIdInAndActivoTrue(Set.of(MAESTRO))).thenReturn(List.of(
+                new ServicioMaestro(MAESTRO, Oficio.ELECTRICIDAD, "Cambio de enchufe", null, 25000, true, null),
+                new ServicioMaestro(MAESTRO, Oficio.ELECTRICIDAD, "Revisión", null, 12000, true, null),
+                new ServicioMaestro(MAESTRO, Oficio.GASFITERIA, "Destape", null, 40000, false, null)));
+
+        assertThat(servicio.masBaratoPorMaestro(Set.of(MAESTRO), Oficio.ELECTRICIDAD).get(MAESTRO).getTitulo())
+                .isEqualTo("Revisión");
+        assertThat(servicio.masBaratoPorMaestro(Set.of(MAESTRO), Oficio.GASFITERIA).get(MAESTRO).getTitulo())
+                .isEqualTo("Destape");
+    }
+
+    /** Sin oficio de contexto (favoritos), el más barato de todo lo publicado. */
+    @Test
+    void sinOficioSeMuestraElMasBaratoDeTodos() {
+        when(servicios.findByMaestroIdInAndActivoTrue(Set.of(MAESTRO))).thenReturn(List.of(
+                new ServicioMaestro(MAESTRO, Oficio.ELECTRICIDAD, "Cambio de enchufe", null, 25000, true, null),
+                new ServicioMaestro(MAESTRO, Oficio.GASFITERIA, "Destape", null, 40000, false, null)));
+
+        assertThat(servicio.masBaratoPorMaestro(Set.of(MAESTRO), null).get(MAESTRO).getPrecio()).isEqualTo(25000);
+    }
+
+    /** Si no publicó nada de ese oficio, no hay precio que mostrar. */
+    @Test
+    void sinServiciosDeEseOficioNoHayPrecio() {
+        when(servicios.findByMaestroIdInAndActivoTrue(Set.of(MAESTRO))).thenReturn(List.of(
+                new ServicioMaestro(MAESTRO, Oficio.ELECTRICIDAD, "Cambio de enchufe", null, 25000, true, null)));
+
+        assertThat(servicio.masBaratoPorMaestro(Set.of(MAESTRO), Oficio.GASFITERIA)).isEmpty();
     }
 
     // --- Pedirlo ---

@@ -1,5 +1,6 @@
 package cl.chasquiya.maestros.catalogo;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,6 +13,9 @@ public interface ServicioMaestroRepository extends JpaRepository<ServicioMaestro
 
     /** Lo que ve un cliente: solo lo que el maestro tiene publicado. */
     List<ServicioMaestro> findByMaestroIdAndActivoTrueOrderByOficioAscTituloAsc(Long maestroId);
+
+    /** Lo publicado por varios maestros de una vez (búsqueda y mapa). */
+    List<ServicioMaestro> findByMaestroIdInAndActivoTrue(Collection<Long> maestroIds);
 
     Optional<ServicioMaestro> findByIdAndMaestroId(Long id, Long maestroId);
 

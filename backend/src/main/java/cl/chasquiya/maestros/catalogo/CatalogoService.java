@@ -3,6 +3,7 @@ package cl.chasquiya.maestros.catalogo;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.catalogo.dto.ServicioRequest;
 import cl.chasquiya.maestros.catalogo.dto.ServicioResponse;
+import cl.chasquiya.maestros.perfiles.Oficio;
 import cl.chasquiya.maestros.perfiles.PerfilMaestro;
 import cl.chasquiya.maestros.perfiles.PerfilMaestroRepository;
 
@@ -95,6 +97,29 @@ public class CatalogoService {
                 .filter(ServicioMaestro::isActivo)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Ese servicio ya no está disponible"));
+    }
+
+    /**
+     * El servicio activo más barato de cada maestro. Si se pide un oficio, solo
+     * mira los de ese oficio: el precio que ve el cliente tiene que ser del
+     * trabajo que está buscando, no un número general que no dice a qué
+     * corresponde.
+     */
+    public Map<Long, ServicioMaestro> masBaratoPorMaestro(Collection<Long> maestroIds, Oficio oficio) {
+        if (maestroIds.isEmpty()) {
+            return Map.of();
+        }
+        return servicios.findByMaestroIdInAndActivoTrue(maestroIds).stream()
+                .filter(s -> oficio == null || s.getOficio() == oficio)
+                .collect(Collectors.toMap(ServicioMaestro::getMaestroId, s -> s,
+                        (a, b) -> a.getPrecio() <= b.getPrecio() ? a : b));
+    }
+
+    /** Oficios en los que el maestro tiene algo publicado hoy. */
+    public Set<Oficio> oficiosPublicados(Long maestroId) {
+        return servicios.findByMaestroIdAndActivoTrueOrderByOficioAscTituloAsc(maestroId).stream()
+                .map(ServicioMaestro::getOficio)
+                .collect(Collectors.toSet());
     }
 
     /**

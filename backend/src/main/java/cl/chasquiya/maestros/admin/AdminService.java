@@ -275,12 +275,18 @@ public class AdminService {
         return todos.stream().filter(u -> u.getRol() == rol).count();
     }
 
-    /** Servicios en los que participó, según su rol. */
+    /**
+     * Servicios en los que participó, según su rol.
+     *
+     * <p>El id del usuario va primero en la comparación a propósito: una
+     * solicitud abierta todavía no tiene maestro, y al revés esto reventaba con
+     * NPE apenas existía una publicada.
+     */
     private long contarServiciosDe(List<Solicitud> servicios, Usuario u) {
         return servicios.stream()
                 .filter(s -> u.getRol() == RolUsuario.MAESTRO
-                        ? s.getMaestroId().equals(u.getId())
-                        : s.getClienteId().equals(u.getId()))
+                        ? u.getId().equals(s.getMaestroId())
+                        : u.getId().equals(s.getClienteId()))
                 .count();
     }
 

@@ -37,7 +37,6 @@ public class PerfilMaestroService {
         perfil.setOficios(req.oficios());
         perfil.setDescripcion(req.descripcion());
         perfil.setAniosExperiencia(req.aniosExperiencia());
-        perfil.setTarifaReferencial(req.tarifaReferencial());
         perfil.setZonaCobertura(req.zonaCobertura());
         perfil.setLatitud(req.latitud());
         perfil.setLongitud(req.longitud());
@@ -79,7 +78,6 @@ public class PerfilMaestroService {
                 p.getOficios(),
                 p.getDescripcion(),
                 p.getAniosExperiencia(),
-                p.getTarifaReferencial(),
                 p.getZonaCobertura(),
                 p.getLatitud(),
                 p.getLongitud(),

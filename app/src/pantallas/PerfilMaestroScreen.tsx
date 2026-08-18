@@ -45,8 +45,8 @@ export function PerfilMaestroScreen({ navigation }: Props) {
   const [oficios, setOficios] = useState<Oficio[]>([]);
   const [descripcion, setDescripcion] = useState('');
   const [aniosExperiencia, setAniosExperiencia] = useState('0');
-  const [tarifa, setTarifa] = useState('');
   const [comuna, setComuna] = useState<string | null>(null);
+  const [cantidadServicios, setCantidadServicios] = useState(0);
 
   const [documentos, setDocumentos] = useState<DocumentoResponse[]>([]);
   const [subiendoDoc, setSubiendoDoc] = useState(false);
@@ -60,11 +60,11 @@ export function PerfilMaestroScreen({ navigation }: Props) {
           setOficios(p.oficios);
           setDescripcion(p.descripcion ?? '');
           setAniosExperiencia(String(p.aniosExperiencia));
-          setTarifa(p.tarifaReferencial != null ? String(p.tarifaReferencial) : '');
           setComuna(p.zonaCobertura);
           setEstado(p.estadoVerificacion);
         }
         setDocumentos(await api.documentos.mios(token));
+        setCantidadServicios((await api.catalogo.mios(token).catch(() => [])).length);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'No se pudo cargar el perfil.');
       } finally {
@@ -95,7 +95,6 @@ export function PerfilMaestroScreen({ navigation }: Props) {
         oficios,
         descripcion,
         aniosExperiencia: Number(aniosExperiencia) || 0,
-        tarifaReferencial: tarifa ? Number(tarifa) : null,
         zonaCobertura: comuna,
         latitud: c ? c.latitud : null,
         longitud: c ? c.longitud : null,
@@ -207,12 +206,22 @@ export function PerfilMaestroScreen({ navigation }: Props) {
             onChangeText={setAniosExperiencia}
             keyboardType="number-pad"
           />
-          <CampoTexto
-            etiqueta="Tarifa referencial (CLP, opcional)"
-            value={tarifa}
-            onChangeText={setTarifa}
-            keyboardType="number-pad"
-          />
+          {/*
+            Los precios ya no viven en el perfil: van en el catálogo, cada uno
+            atado al trabajo que describe. Esta fila es el puente, para que no
+            haya que descubrir la pantalla por su cuenta.
+          */}
+          <Pressable style={styles.filaCatalogo} onPress={() => navigation.navigate('MisServicios')}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.filaCatalogoTitulo}>Mis servicios y precios</Text>
+              <Text style={styles.filaCatalogoAyuda}>
+                {cantidadServicios === 0
+                  ? 'Necesitas al menos uno publicado para aparecer en las búsquedas'
+                  : `${cantidadServicios} publicado${cantidadServicios === 1 ? '' : 's'}`}
+              </Text>
+            </View>
+            <Text style={styles.filaCatalogoFlecha}>›</Text>
+          </Pressable>
 
           {!!error && <Text style={styles.error}>{error}</Text>}
           {!!exito && <Text style={styles.exito}>{exito}</Text>}
@@ -305,6 +314,20 @@ const styles = StyleSheet.create({
   multilinea: { height: 100, paddingTop: espacio.sm, textAlignVertical: 'top' },
   docs: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm, marginBottom: espacio.md },
   thumb: { width: 80, height: 80, borderRadius: radio.sm, backgroundColor: colores.borde },
+  filaCatalogo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderRadius: radio.md,
+    padding: espacio.md,
+    marginBottom: espacio.md,
+    backgroundColor: colores.superficie,
+  },
+  filaCatalogoTitulo: { color: colores.texto, fontWeight: '700', fontSize: tipografia.cuerpo },
+  filaCatalogoAyuda: { color: colores.textoSuave, fontSize: tipografia.pequeno, marginTop: 2 },
+  filaCatalogoFlecha: { color: colores.primario, fontSize: tipografia.titulo, fontWeight: '700' },
   error: { color: colores.error, marginBottom: espacio.md, fontSize: tipografia.cuerpo },
   exito: { color: colores.exito, marginBottom: espacio.md, fontSize: tipografia.cuerpo, fontWeight: '600' },
 });

@@ -55,7 +55,7 @@ export type PerfilMaestroData = {
   oficios: Oficio[];
   descripcion: string;
   aniosExperiencia: number;
-  tarifaReferencial: number | null;
+  // Los precios NO viven aquí: van en el catálogo, cada uno con su servicio.
   zonaCobertura: string;
   latitud: number | null;
   longitud: number | null;
@@ -68,7 +68,6 @@ export type PerfilMaestroResponse = {
   oficios: Oficio[];
   descripcion: string | null;
   aniosExperiencia: number;
-  tarifaReferencial: number | null;
   zonaCobertura: string | null;
   latitud: number | null;
   longitud: number | null;
@@ -258,7 +257,15 @@ export type MaestroCercano = {
   oficios: Oficio[];
   zonaCobertura: string | null;
   aniosExperiencia: number;
-  tarifaReferencial: number | null;
+  /**
+   * Precio del catálogo para el oficio que se está buscando; sin filtro, el más
+   * bajo que tenga publicado. Null solo en listas sin contexto (favoritos).
+   */
+  precio: number | null;
+  /** Si ese precio es firme o es un "desde". */
+  precioFijo: boolean;
+  /** Qué servicio es ese precio: el número solo, sin contexto, engaña. */
+  precioServicio: string | null;
   distanciaKm: number;
   calificacionPromedio: number;
   cantidadCalificaciones: number;
@@ -314,7 +321,7 @@ export type MaestroPublico = {
   oficios: Oficio[];
   descripcion: string | null;
   aniosExperiencia: number;
-  tarifaReferencial: number | null;
+  // Sin precio general: se piden aparte con api.catalogo.deMaestro().
   zonaCobertura: string | null;
   calificacionPromedio: number;
   cantidadCalificaciones: number;

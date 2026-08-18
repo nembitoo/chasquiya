@@ -227,7 +227,6 @@ public class PrivacidadService {
         m.put("oficios", p.getOficios().stream().map(Enum::name).toList());
         m.put("descripcion", textoODefecto(p.getDescripcion()));
         m.put("aniosExperiencia", p.getAniosExperiencia());
-        m.put("tarifaReferencial", p.getTarifaReferencial() == null ? "" : p.getTarifaReferencial());
         m.put("zonaCobertura", textoODefecto(p.getZonaCobertura()));
         m.put("estadoVerificacion", p.getEstadoVerificacion().name());
         return m;

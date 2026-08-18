@@ -12,7 +12,15 @@ public record MaestroCercanoResponse(
         Set<Oficio> oficios,
         String zonaCobertura,
         int aniosExperiencia,
-        Integer tarifaReferencial,
+        /**
+         * Precio del catálogo para el oficio que el cliente está buscando; si no
+         * filtró por oficio, el más bajo que tenga publicado.
+         */
+        Integer precio,
+        /** Si ese precio es firme o es un "desde". */
+        boolean precioFijo,
+        /** Qué servicio es ese precio: el número solo, sin contexto, engaña. */
+        String precioServicio,
         double distanciaKm,
         double calificacionPromedio,
         long cantidadCalificaciones,

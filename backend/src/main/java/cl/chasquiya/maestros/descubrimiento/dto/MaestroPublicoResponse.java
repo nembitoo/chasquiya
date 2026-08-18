@@ -12,7 +12,8 @@ public record MaestroPublicoResponse(
         Set<Oficio> oficios,
         String descripcion,
         int aniosExperiencia,
-        Integer tarifaReferencial,
+        // Sin precio general: los precios van en el catálogo, cada uno con su
+        // servicio. Se piden aparte en /catalogo/{maestroId}.
         String zonaCobertura,
         double calificacionPromedio,
         long cantidadCalificaciones,

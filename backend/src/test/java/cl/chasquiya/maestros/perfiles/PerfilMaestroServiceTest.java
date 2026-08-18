@@ -28,7 +28,8 @@ class PerfilMaestroServiceTest {
         return new PerfilMaestroRequest(
                 Set.of(Oficio.ELECTRICIDAD, Oficio.REPARACIONES),
                 "Electricista con 5 años de experiencia",
-                5, 25000, "Maipú", -33.51, -70.75);
+                // Sin tarifa: los precios viven en el catálogo, no en el perfil.
+                5, "Maipú", -33.51, -70.75);
     }
 
     @Test

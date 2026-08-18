@@ -15,6 +15,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.calificaciones.CalificacionService;
 import cl.chasquiya.maestros.calificaciones.dto.ReputacionResponse;
+import cl.chasquiya.maestros.catalogo.CatalogoService;
+import cl.chasquiya.maestros.catalogo.ServicioMaestro;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.descubrimiento.dto.MaestroPublicoResponse;
 import cl.chasquiya.maestros.favoritos.Favorito;
@@ -41,15 +43,17 @@ public class DescubrimientoService {
     private final CalificacionService calificaciones;
     private final FavoritoRepository favoritos;
     private final SolicitudRepository solicitudes;
+    private final CatalogoService catalogo;
 
     public DescubrimientoService(PerfilMaestroRepository perfiles, UsuarioRepository usuarios,
                                  CalificacionService calificaciones, FavoritoRepository favoritos,
-                                 SolicitudRepository solicitudes) {
+                                 SolicitudRepository solicitudes, CatalogoService catalogo) {
         this.perfiles = perfiles;
         this.usuarios = usuarios;
         this.calificaciones = calificaciones;
         this.favoritos = favoritos;
         this.solicitudes = solicitudes;
+        this.catalogo = catalogo;
     }
 
     /**
@@ -73,11 +77,13 @@ public class DescubrimientoService {
         Map<Long, Double> distancias = ranking.stream().collect(Collectors.toMap(
                 MaestroCercanoProjection::getUsuarioId, r -> aKilometros(r.getDistanciaM()), (a, b) -> a));
 
-        List<MaestroCercanoResponse> salida = new ArrayList<>(fichasDe(ids, clienteId, distancias));
+        // El precio de la ficha es el del oficio buscado: si cambia el filtro,
+        // cambia el precio que ve el cliente.
+        List<MaestroCercanoResponse> salida = new ArrayList<>(fichasDe(ids, clienteId, distancias, oficio));
 
         // --- Filtros que se aplican sobre la ficha ya construida ---
         if (precioMaximo != null) {
-            salida.removeIf(m -> m.tarifaReferencial() != null && m.tarifaReferencial() > precioMaximo);
+            salida.removeIf(m -> m.precio() != null && m.precio() > precioMaximo);
         }
         if (calificacionMinima != null) {
             salida.removeIf(m -> m.calificacionPromedio() < calificacionMinima);
@@ -88,8 +94,8 @@ public class DescubrimientoService {
             salida.sort((a, b) -> Double.compare(b.calificacionPromedio(), a.calificacionPromedio()));
         } else if ("precio".equals(orden)) {
             salida.sort((a, b) -> Integer.compare(
-                    a.tarifaReferencial() == null ? Integer.MAX_VALUE : a.tarifaReferencial(),
-                    b.tarifaReferencial() == null ? Integer.MAX_VALUE : b.tarifaReferencial()));
+                    a.precio() == null ? Integer.MAX_VALUE : a.precio(),
+                    b.precio() == null ? Integer.MAX_VALUE : b.precio()));
         } else {
             salida.sort((a, b) -> Double.compare(a.distanciaKm(), b.distanciaKm()));
         }
@@ -102,9 +108,22 @@ public class DescubrimientoService {
      */
     public List<MaestroCercanoResponse> fichasDe(Collection<Long> usuarioIds, Long clienteId,
                                                  Map<Long, Double> distanciasKm) {
+        // Sin oficio de contexto (favoritos, cotizaciones): el precio que se
+        // muestra es el más bajo que tenga publicado.
+        return fichasDe(usuarioIds, clienteId, distanciasKm, null);
+    }
+
+    /**
+     * @param oficio qué está buscando el cliente. Decide qué precio se muestra:
+     *               el del servicio más barato de ese oficio. Con null, el más
+     *               barato de todo su catálogo.
+     */
+    public List<MaestroCercanoResponse> fichasDe(Collection<Long> usuarioIds, Long clienteId,
+                                                 Map<Long, Double> distanciasKm, Oficio oficio) {
         if (usuarioIds.isEmpty()) {
             return List.of();
         }
+        Map<Long, ServicioMaestro> precios = catalogo.masBaratoPorMaestro(usuarioIds, oficio);
         Map<Long, PerfilMaestro> perfilPorUsuario = perfiles.findByUsuarioIdIn(usuarioIds).stream()
                 .collect(Collectors.toMap(PerfilMaestro::getUsuarioId, Function.identity()));
         Map<Long, Usuario> usuarioPorId = usuarios.findAllById(usuarioIds).stream()
@@ -121,9 +140,13 @@ public class DescubrimientoService {
                 continue;
             }
             ReputacionResponse rep = reputaciones.getOrDefault(id, ReputacionResponse.vacia());
+            ServicioMaestro barato = precios.get(id);
             salida.add(new MaestroCercanoResponse(
                     u.getId(), u.getNombre(), u.getApellido(), p.getOficios(),
-                    p.getZonaCobertura(), p.getAniosExperiencia(), p.getTarifaReferencial(),
+                    p.getZonaCobertura(), p.getAniosExperiencia(),
+                    barato == null ? null : barato.getPrecio(),
+                    barato != null && barato.isPrecioFijo(),
+                    barato == null ? null : barato.getTitulo(),
                     distanciasKm.getOrDefault(id, 0.0), rep.promedio(), rep.cantidad(),
                     favoritosDelCliente.contains(id), u.tieneAvatar(),
                     completados.getOrDefault(id, 0L),
@@ -157,7 +180,7 @@ public class DescubrimientoService {
         boolean esFavorito = clienteId != null && favoritos.existsByClienteIdAndMaestroId(clienteId, usuarioId);
 
         return new MaestroPublicoResponse(u.getId(), u.getNombre(), u.getApellido(),
-                p.getOficios(), p.getDescripcion(), p.getAniosExperiencia(), p.getTarifaReferencial(),
+                p.getOficios(), p.getDescripcion(), p.getAniosExperiencia(),
                 p.getZonaCobertura(), rep.promedio(), rep.cantidad(), esFavorito, u.tieneAvatar(),
                 trabajosCompletadosDe(List.of(usuarioId)).getOrDefault(usuarioId, 0L));
     }

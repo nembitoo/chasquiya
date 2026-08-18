@@ -187,6 +187,26 @@ class AdminServiceTest {
         assertTrue(servicio.metricas(30).alertas().isEmpty());
     }
 
+    /**
+     * Una solicitud abierta no tiene maestro asignado. Comparar al revés hacía
+     * que la tabla de usuarios del backoffice reventara con NPE (HTTP 500)
+     * apenas un cliente publicaba un trabajo sin elegir maestro.
+     */
+    @Test
+    void laTablaDeUsuariosAguantaSolicitudesAbiertas() {
+        Solicitud abierta = new Solicitud(1L, Oficio.PINTURA, "Pintar el living", "dir", null, null, null, null);
+        ReflectionTestUtils.setField(abierta, "id", 20L);
+        when(solicitudes.findAll()).thenReturn(List.of(abierta, solicitud(21L, EstadoServicio.PAGADO, 1)));
+        when(usuarios.findAll()).thenReturn(List.of(
+                usuario(1L, RolUsuario.CLIENTE), usuario(2L, RolUsuario.MAESTRO)));
+
+        var filas = servicio.listarUsuarios();
+
+        assertEquals(2, filas.size());
+        assertEquals(2, filas.get(0).serviciosRealizados(), "el cliente pidió las dos");
+        assertEquals(1, filas.get(1).serviciosRealizados(), "el maestro solo participa en la asignada");
+    }
+
     @Test
     void suspenderDesactivaLaCuenta() {
         Usuario u = usuario(5L, RolUsuario.MAESTRO);

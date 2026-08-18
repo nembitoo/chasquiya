@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -58,6 +59,13 @@ class SolicitudAbiertaTest {
         when(usuarios.findAllById(any())).thenReturn(List.of());
         when(cotizaciones.findBySolicitudIdOrderByMontoAsc(any())).thenReturn(List.of());
         when(fotos.findBySolicitudIdIn(any())).thenReturn(List.of());
+        /*
+         * Map.of() y no un mapa cualquiera: es lo que devuelve el servicio real
+         * cuando no hay catálogo que consultar, y a diferencia de HashMap lanza
+         * NPE si le piden la clave null. Con el mapa vacío por defecto de
+         * Mockito (un HashMap) este escenario pasaba desapercibido.
+         */
+        when(catalogo.preciosDe(any())).thenReturn(Map.of());
     }
 
     private Solicitud abierta() {
@@ -68,11 +76,13 @@ class SolicitudAbiertaTest {
         return s;
     }
 
+    /** Aprobado y con precios publicados de ese oficio: lo que hoy se exige para competir. */
     private PerfilMaestro aprobado(Long usuarioId, Oficio oficio) {
         PerfilMaestro p = new PerfilMaestro(usuarioId);
         p.setEstadoVerificacion(EstadoVerificacion.APROBADO);
         p.setOficios(Set.of(oficio));
         when(perfiles.findByUsuarioId(usuarioId)).thenReturn(Optional.of(p));
+        when(catalogo.oficiosPublicados(usuarioId)).thenReturn(Set.of(oficio));
         return p;
     }
 
@@ -131,6 +141,61 @@ class SolicitudAbiertaTest {
                 .hasMessageContaining("oficio");
 
         verify(cotizaciones, never()).save(any());
+    }
+
+    /**
+     * Tiene el oficio en su perfil, pero no publicó ningún precio de ese oficio.
+     * No puede competir: el catálogo es justo lo que el cliente compara.
+     */
+    @Test
+    void sinPreciosPublicadosDeEseOficioNoPuedeCotizar() {
+        abierta();
+        PerfilMaestro p = new PerfilMaestro(MAESTRO_A);
+        p.setEstadoVerificacion(EstadoVerificacion.APROBADO);
+        p.setOficios(Set.of(Oficio.ELECTRICIDAD));
+        when(perfiles.findByUsuarioId(MAESTRO_A)).thenReturn(Optional.of(p));
+        when(catalogo.oficiosPublicados(MAESTRO_A)).thenReturn(Set.of());
+
+        assertThatThrownBy(() -> servicio.cotizar(MAESTRO_A, SOLICITUD, new CotizarRequest(30000, null, null, null)))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("catálogo");
+
+        verify(cotizaciones, never()).save(any());
+    }
+
+    /**
+     * Regresión: la lista de trabajos disponibles reventaba con NPE (500) y la
+     * app lo mostraba como "no hay trabajos". Una solicitud abierta no nació de
+     * un catálogo, así que su servicioId es null, y el mapa de precios inmutable
+     * no acepta esa clave.
+     */
+    @Test
+    void losTrabajosDisponiblesSeArmanAunqueNoVenganDeUnCatalogo() {
+        Solicitud publicada = abierta();
+        aprobado(MAESTRO_A, Oficio.ELECTRICIDAD);
+        when(solicitudes.buscarAbiertasPorOficio("ELECTRICIDAD", MAESTRO_A)).thenReturn(List.of(publicada));
+
+        List<SolicitudResponse> disponibles = servicio.abiertasPara(MAESTRO_A);
+
+        assertThat(disponibles).hasSize(1);
+        assertThat(disponibles.get(0).abierta()).isTrue();
+        assertThat(disponibles.get(0).precioCatalogo()).isNull();
+    }
+
+    /** Si no va a poder cotizarlo, mostrárselo sería un callejón sin salida. */
+    @Test
+    void losTrabajosDisponiblesSonSoloDeLosOficiosConCatalogo() {
+        PerfilMaestro p = new PerfilMaestro(MAESTRO_A);
+        p.setEstadoVerificacion(EstadoVerificacion.APROBADO);
+        p.setOficios(Set.of(Oficio.ELECTRICIDAD, Oficio.PINTURA));
+        when(perfiles.findByUsuarioId(MAESTRO_A)).thenReturn(Optional.of(p));
+        // Publicó precios de electricidad, pero no de pintura.
+        when(catalogo.oficiosPublicados(MAESTRO_A)).thenReturn(Set.of(Oficio.ELECTRICIDAD));
+
+        servicio.abiertasPara(MAESTRO_A);
+
+        verify(solicitudes).buscarAbiertasPorOficio("ELECTRICIDAD", MAESTRO_A);
+        verify(solicitudes, never()).buscarAbiertasPorOficio(eq("PINTURA"), any());
     }
 
     @Test

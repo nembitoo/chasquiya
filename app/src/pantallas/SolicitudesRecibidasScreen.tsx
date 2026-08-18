@@ -191,7 +191,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
               {vista === 'activos'
                 ? 'No tienes solicitudes activas. Cuando un cliente te contacte, aparecerán aquí.'
                 : vista === 'abiertas'
-                  ? 'Ahora mismo no hay trabajos publicados de tus oficios cerca tuyo. Vuelve más tarde.'
+                  ? 'Aquí aparecen los trabajos de los oficios que tengas publicados en tu catálogo. Si no ves ninguno, publica tus servicios con precio o vuelve más tarde.'
                   : 'Aquí verás los trabajos que ya terminaste.'}
             </Text>
           ) : (

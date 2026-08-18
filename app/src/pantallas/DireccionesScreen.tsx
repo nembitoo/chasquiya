@@ -1,7 +1,16 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
@@ -192,6 +201,10 @@ export function DireccionesScreen({ navigation }: Props) {
 
       {/* Formulario en hoja inferior */}
       <Modal visible={editando !== null} transparent animationType="slide" onRequestClose={() => setEditando(null)}>
+        {/* Sin esto el teclado tapa la hoja completa y escribes a ciegas. */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={styles.modalFondo} onPress={() => setEditando(null)}>
           <Pressable
             style={[styles.hoja, { paddingBottom: espacio.xl + insets.bottom }]}
@@ -233,6 +246,7 @@ export function DireccionesScreen({ navigation }: Props) {
             <Boton titulo="Cancelar" variante="terciario" onPress={() => setEditando(null)} />
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

@@ -1,6 +1,15 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
@@ -176,6 +185,11 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
           <ActivityIndicator size="large" color={colores.primario} />
         </View>
       ) : (
+        /* El formulario vive dentro de la lista: sin esto el teclado tapa el
+           campo justo cuando lo estas escribiendo. */
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.lista} keyboardShouldPersistTaps="handled">
           {!!error && <Text style={styles.error}>{error}</Text>}
 
@@ -460,6 +474,7 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
             ))
           )}
         </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );

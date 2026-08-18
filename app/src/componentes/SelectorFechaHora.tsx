@@ -126,6 +126,17 @@ export function SelectorFechaHora({ etiqueta, valor, onCambio }: Props) {
                 value={temporal}
                 mode={modo}
                 display="spinner"
+                /*
+                 * themeVariant y textColor son obligatorios aqui: el spinner de
+                 * iOS sigue el tema del SISTEMA, no el de la app. En un iPhone
+                 * en modo oscuro dibujaba texto blanco sobre el fondo blanco de
+                 * este modal, y parecia que el selector no aparecia.
+                 */
+                themeVariant="light"
+                textColor={colores.texto}
+                locale="es-CL"
+                /* El spinner de iOS no tiene altura propia dentro de un modal. */
+                style={styles.spinner}
                 minimumDate={modo === 'date' ? new Date() : undefined}
                 onChange={alCambiar}
               />
@@ -173,6 +184,7 @@ const styles = StyleSheet.create({
   valor: { color: colores.texto, fontSize: tipografia.cuerpo, flexShrink: 1 },
   placeholder: { color: colores.textoSuave },
   modalFondo: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  spinner: { height: 200, alignSelf: 'stretch' },
   modalCaja: {
     backgroundColor: colores.blanco,
     borderTopLeftRadius: radio.lg,

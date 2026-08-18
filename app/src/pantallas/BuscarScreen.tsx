@@ -384,7 +384,9 @@ const styles = StyleSheet.create({
   selectorTexto: { ...t.pequenoFuerte, color: colores.textoSuave },
   selectorTextoActivo: { color: colores.textoInverso },
   aviso: { ...t.etiqueta, marginTop: espacio.xxs },
-  chips: { maxHeight: 52, marginTop: espacio.sm },
+  // Sin maxHeight ni altura fija: con la letra del sistema en grande la
+  // pildora crecia y el ScrollView le cortaba el texto arriba y abajo.
+  chips: { marginTop: espacio.sm },
   chipsContenido: { paddingHorizontal: margenPantalla, gap: espacio.xs, alignItems: 'center' },
   chip: {
     flexDirection: 'row',
@@ -395,7 +397,8 @@ const styles = StyleSheet.create({
     borderColor: colores.borde,
     backgroundColor: colores.superficie,
     paddingHorizontal: espacio.sm + 2,
-    height: 38,
+    paddingVertical: espacio.xs,
+    minHeight: 38,
   },
   chipActivo: { borderColor: colores.primario, backgroundColor: colores.primarioSuave },
   chipTexto: { ...t.pequenoFuerte, color: colores.textoSuave },

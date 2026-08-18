@@ -1,6 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import React, { useCallback, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -123,11 +124,15 @@ export function InicioScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.contenedor} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Saludo */}
-        <View style={styles.cabecera}>
+        {/* Saludo. Para el cliente va sobre un degradado que sangra a los
+            bordes; para los demas roles se mantiene sobre el fondo claro. */}
+        <Envoltura degradado={rol === 'CLIENTE'}>
+          <View style={styles.cabecera}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.saludo}>Hola, {sesion?.nombre} 👋</Text>
-            <Text style={t.pequeno}>
+            <Text style={[styles.saludo, rol === 'CLIENTE' && styles.textoSobreColor]}>
+              Hola, {sesion?.nombre} 👋
+            </Text>
+            <Text style={[t.pequeno, rol === 'CLIENTE' && styles.subtituloSobreColor]}>
               {rol === 'MAESTRO'
                 ? 'Revisa tus solicitudes del día'
                 : rol === 'ADMIN'
@@ -155,20 +160,43 @@ export function InicioScreen({ navigation }: Props) {
               tamano={44}
             />
           </Pressable>
-        </View>
+          </View>
+        </Envoltura>
 
         {rol === 'CLIENTE' && (
           <>
+            {/* Publicar arriba del todo: es la accion principal del cliente y
+                antes vivia enterrada al final de la pantalla. */}
+            <Pressable
+              style={styles.publicar}
+              onPress={() => navigation.navigate('PublicarSolicitud')}>
+              <View style={styles.publicarIcono}>
+                <Icono nombre="megaphone" tamano="lg" color={colores.primario} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.publicarTitulo}>Publicar un trabajo</Text>
+                <Text style={styles.publicarTexto}>
+                  Cuéntanos qué necesitas y varios maestros te cotizan.
+                </Text>
+              </View>
+              <Icono nombre="chevron-forward" tamano="md" color={colores.primario} />
+            </Pressable>
+
             {/* Buscador (lleva a la pestaña Buscar) */}
             <Pressable style={styles.buscador} onPress={() => navigation.navigate('Buscar')}>
               <Icono nombre="search" tamano="md" color={colores.textoTenue} />
-              <Text style={styles.buscadorTexto}>¿Qué servicio necesitas?</Text>
+              <Text style={styles.buscadorTexto}>Buscar servicio o maestro</Text>
             </Pressable>
 
-            {/* Categorías */}
-            <Text style={[t.h3, styles.tituloSeccion]}>Categorías</Text>
+            {/* Categorias: cuatro, no ocho. Con ocho ninguna se lee. */}
+            <View style={styles.filaSeccion}>
+              <Text style={[t.h3, { flex: 1 }]}>Explora categorías</Text>
+              <Pressable onPress={() => navigation.navigate('Buscar')} hitSlop={8}>
+                <Text style={styles.verTodo}>Ver todas</Text>
+              </Pressable>
+            </View>
             <View style={styles.grilla}>
-              {OFICIOS.slice(0, 8).map((o) => (
+              {OFICIOS.slice(0, 4).map((o) => (
                 <Pressable
                   key={o.valor}
                   style={({ pressed }) => [styles.categoria, pressed && styles.presionado]}
@@ -194,7 +222,7 @@ export function InicioScreen({ navigation }: Props) {
               cercanos.length > 0 && (
                 <>
                   <View style={styles.filaSeccion}>
-                    <Text style={[t.h3, { flex: 1 }]}>Cerca de ti</Text>
+                    <Text style={[t.h3, { flex: 1 }]}>Recomendados para ti</Text>
                     <Pressable onPress={() => navigation.navigate('Buscar')} hitSlop={8}>
                       <Text style={styles.verTodo}>Ver todos</Text>
                     </Pressable>
@@ -204,6 +232,13 @@ export function InicioScreen({ navigation }: Props) {
                       key={m.usuarioId}
                       maestro={m}
                       onPress={() => navigation.navigate('MaestroPublico', { usuarioId: m.usuarioId })}
+                      onContactar={() =>
+                        navigation.navigate('NuevaSolicitud', {
+                          maestroId: m.usuarioId,
+                          maestroNombre: `${m.nombre} ${m.apellido}`,
+                          oficios: m.oficios,
+                        })
+                      }
                     />
                   ))}
                 </>
@@ -245,24 +280,6 @@ export function InicioScreen({ navigation }: Props) {
               </>
             )}
 
-            <AccesoRapido
-              icono="megaphone"
-              titulo="Publicar un trabajo"
-              descripcion="Recibe varios precios y elige el que más te convenga"
-              onPress={() => navigation.navigate('PublicarSolicitud')}
-            />
-            <AccesoRapido
-              icono="search"
-              titulo="Buscar maestros cerca de ti"
-              descripcion="Filtra por oficio y distancia"
-              onPress={() => navigation.navigate('Buscar')}
-            />
-            <AccesoRapido
-              icono="briefcase"
-              titulo="Mis servicios"
-              descripcion="Sigue el estado de tus solicitudes"
-              onPress={() => navigation.navigate('MisSolicitudes')}
-            />
           </>
         )}
 
@@ -287,9 +304,6 @@ export function InicioScreen({ navigation }: Props) {
                   </Pressable>
                 </View>
 
-                {/* La ilustracion trae su propio fondo rosado claro; la tarjeta
-                    usa ese mismo tono para que no se vea donde termina la
-                    imagen. */}
                 <Image
                   source={require('../../assets/maestro-inicio.png')}
                   style={styles.destacadaImagen}
@@ -390,6 +404,28 @@ function AccesoRapido({
   );
 }
 
+/**
+ * Pinta el degradado detras de la cabecera del cliente.
+ *
+ * Los margenes negativos son para que el color llegue a los bordes: el
+ * contenido del scroll vive con padding, y sin esto quedaria una franja de
+ * fondo claro a cada lado.
+ */
+function Envoltura({ degradado, children }: { degradado: boolean; children: React.ReactNode }) {
+  if (!degradado) {
+    return <>{children}</>;
+  }
+  return (
+    <LinearGradient
+      colors={[colores.primario, colores.primarioActivo]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.degradado}>
+      {children}
+    </LinearGradient>
+  );
+}
+
 /** Un numero del resumen: valor grande arriba, que significa abajo. */
 function Numero({ icono, valor, etiqueta }: { icono: NombreIcono; valor: string; etiqueta: string }) {
   return (
@@ -436,12 +472,45 @@ const styles = StyleSheet.create({
   scroll: { padding: margenPantalla, paddingBottom: espacio.xl },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm, marginBottom: espacio.lg },
   saludo: { ...t.h2 },
+  degradado: {
+    marginHorizontal: -margenPantalla,
+    marginTop: -margenPantalla,
+    paddingHorizontal: margenPantalla,
+    paddingTop: margenPantalla,
+    paddingBottom: espacio.md,
+    marginBottom: espacio.md,
+    borderBottomLeftRadius: radio.xl,
+    borderBottomRightRadius: radio.xl,
+  },
+  textoSobreColor: { color: colores.textoInverso },
+  subtituloSobreColor: { color: 'rgba(255,255,255,0.85)' },
+
+  /* --- Publicar un trabajo, la accion principal del cliente --- */
+  publicar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.primarioSuave,
+    borderRadius: radio.md,
+    padding: espacio.md,
+    marginBottom: espacio.md,
+  },
+  publicarIcono: {
+    width: 48,
+    height: 48,
+    borderRadius: radio.completo,
+    backgroundColor: colores.superficie,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  publicarTitulo: { ...t.cuerpoFuerte },
+  publicarTexto: { ...t.etiqueta, color: colores.textoSuave, marginTop: 2 },
 
   /* --- Tarjeta destacada del maestro --- */
   destacada: {
-    /* Este rosa sale del propio recorte de la ilustracion: si la tarjeta usara
-       otro tono se veria el rectangulo de la imagen. */
-    backgroundColor: '#FDF5F6',
+    /* La ilustracion viene con fondo transparente, asi que la tarjeta puede
+       usar el rosa del sistema sin que se vea el recorte. */
+    backgroundColor: colores.primarioSuave,
     borderRadius: radio.lg,
     padding: espacio.md,
     marginBottom: espacio.md,

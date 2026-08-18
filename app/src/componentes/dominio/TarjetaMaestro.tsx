@@ -13,6 +13,8 @@ type Props = {
   maestro: MaestroCercano;
   onPress: () => void;
   onFavorito?: () => void;
+  /** Si viene, la tarjeta ofrece pedirle el servicio sin pasar por su perfil. */
+  onContactar?: () => void;
   /** La distancia no aplica en la lista de favoritos. */
   mostrarDistancia?: boolean;
 };
@@ -21,7 +23,7 @@ type Props = {
  * Tarjeta de maestro: la pieza más visible de la app.
  * Se usa en búsqueda, favoritos y (a futuro) en el home.
  */
-export function TarjetaMaestro({ maestro, onPress, onFavorito, mostrarDistancia = true }: Props) {
+export function TarjetaMaestro({ maestro, onPress, onFavorito, onContactar, mostrarDistancia = true }: Props) {
   const oficioPrincipal = maestro.oficios[0];
 
   return (
@@ -105,6 +107,15 @@ export function TarjetaMaestro({ maestro, onPress, onFavorito, mostrarDistancia 
           </Text>
         )}
 
+        {!!onContactar && (
+          <Pressable
+            onPress={onContactar}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.contactar, pressed && styles.presionada]}>
+            <Text style={styles.contactarTexto}>Contactar</Text>
+          </Pressable>
+        )}
+
         <View style={styles.filaDatos}>
           <Text style={styles.dato}>{maestro.aniosExperiencia} años exp.</Text>
           {maestro.trabajosCompletados > 0 && (
@@ -162,6 +173,15 @@ const styles = StyleSheet.create({
   },
   selloTexto: { ...t.etiqueta, color: colores.exitoTexto, fontWeight: '700' },
   servicio: { ...t.etiqueta, color: colores.textoSuave, marginTop: 1 },
+  contactar: {
+    alignSelf: 'flex-start',
+    backgroundColor: colores.primario,
+    borderRadius: radio.completo,
+    paddingHorizontal: espacio.md,
+    paddingVertical: espacio.xs,
+    marginTop: espacio.xs,
+  },
+  contactarTexto: { ...t.pequenoFuerte, color: colores.textoInverso },
   filaDatos: { flexDirection: 'row', alignItems: 'center', gap: espacio.xxs, marginTop: espacio.xs },
   dato: { ...t.pequeno, flexShrink: 1 },
   separador: { ...t.pequeno, color: colores.textoTenue },

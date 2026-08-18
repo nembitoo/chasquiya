@@ -9,12 +9,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../api/cliente';
 import { MaestroCercano, Solicitud } from '../api/tipos';
 import { EstadoBadge } from '../componentes/EstadoBadge';
-import { Estrellas } from '../componentes/Estrellas';
 import { AvatarUsuario } from '../componentes/base/AvatarUsuario';
 import { ICONO_OFICIO, Icono, NombreIcono } from '../componentes/base/Icono';
 import { Campanita } from '../componentes/dominio/Campanita';
+import { TarjetaMaestro } from '../componentes/dominio/TarjetaMaestro';
 import { SkeletonLista } from '../componentes/feedback/Skeleton';
-import { COLOR_OFICIO, NOMBRE_OFICIO, OFICIOS } from '../datos/oficios';
+import { COLOR_OFICIO, OFICIOS } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { TabProps } from '../navegacion/Navegacion';
 import { colores, espacio, margenPantalla, radio, sombra, texto as t } from '../tema/tema';
@@ -247,7 +247,7 @@ export function InicioScreen({ navigation }: Props) {
                     </Pressable>
                   </View>
                   {cercanos.map((m) => (
-                    <FilaMaestro
+                    <TarjetaMaestro
                       key={m.usuarioId}
                       maestro={m}
                       onPress={() => navigation.navigate('MaestroPublico', { usuarioId: m.usuarioId })}
@@ -453,53 +453,6 @@ function Envoltura({
   );
 }
 
-/**
- * Maestro en el home: fila compacta, con Contactar a la derecha.
- *
- * En Buscar se usa la tarjeta grande, que muestra precio y servicio. Aqui la
- * lista es un aperitivo -tres nombres- y una tarjeta por cada uno ocupaba media
- * pantalla.
- */
-function FilaMaestro({
-  maestro,
-  onPress,
-  onContactar,
-}: {
-  maestro: MaestroCercano;
-  onPress: () => void;
-  onContactar: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.filaMaestro, pressed && styles.presionado]}>
-      <AvatarUsuario
-        usuarioId={maestro.usuarioId}
-        nombre={`${maestro.nombre} ${maestro.apellido}`}
-        tieneAvatar={maestro.tieneAvatar}
-        tamano={48}
-      />
-      <View style={{ flex: 1 }}>
-        <Text style={t.cuerpoFuerte} numberOfLines={1}>
-          {maestro.nombre} {maestro.apellido}
-        </Text>
-        <Estrellas valor={maestro.calificacionPromedio} cantidad={maestro.cantidadCalificaciones} />
-        <Text style={styles.filaMaestroOficio} numberOfLines={1}>
-          {maestro.oficios.map((o) => NOMBRE_OFICIO[o] ?? o).join(' · ')}
-          {maestro.distanciaKm > 0 ? ` · a ${maestro.distanciaKm} km` : ''}
-        </Text>
-      </View>
-      <Pressable
-        onPress={onContactar}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.contactar, pressed && styles.presionado]}>
-        <Text style={styles.contactarTexto}>Contactar</Text>
-      </Pressable>
-    </Pressable>
-  );
-}
-
 /** Un numero del resumen: valor grande arriba, que significa abajo. */
 function Numero({ icono, valor, etiqueta }: { icono: NombreIcono; valor: string; etiqueta: string }) {
   return (
@@ -557,25 +510,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: radio.xl,
   },
   textoSobreColor: { color: colores.textoInverso },
-  filaMaestro: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espacio.sm,
-    backgroundColor: colores.superficie,
-    borderRadius: radio.md,
-    borderWidth: 1,
-    borderColor: colores.borde,
-    padding: espacio.sm + 2,
-    marginBottom: espacio.sm,
-  },
-  filaMaestroOficio: { ...t.etiqueta, color: colores.textoSuave },
-  contactar: {
-    backgroundColor: colores.primario,
-    borderRadius: radio.completo,
-    paddingHorizontal: espacio.md,
-    paddingVertical: espacio.xs + 2,
-  },
-  contactarTexto: { ...t.pequenoFuerte, color: colores.textoInverso },
   subtituloSobreColor: { color: 'rgba(255,255,255,0.85)' },
 
   /* --- Publicar un trabajo, la accion principal del cliente --- */

@@ -384,9 +384,13 @@ const styles = StyleSheet.create({
   selectorTexto: { ...t.pequenoFuerte, color: colores.textoSuave },
   selectorTextoActivo: { color: colores.textoInverso },
   aviso: { ...t.etiqueta, marginTop: espacio.xxs },
-  // Sin maxHeight ni altura fija: con la letra del sistema en grande la
-  // pildora crecia y el ScrollView le cortaba el texto arriba y abajo.
-  chips: { marginTop: espacio.sm },
+  /*
+   * flexGrow: 0 es la clave. Un ScrollView horizontal dentro de una columna no
+   * tiene altura propia: con `maxHeight` fijo recortaba las pildoras cuando la
+   * letra del sistema era grande, y sin ninguna restriccion colapsaba a cero y
+   * la fila desaparecia. Asi mide exactamente lo que ocupa su contenido.
+   */
+  chips: { marginTop: espacio.sm, flexGrow: 0 },
   chipsContenido: { paddingHorizontal: margenPantalla, gap: espacio.xs, alignItems: 'center' },
   chip: {
     flexDirection: 'row',

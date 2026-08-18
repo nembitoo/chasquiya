@@ -92,57 +92,38 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
         showsMyLocationButton={false}
         // Tocar el mapa (fuera de un marcador) cierra la tarjeta.
         onPress={() => setElegido(null)}>
+        {/*
+          Marcador ESTÁNDAR, sin vista propia dentro.
+
+          Antes cada pin era un <View> nuestro con el precio flotando. Eso
+          fallaba distinto en cada plataforma y por la misma causa: la vista
+          personalizada.
+            · Android la convierte en imagen y la recortaba (5 intentos de
+              arreglo: tracksViewChanges, collapsable, ancho fijo, sin sombra…).
+            · iOS la dibujaba bien pero se comía el toque, así que no se podía
+              seleccionar al maestro.
+
+          El pin nativo no se rasteriza ni intercepta nada. El precio se mudó a
+          la tarjeta de abajo, que es una vista normal fuera del mapa y por eso
+          se comporta igual en los dos sistemas. Se pierde ver todos los precios
+          de una mirada; se gana un mapa que funciona.
+        */}
         {ubicables.map((m) => (
           <Marker
             key={m.usuarioId}
             coordinate={{ latitude: m.latitudAprox as number, longitude: m.longitudAprox as number }}
+            /* Todos del mismo color: Android no re-renderiza pinColor sin
+               remontar el marcador, y cual esta elegido ya lo dice la tarjeta. */
+            pinColor={colores.primario}
             onPress={() => setElegido(m)}
-            /*
-             * Android dibuja cada marcador con contenido propio como una imagen.
-             * Congelar esa imagen (`tracksViewChanges={false}`) ahorra trabajo,
-             * pero solo sale bien si se congela justo cuando el contenido ya
-             * está medido: antes queda invisible, y a medio medir queda cortado.
-             * No hay un momento confiable para hacerlo.
-             *
-             * Con 16 marcadores ese ahorro no se nota, así que se deja en vivo:
-             * vale más que se vea bien. Si algún día hay cientos, la salida es
-             * un marcador simple con el precio en el globo de detalle.
-             */
-            tracksViewChanges>
-            {/*
-              La envoltura transparente le da aire al recorte que hace Android.
-
-              `collapsable={false}` es la parte que de verdad arregla el corte:
-              React Native "aplana" las vistas que no tienen props propias, como
-              optimización. Pero react-native-maps saca una FOTO de esta vista
-              nativa para dibujar el marcador, y si la vista fue aplanada, la
-              foto no coincide con lo que el layout calculó: sale cortada a la
-              mitad, siempre del mismo lado. Sin este prop, la vista nunca se
-              aplana y la foto queda completa.
-            */}
-            <View style={styles.pinEnvoltura} collapsable={false}>
-              <View style={[styles.pin, elegido?.usuarioId === m.usuarioId && styles.pinActivo]}>
-                <Text
-                  style={[
-                    styles.pinTexto,
-                    elegido?.usuarioId === m.usuarioId && styles.pinTextoActivo,
-                  ]}
-                  numberOfLines={1}
-                  // Sin esto, un teléfono con letra grande agranda el texto pero
-                  // no la caja del marcador, y el precio sale cortado.
-                  allowFontScaling={false}>
-                  {/* El precio del oficio filtrado: si el cliente cambia de
-                      gasfitería a electricidad, cambia el número del pin. */}
-                  {m.precio == null ? 'A convenir' : formatearCLP(m.precio)}
-                </Text>
-              </View>
-            </View>
-          </Marker>
+          />
         ))}
       </MapView>
 
       <View style={styles.aviso}>
         <Icono nombre="information-circle-outline" tamano="sm" color={colores.textoSuave} />
+        {/* "zona aproximada" no es relleno: es la promesa de que el mapa nunca
+            muestra la ubicación exacta del maestro (Ley 21.719). */}
         <Text style={styles.avisoTexto}>
           {ubicables.length} en el mapa · zona aproximada
         </Text>
@@ -159,6 +140,14 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
               ? 'No hay maestros cerca con estos filtros. Prueba ampliando la distancia.'
               : 'Los maestros encontrados no tienen su zona registrada, así que no se pueden ubicar en el mapa.'}
           </Text>
+        </View>
+      )}
+
+      {/* El precio dejó de estar en el pin, así que hay que decir dónde está. */}
+      {!elegido && ubicables.length > 0 && (
+        <View style={styles.pista}>
+          <Icono nombre="hand-left-outline" tamano="sm" color={colores.textoSuave} />
+          <Text style={styles.pistaTexto}>Toca un pin para ver el precio</Text>
         </View>
       )}
 
@@ -181,6 +170,28 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
               <Estrellas valor={elegido.calificacionPromedio} cantidad={elegido.cantidadCalificaciones} />
               <Text style={styles.distancia}>{elegido.distanciaKm} km</Text>
             </View>
+
+            {/* El precio del oficio buscado. Antes vivía flotando en el pin;
+                aquí cabe entero y además puede decir de qué servicio es. */}
+            <View style={styles.filaPrecio}>
+              <Text style={styles.precio}>
+                {elegido.precio == null
+                  ? 'Precio a convenir'
+                  : elegido.precioFijo
+                    ? formatearCLP(elegido.precio)
+                    : `Desde ${formatearCLP(elegido.precio)}`}
+              </Text>
+              {elegido.precio != null && elegido.precioFijo && (
+                <View style={styles.sello}>
+                  <Text style={styles.selloTexto}>Precio fijo</Text>
+                </View>
+              )}
+            </View>
+            {!!elegido.precioServicio && (
+              <Text style={styles.servicio} numberOfLines={1}>
+                {elegido.precioServicio}
+              </Text>
+            )}
           </View>
           <Icono nombre="chevron-forward" tamano="md" color={colores.textoTenue} />
         </Pressable>
@@ -191,42 +202,6 @@ export function MapaMaestros({ maestros, centro, onVerPerfil }: Props) {
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1 },
-  // Margen alrededor del globo: Android convierte el marcador en imagen y sin
-  // este aire recorta el borde y la sombra.
-  pinEnvoltura: { paddingHorizontal: 6, paddingVertical: 4 },
-  pin: {
-    /*
-     * Ancho y alto FIJOS a propósito.
-     *
-     * Con `minWidth` la caja tenía que crecer según lo que midiera el texto, y
-     * al convertir el marcador en imagen esa medida se perdía: la caja quedaba
-     * en el mínimo y el precio salía cortado ("$20.00" en vez de "$20.000").
-     *
-     * Con un ancho fijo el tamaño se conoce en la primera pasada de layout, sin
-     * depender del texto. 82 px alcanzan para "$100.000" y para "A convenir".
-     */
-    width: 82,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colores.superficie,
-    borderWidth: 1.5,
-    borderColor: colores.primario,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    // Sin `elevation`: en un marcador de Android la sombra sale recortada.
-  },
-  pinActivo: { backgroundColor: colores.primario, borderColor: colores.primario },
-  pinTexto: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
-    color: colores.primario,
-    textAlign: 'center',
-    // Si algún texto no cabe, que se acorte con "…" y no que se recorte al borde.
-    width: '100%',
-  },
-  pinTextoActivo: { color: colores.textoInverso },
   aviso: {
     position: 'absolute',
     top: espacio.sm,
@@ -277,6 +252,31 @@ const styles = StyleSheet.create({
     padding: espacio.md,
     ...sombra.nivel2,
   },
+  pista: {
+    position: 'absolute',
+    left: espacio.md,
+    right: espacio.md,
+    bottom: espacio.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espacio.xxs,
+    backgroundColor: colores.superficie,
+    borderRadius: 999,
+    paddingVertical: espacio.xs,
+    ...sombra.nivel1,
+  },
+  pistaTexto: { ...t.pequeno, color: colores.textoSuave },
+  filaPrecio: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs, marginTop: espacio.xxs },
+  precio: { ...t.cuerpoFuerte, color: colores.primario },
+  sello: {
+    backgroundColor: colores.exitoFondo,
+    borderRadius: 999,
+    paddingHorizontal: espacio.xs,
+    paddingVertical: 1,
+  },
+  selloTexto: { ...t.etiqueta, color: colores.exitoTexto, fontWeight: '700' },
+  servicio: { ...t.etiqueta, color: colores.textoSuave },
   oficio: { ...t.pequeno, color: colores.primario },
   filaDatos: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm, marginTop: 2 },
   distancia: { ...t.pequenoFuerte, color: colores.primario },

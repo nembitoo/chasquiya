@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
    * letra del sistema era grande, y sin ninguna restriccion colapsaba a cero y
    * la fila desaparecia. Asi mide exactamente lo que ocupa su contenido.
    */
-  chips: { marginTop: espacio.sm, flexGrow: 0 },
+  chips: { marginTop: espacio.xs, flexGrow: 0 },
   /*
    * El paddingVertical no es estetico: el ScrollView horizontal mide justo lo
    * que miden las pildoras, y sin este aire recorta el borde de 1 px de arriba
@@ -410,7 +410,9 @@ const styles = StyleSheet.create({
    */
   chipsContenido: {
     paddingHorizontal: margenPantalla,
-    paddingVertical: 3,
+    /* 8 y no 3: con 3 el borde ya no se cortaba, pero la fila seguia pegada al
+       buscador de arriba y a la barra de abajo. */
+    paddingVertical: espacio.xs,
     gap: espacio.xs,
     alignItems: 'center',
   },

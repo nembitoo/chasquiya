@@ -483,6 +483,7 @@ function formatoDiaMes(iso) {
 
 async function cargarMaestros() {
   const lista = await api('/admin/maestros');
+  maestrosCargados = lista;
   listado({
     id: 'maestros',
     contenedor: 'tabla-maestros',
@@ -521,17 +522,137 @@ async function cargarMaestros() {
         <td>${m.aniosExperiencia} años</td>
         <td>${badge(m.estadoVerificacion)}</td>
         <td class="acciones-celda">
-          ${m.estadoVerificacion !== 'APROBADO'
-            ? `<button class="btn btn-mini" onclick="decidirMaestro(${m.usuarioId}, true)">Aprobar</button>` : ''}
-          ${m.estadoVerificacion !== 'RECHAZADO'
-            ? `<button class="btn btn-mini btn-secundario" onclick="decidirMaestro(${m.usuarioId}, false)">Rechazar</button>` : ''}
+          <button class="btn btn-mini btn-secundario" onclick="verFichaMaestro(${m.usuarioId})">Ver ficha</button>
         </td>`),
   });
+}
+
+/*
+ * Ficha del maestro: lo que hace falta para decidir su verificacion.
+ *
+ * Antes la tabla solo ofrecia Aprobar/Rechazar, sin forma de ver el carnet ni
+ * los antecedentes: el admin decidia a ciegas.
+ */
+let maestrosCargados = [];
+let urlsFicha = [];
+
+/**
+ * Descarga una imagen protegida y la deja lista para un <img>.
+ *
+ * Un <img src> no puede mandar el encabezado Authorization, asi que se pide con
+ * fetch y se envuelve en un blob local. Las URLs creadas hay que liberarlas al
+ * cerrar o se van acumulando en memoria.
+ */
+async function urlImagen(ruta) {
+  const res = await fetch(ruta, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error('No se pudo cargar la imagen');
+  const url = URL.createObjectURL(await res.blob());
+  urlsFicha.push(url);
+  return url;
+}
+
+async function verFichaMaestro(usuarioId) {
+  const m = maestrosCargados.find((x) => x.usuarioId === usuarioId);
+  if (!m) return;
+
+  const cuerpo = document.getElementById('ficha-cuerpo');
+  const iniciales = `${(m.nombre || '?')[0] || ''}${(m.apellido || '')[0] || ''}`.toUpperCase();
+  cuerpo.innerHTML = `
+    <div class="ficha-cabecera">
+      <div class="ficha-avatar" id="ficha-avatar">${txt(iniciales)}</div>
+      <div>
+        <div class="ficha-nombre" id="ficha-titulo">${txt(m.nombre)} ${txt(m.apellido)}</div>
+        <div class="ficha-correo">${txt(m.email)}${m.telefono ? ' · ' + txt(m.telefono) : ''}</div>
+        <div style="margin-top:6px">${badge(m.estadoVerificacion)}</div>
+      </div>
+    </div>
+
+    <div class="ficha-datos">
+      <div class="ficha-dato">
+        <div class="ficha-dato-etiqueta">Oficios</div>
+        <div class="ficha-dato-valor">${(m.oficios || []).map((o) => txt(ETIQUETA_OFICIO[o] || o)).join(', ') || '—'}</div>
+      </div>
+      <div class="ficha-dato">
+        <div class="ficha-dato-etiqueta">Zona</div>
+        <div class="ficha-dato-valor">${txt(m.zonaCobertura || '—')}</div>
+      </div>
+      <div class="ficha-dato">
+        <div class="ficha-dato-etiqueta">Experiencia</div>
+        <div class="ficha-dato-valor">${m.aniosExperiencia} años</div>
+      </div>
+      <div class="ficha-dato">
+        <div class="ficha-dato-etiqueta">Trabajos terminados</div>
+        <div class="ficha-dato-valor">${m.trabajosCompletados}</div>
+      </div>
+      <div class="ficha-dato">
+        <div class="ficha-dato-etiqueta">Calificación</div>
+        <div class="ficha-dato-valor">${m.cantidadCalificaciones > 0
+          ? `${m.calificacionPromedio.toFixed(1)} (${m.cantidadCalificaciones})`
+          : 'Sin calificaciones'}</div>
+      </div>
+    </div>
+
+    ${m.descripcion ? `
+      <div class="ficha-titulo-bloque">Cómo se describe</div>
+      <p class="ficha-descripcion">${txt(m.descripcion)}</p>` : ''}
+
+    <div class="ficha-titulo-bloque">Documentos de verificación</div>
+    <div class="ficha-docs" id="ficha-docs"><p class="vacio">Cargando documentos…</p></div>
+
+    <div class="ficha-acciones">
+      ${m.estadoVerificacion !== 'APROBADO'
+        ? `<button class="btn" onclick="decidirMaestro(${m.usuarioId}, true)">Aprobar</button>` : ''}
+      ${m.estadoVerificacion !== 'RECHAZADO'
+        ? `<button class="btn btn-secundario" onclick="decidirMaestro(${m.usuarioId}, false)">Rechazar</button>` : ''}
+    </div>`;
+
+  document.getElementById('ficha-fondo').classList.remove('oculto');
+
+  // La foto de perfil es opcional: si no tiene, quedan sus iniciales.
+  if (m.tieneAvatar) {
+    try {
+      const url = await urlImagen(`/usuarios/${usuarioId}/avatar`);
+      const caja = document.getElementById('ficha-avatar');
+      if (caja) caja.outerHTML = `<img class="ficha-avatar" src="${url}" alt="Foto de ${txt(m.nombre)}" />`;
+    } catch (_) { /* se queda con las iniciales */ }
+  }
+
+  const contenedor = document.getElementById('ficha-docs');
+  try {
+    const docs = await api(`/admin/maestros/${usuarioId}/documentos`);
+    if (!docs.length) {
+      contenedor.innerHTML = '<p class="vacio">Todavía no subió ningún documento.</p>';
+      return;
+    }
+    const partes = await Promise.all(docs.map(async (d) => {
+      try {
+        const url = await urlImagen(`/admin/maestros/${usuarioId}/documentos/${d.id}/contenido`);
+        return `<figure class="ficha-doc">
+                  <img src="${url}" alt="${txt(d.nombreArchivo)}" onclick="window.open('${url}', '_blank')" />
+                  <span>${txt(d.nombreArchivo)}</span>
+                </figure>`;
+      } catch (_) {
+        return `<figure class="ficha-doc"><span>No se pudo cargar ${txt(d.nombreArchivo)}</span></figure>`;
+      }
+    }));
+    contenedor.innerHTML = partes.join('');
+  } catch (e) {
+    contenedor.innerHTML = `<p class="vacio">${txt(e.message)}</p>`;
+  }
+}
+
+function cerrarFicha(evento) {
+  // Solo cierra al tocar el fondo, no al tocar la ficha.
+  if (evento && evento.target !== document.getElementById('ficha-fondo')) return;
+  document.getElementById('ficha-fondo').classList.add('oculto');
+  urlsFicha.forEach((u) => URL.revokeObjectURL(u));
+  urlsFicha = [];
 }
 
 async function decidirMaestro(usuarioId, aprobar) {
   try {
     await api(`/admin/maestros/${usuarioId}/${aprobar ? 'aprobar' : 'rechazar'}`, { method: 'POST' });
+    document.getElementById('ficha-fondo').classList.add('oculto');
     await cargarMaestros();
   } catch (e) { mostrarError(e); }
 }

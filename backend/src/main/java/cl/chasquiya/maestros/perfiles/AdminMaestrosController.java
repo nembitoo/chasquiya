@@ -1,6 +1,9 @@
 package cl.chasquiya.maestros.perfiles;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -17,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 import cl.chasquiya.maestros.documentos.ArchivoDescarga;
 import cl.chasquiya.maestros.documentos.DocumentoMaestroService;
 import cl.chasquiya.maestros.documentos.dto.DocumentoResponse;
+import cl.chasquiya.maestros.descubrimiento.DescubrimientoService;
+import cl.chasquiya.maestros.descubrimiento.dto.MaestroCercanoResponse;
 import cl.chasquiya.maestros.perfiles.dto.MaestroAdminResponse;
 import cl.chasquiya.maestros.perfiles.dto.PerfilMaestroResponse;
 import cl.chasquiya.maestros.usuarios.Usuario;
@@ -30,25 +35,26 @@ public class AdminMaestrosController {
     private final PerfilMaestroService servicio;
     private final UsuarioRepository usuarios;
     private final DocumentoMaestroService documentos;
+    private final DescubrimientoService descubrimiento;
 
     public AdminMaestrosController(PerfilMaestroService servicio, UsuarioRepository usuarios,
-                                   DocumentoMaestroService documentos) {
+                                   DocumentoMaestroService documentos,
+                                   DescubrimientoService descubrimiento) {
         this.servicio = servicio;
         this.usuarios = usuarios;
         this.documentos = documentos;
+        this.descubrimiento = descubrimiento;
     }
 
     @GetMapping("/pendientes")
     public List<MaestroAdminResponse> pendientes() {
-        return servicio.listarPorEstado(EstadoVerificacion.PENDIENTE).stream()
-                .map(this::aAdminResponse)
-                .toList();
+        return aAdminResponses(servicio.listarPorEstado(EstadoVerificacion.PENDIENTE));
     }
 
     /** Todos los maestros con perfil, sin importar su estado (tabla del backoffice). */
     @GetMapping
     public List<MaestroAdminResponse> todos() {
-        return servicio.listarTodos().stream().map(this::aAdminResponse).toList();
+        return aAdminResponses(servicio.listarTodos());
     }
 
     @PostMapping("/{usuarioId}/aprobar")
@@ -74,10 +80,37 @@ public class AdminMaestrosController {
                 .body(new ByteArrayResource(a.datos()));
     }
 
-    private MaestroAdminResponse aAdminResponse(PerfilMaestro p) {
-        Usuario u = usuarios.findById(p.getUsuarioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
-        return new MaestroAdminResponse(p.getUsuarioId(), u.getNombre(), u.getApellido(), u.getEmail(),
-                p.getOficios(), p.getZonaCobertura(), p.getAniosExperiencia(), p.getEstadoVerificacion());
+    /**
+     * La reputacion, los trabajos terminados y el avatar salen de la misma
+     * ficha que ya arma descubrimiento: se piden en lote para no hacer una
+     * consulta por maestro.
+     */
+    private List<MaestroAdminResponse> aAdminResponses(List<PerfilMaestro> perfiles) {
+        if (perfiles.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = perfiles.stream().map(PerfilMaestro::getUsuarioId).toList();
+        Map<Long, Usuario> personas = usuarios.findAllById(ids).stream()
+                .collect(Collectors.toMap(Usuario::getId, Function.identity()));
+        Map<Long, MaestroCercanoResponse> fichas = descubrimiento.fichasDe(ids, null, Map.of()).stream()
+                .collect(Collectors.toMap(MaestroCercanoResponse::usuarioId, Function.identity()));
+
+        return perfiles.stream()
+                .map(p -> {
+                    Usuario u = personas.get(p.getUsuarioId());
+                    if (u == null) {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
+                    }
+                    MaestroCercanoResponse f = fichas.get(p.getUsuarioId());
+                    return new MaestroAdminResponse(
+                            p.getUsuarioId(), u.getNombre(), u.getApellido(), u.getEmail(), u.getTelefono(),
+                            p.getOficios(), p.getDescripcion(), p.getZonaCobertura(),
+                            p.getAniosExperiencia(), p.getEstadoVerificacion(),
+                            u.tieneAvatar(),
+                            f == null ? 0 : f.trabajosCompletados(),
+                            f == null ? 0 : f.calificacionPromedio(),
+                            f == null ? 0 : f.cantidadCalificaciones());
+                })
+                .toList();
     }
 }

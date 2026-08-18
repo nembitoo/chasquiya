@@ -159,6 +159,14 @@
     </div>
   </section>
 
+  <!-- Ficha del maestro: documentos y datos para poder decidir la verificacion -->
+  <div id="ficha-fondo" class="ficha-fondo oculto" onclick="cerrarFicha(event)">
+    <div class="ficha" role="dialog" aria-modal="true" aria-labelledby="ficha-titulo">
+      <button class="ficha-cerrar" onclick="cerrarFicha()" aria-label="Cerrar">&times;</button>
+      <div id="ficha-cuerpo"></div>
+    </div>
+  </div>
+
   <!-- Chart.js va copiado en el repo, no por CDN: el panel debe funcionar sin
        internet y sin que un tercero pueda ejecutar código aquí (ver vendor/LEEME.md). -->
   <script src="vendor/chart.umd.js"></script>

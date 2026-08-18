@@ -68,6 +68,7 @@ export function PerfilScreen({ navigation }: { navigation: any }) {
           { icono: 'calendar-outline' as NombreIcono, titulo: 'Mi agenda', onPress: () => navigation.navigate('Agenda') },
         ]
       : []),
+    { icono: 'star-outline', titulo: 'Mis calificaciones', onPress: () => navigation.navigate('MisCalificaciones') },
     { icono: 'person-outline', titulo: 'Mis datos', onPress: () => navigation.navigate('MisDatos') },
     { icono: 'location-outline', titulo: 'Mis direcciones', onPress: () => navigation.navigate('Direcciones') },
     { icono: 'heart-outline', titulo: 'Mis maestros', onPress: () => navigation.navigate('Favoritos') },

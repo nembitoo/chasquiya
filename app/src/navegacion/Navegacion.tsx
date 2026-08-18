@@ -29,6 +29,7 @@ import { InicioScreen } from '../pantallas/InicioScreen';
 import { LoginScreen } from '../pantallas/LoginScreen';
 import { MaestroPublicoScreen } from '../pantallas/MaestroPublicoScreen';
 import { MisDatosScreen } from '../pantallas/MisDatosScreen';
+import { MisCalificacionesScreen } from '../pantallas/MisCalificacionesScreen';
 import { MisServiciosScreen } from '../pantallas/MisServiciosScreen';
 import { MisSolicitudesScreen } from '../pantallas/MisSolicitudesScreen';
 import { NotificacionesScreen } from '../pantallas/NotificacionesScreen';
@@ -75,6 +76,8 @@ export type RootStackParamList = {
   PerfilMaestro: undefined;
   /** Catálogo del maestro: qué hace y cuánto cobra. */
   MisServicios: undefined;
+  /** Lo que otros opinaron de mí. */
+  MisCalificaciones: undefined;
   Agenda: undefined;
   Ayuda: undefined;
   Favoritos: undefined;
@@ -236,6 +239,7 @@ export function Navegacion() {
             <Stack.Screen name="Calificar" component={CalificarScreen} />
             <Stack.Screen name="PerfilMaestro" component={PerfilMaestroScreen} />
             <Stack.Screen name="MisServicios" component={MisServiciosScreen} />
+            <Stack.Screen name="MisCalificaciones" component={MisCalificacionesScreen} />
             <Stack.Screen name="Agenda" component={AgendaScreen} />
             <Stack.Screen name="Ayuda" component={AyudaScreen} />
             <Stack.Screen name="Favoritos" component={FavoritosScreen} />

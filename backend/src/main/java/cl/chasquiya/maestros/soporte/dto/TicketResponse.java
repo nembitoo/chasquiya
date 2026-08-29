@@ -32,11 +32,14 @@ public record TicketResponse(
         Instant servicioFecha,
         /** Evidencias adjuntas; el contenido se pide aparte. */
         long cantidadFotos,
+        /** Mensajes del hilo, sin contar el texto con que nació el reclamo. */
+        long cantidadMensajes,
         Instant fechaCreacion,
         Instant fechaActualizacion) {
 
     public static TicketResponse de(TicketSoporte t, String nombre, String email,
-                                    Solicitud s, String maestro, long cantidadFotos) {
+                                    Solicitud s, String maestro, long cantidadFotos,
+                                    long cantidadMensajes) {
         return new TicketResponse(t.getId(), t.getUsuarioId(), nombre, email, t.getCategoria(),
                 t.getAsunto(), t.getMensaje(), t.getEstado(), t.getRespuesta(), t.getSolicitudId(),
                 s == null ? null : s.getOficio(),
@@ -44,7 +47,7 @@ public record TicketResponse(
                 s == null ? null : s.getEstado(),
                 s == null ? null : maestro,
                 s == null ? null : s.getFechaCreacion(),
-                cantidadFotos,
+                cantidadFotos, cantidadMensajes,
                 t.getFechaCreacion(), t.getFechaActualizacion());
     }
 }

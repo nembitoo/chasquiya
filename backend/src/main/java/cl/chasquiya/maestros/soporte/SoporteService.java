@@ -16,6 +16,8 @@ import org.springframework.web.server.ResponseStatusException;
 import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
 import cl.chasquiya.maestros.soporte.dto.CrearTicketRequest;
+import cl.chasquiya.maestros.soporte.dto.EscribirMensajeRequest;
+import cl.chasquiya.maestros.soporte.dto.MensajeTicketResponse;
 import cl.chasquiya.maestros.soporte.dto.ResponderTicketRequest;
 import cl.chasquiya.maestros.soporte.dto.TicketResponse;
 import cl.chasquiya.maestros.usuarios.Usuario;
@@ -37,17 +39,23 @@ public class SoporteService {
     /** Tope defensivo: evita que una sola cuenta llene la bandeja del admin. */
     private static final int MAXIMO_ABIERTOS = 10;
 
+    /** Del lado del admin el hilo no muestra a la persona, sino a la plataforma. */
+    private static final String SOPORTE = "Soporte ChasquiYa!";
+
     private final TicketSoporteRepository tickets;
     private final UsuarioRepository usuarios;
     private final SolicitudRepository solicitudes;
     private final FotoTicketRepository fotos;
+    private final MensajeTicketRepository mensajes;
 
     public SoporteService(TicketSoporteRepository tickets, UsuarioRepository usuarios,
-                          SolicitudRepository solicitudes, FotoTicketRepository fotos) {
+                          SolicitudRepository solicitudes, FotoTicketRepository fotos,
+                          MensajeTicketRepository mensajes) {
         this.tickets = tickets;
         this.usuarios = usuarios;
         this.solicitudes = solicitudes;
         this.fotos = fotos;
+        this.mensajes = mensajes;
     }
 
     // --- Usuario ---
@@ -64,8 +72,8 @@ public class SoporteService {
         TicketSoporte t = new TicketSoporte(usuarioId, req.categoria(), req.asunto().trim(),
                 req.mensaje().trim(), req.solicitudId());
         tickets.save(t);
-        // Sin fotos todavía: se suben después, cuando el reclamo ya existe.
-        return TicketResponse.de(t, null, null, servicio, maestroDe(servicio), 0);
+        // Sin fotos ni mensajes todavía: el hilo arranca con el texto del reclamo.
+        return TicketResponse.de(t, null, null, servicio, maestroDe(servicio), 0, 0);
     }
 
     public List<TicketResponse> mios(Long usuarioId) {
@@ -103,26 +111,109 @@ public class SoporteService {
         return conContexto(lista, true);
     }
 
-    public TicketResponse responder(Long ticketId, ResponderTicketRequest req) {
-        TicketSoporte t = tickets.findById(ticketId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reclamo no encontrado"));
+    public TicketResponse responder(Long adminId, Long ticketId, ResponderTicketRequest req) {
+        TicketSoporte t = buscar(ticketId);
 
         if (t.getEstado() != req.estado() && !t.getEstado().puedePasarA(req.estado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "No se puede pasar de " + t.getEstado() + " a " + req.estado());
         }
-        // Cerrar sin explicar por qué deja al usuario sin respuesta: no se permite.
-        if (req.estado() == EstadoTicket.RESUELTO && (req.respuesta() == null || req.respuesta().isBlank())) {
+        boolean respondeAhora = req.respuesta() != null && !req.respuesta().isBlank();
+
+        // Ley 19.496: cerrar sin explicar por qué deja al usuario sin respuesta.
+        // Con el hilo, "responder" ya no es solo este campo: vale igual haberle
+        // escrito antes en la conversación.
+        if (req.estado() == EstadoTicket.RESUELTO
+                && !respondeAhora
+                && !mensajes.existsByTicketIdAndEsAdminTrue(ticketId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Para cerrar un reclamo hay que escribir una respuesta");
         }
-        if (req.respuesta() != null && !req.respuesta().isBlank()) {
+        if (respondeAhora) {
+            // Sigue siendo la última palabra del admin, y además entra al hilo
+            // para que la conversación quede completa.
             t.setRespuesta(req.respuesta().trim());
+            mensajes.save(new MensajeTicket(ticketId, adminId, true, req.respuesta().trim()));
         }
         t.setEstado(req.estado());
         tickets.save(t);
 
         return conContexto(List.of(t), true).get(0);
+    }
+
+    // --- Conversación ---
+
+    public List<MensajeTicketResponse> mensajesDe(Long usuarioId, Long ticketId) {
+        delAutor(usuarioId, ticketId);
+        return hilo(ticketId);
+    }
+
+    public List<MensajeTicketResponse> mensajesComoAdmin(Long ticketId) {
+        buscar(ticketId);
+        return hilo(ticketId);
+    }
+
+    /** Quien reclama aporta información mientras su reclamo siga abierto. */
+    public MensajeTicketResponse escribir(Long usuarioId, Long ticketId, EscribirMensajeRequest req) {
+        TicketSoporte t = delAutor(usuarioId, ticketId);
+        exigirReclamoAbierto(t);
+        return guardar(t, usuarioId, false, req.cuerpo());
+    }
+
+    public MensajeTicketResponse escribirComoAdmin(Long adminId, Long ticketId, EscribirMensajeRequest req) {
+        TicketSoporte t = buscar(ticketId);
+        exigirReclamoAbierto(t);
+        MensajeTicketResponse m = guardar(t, adminId, true, req.cuerpo());
+        // Si el admin ya está escribiendo, el reclamo dejó de estar sin mirar.
+        // Sin esto seguiría contando como el más viejo sin tocar en el panel.
+        if (t.getEstado() == EstadoTicket.NUEVO) {
+            t.setEstado(EstadoTicket.EN_REVISION);
+            tickets.save(t);
+        }
+        return m;
+    }
+
+    private MensajeTicketResponse guardar(TicketSoporte t, Long autorId, boolean esAdmin, String cuerpo) {
+        MensajeTicket m = new MensajeTicket(t.getId(), autorId, esAdmin, cuerpo.trim());
+        mensajes.save(m);
+        return MensajeTicketResponse.de(m, esAdmin ? SOPORTE : nombreDe(usuarios.findById(autorId).orElse(null)));
+    }
+
+    private List<MensajeTicketResponse> hilo(Long ticketId) {
+        List<MensajeTicket> lista = mensajes.findByTicketIdOrderByFechaCreacionAsc(ticketId);
+        Map<Long, Usuario> personas = usuarios.findAllById(lista.stream()
+                        .filter(m -> !m.isEsAdmin())
+                        .map(MensajeTicket::getAutorId)
+                        .filter(Objects::nonNull)
+                        .distinct().toList()).stream()
+                .collect(Collectors.toMap(Usuario::getId, Function.identity()));
+
+        return lista.stream()
+                .map(m -> MensajeTicketResponse.de(m,
+                        m.isEsAdmin() ? SOPORTE : nombreDe(personas.get(m.getAutorId()))))
+                .toList();
+    }
+
+    private TicketSoporte buscar(Long ticketId) {
+        return tickets.findById(ticketId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reclamo no encontrado"));
+    }
+
+    private TicketSoporte delAutor(Long usuarioId, Long ticketId) {
+        TicketSoporte t = buscar(ticketId);
+        // usuarioId primero: nunca es null, y así un tercero recibe 403 y no un 500.
+        if (!usuarioId.equals(t.getUsuarioId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Este reclamo no es tuyo");
+        }
+        return t;
+    }
+
+    /** Un reclamo resuelto se lee, no se escribe: su conversación terminó. */
+    private void exigirReclamoAbierto(TicketSoporte t) {
+        if (t.getEstado() == EstadoTicket.RESUELTO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Este reclamo ya está cerrado. Si sigues con el problema, abre uno nuevo.");
+        }
     }
 
     /**
@@ -140,9 +231,13 @@ public class SoporteService {
                         .distinct().toList()).stream()
                 .collect(Collectors.toMap(Solicitud::getId, Function.identity()));
 
+        List<Long> ids = lista.stream().map(TicketSoporte::getId).toList();
+
         Map<Long, Long> fotosPorTicket = new HashMap<>();
-        fotos.findByTicketIdIn(lista.stream().map(TicketSoporte::getId).toList())
-                .forEach(f -> fotosPorTicket.merge(f.getTicketId(), 1L, Long::sum));
+        fotos.findByTicketIdIn(ids).forEach(f -> fotosPorTicket.merge(f.getTicketId(), 1L, Long::sum));
+
+        Map<Long, Long> mensajesPorTicket = new HashMap<>();
+        mensajes.findByTicketIdIn(ids).forEach(m -> mensajesPorTicket.merge(m.getTicketId(), 1L, Long::sum));
 
         // Autores y maestros salen del mismo lote: todos son usuarios.
         Stream<Long> autores = conAutor ? lista.stream().map(TicketSoporte::getUsuarioId) : Stream.<Long>empty();
@@ -163,7 +258,9 @@ public class SoporteService {
                     return TicketResponse.de(t,
                             conAutor ? nombreDe(autor) : null,
                             conAutor ? (autor == null ? "—" : autor.getEmail()) : null,
-                            s, maestro, fotosPorTicket.getOrDefault(t.getId(), 0L));
+                            s, maestro,
+                            fotosPorTicket.getOrDefault(t.getId(), 0L),
+                            mensajesPorTicket.getOrDefault(t.getId(), 0L));
                 })
                 .toList();
     }

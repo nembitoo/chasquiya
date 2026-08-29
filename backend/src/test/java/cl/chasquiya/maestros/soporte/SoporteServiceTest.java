@@ -20,6 +20,7 @@ import cl.chasquiya.maestros.perfiles.Oficio;
 import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
 import cl.chasquiya.maestros.soporte.dto.CrearTicketRequest;
+import cl.chasquiya.maestros.soporte.dto.EscribirMensajeRequest;
 import cl.chasquiya.maestros.soporte.dto.ResponderTicketRequest;
 import cl.chasquiya.maestros.usuarios.UsuarioRepository;
 
@@ -28,12 +29,15 @@ class SoporteServiceTest {
     private static final Long USUARIO = 1L;
     private static final Long MAESTRO = 2L;
     private static final Long SOLICITUD = 33L;
+    private static final Long ADMIN = 3L;
 
     private final TicketSoporteRepository tickets = mock(TicketSoporteRepository.class);
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
     private final SolicitudRepository solicitudes = mock(SolicitudRepository.class);
     private final FotoTicketRepository fotos = mock(FotoTicketRepository.class);
-    private final SoporteService servicio = new SoporteService(tickets, usuarios, solicitudes, fotos);
+    private final MensajeTicketRepository mensajes = mock(MensajeTicketRepository.class);
+    private final SoporteService servicio =
+            new SoporteService(tickets, usuarios, solicitudes, fotos, mensajes);
 
     private TicketSoporte ticket(EstadoTicket estado) {
         TicketSoporte t = new TicketSoporte(USUARIO, CategoriaTicket.PAGO, "Cobro raro", "Me cobraron de mas", null);
@@ -95,16 +99,39 @@ class SoporteServiceTest {
     void noSeCierraUnReclamoSinExplicarPorQue() {
         when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.EN_REVISION)));
 
-        assertThatThrownBy(() -> servicio.responder(7L, new ResponderTicketRequest(EstadoTicket.RESUELTO, "  ")))
+        assertThatThrownBy(() -> servicio.responder(ADMIN, 7L, new ResponderTicketRequest(EstadoTicket.RESUELTO, "  ")))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("respuesta");
+    }
+
+    /**
+     * Ley 19.496 con el hilo: si el admin ya le escribió en la conversación, el
+     * reclamo no se está cerrando en silencio y puede cerrarse sin repetirse.
+     */
+    @Test
+    void seCierraSinRepetirSiElAdminYaEscribioEnElHilo() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.EN_REVISION)));
+        when(mensajes.existsByTicketIdAndEsAdminTrue(7L)).thenReturn(true);
+
+        assertThat(servicio.responder(ADMIN, 7L, new ResponderTicketRequest(EstadoTicket.RESUELTO, null)).estado())
+                .isEqualTo(EstadoTicket.RESUELTO);
+    }
+
+    /** La respuesta del cierre también entra al hilo: la conversación queda completa. */
+    @Test
+    void laRespuestaDelCierreQuedaEnLaConversacion() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.EN_REVISION)));
+
+        servicio.responder(ADMIN, 7L, new ResponderTicketRequest(EstadoTicket.RESUELTO, "Se devolvio la diferencia"));
+
+        verify(mensajes).save(any());
     }
 
     @Test
     void unReclamoResueltoNoVuelveAtras() {
         when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.RESUELTO)));
 
-        assertThatThrownBy(() -> servicio.responder(7L, new ResponderTicketRequest(EstadoTicket.EN_REVISION, "otra vez")))
+        assertThatThrownBy(() -> servicio.responder(ADMIN, 7L, new ResponderTicketRequest(EstadoTicket.EN_REVISION, "otra vez")))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("No se puede pasar");
     }
@@ -114,10 +141,10 @@ class SoporteServiceTest {
         TicketSoporte t = ticket(EstadoTicket.NUEVO);
         when(tickets.findById(7L)).thenReturn(Optional.of(t));
 
-        servicio.responder(7L, new ResponderTicketRequest(EstadoTicket.EN_REVISION, "Lo estamos viendo"));
+        servicio.responder(ADMIN, 7L, new ResponderTicketRequest(EstadoTicket.EN_REVISION, "Lo estamos viendo"));
         assertThat(t.getEstado()).isEqualTo(EstadoTicket.EN_REVISION);
 
-        servicio.responder(7L, new ResponderTicketRequest(EstadoTicket.RESUELTO, "Se devolvio la diferencia"));
+        servicio.responder(ADMIN, 7L, new ResponderTicketRequest(EstadoTicket.RESUELTO, "Se devolvio la diferencia"));
         assertThat(t.getEstado()).isEqualTo(EstadoTicket.RESUELTO);
         assertThat(t.getRespuesta()).isEqualTo("Se devolvio la diferencia");
     }
@@ -212,5 +239,90 @@ class SoporteServiceTest {
                 new FotoTicket(7L, "reclamos/7/b", "image/jpeg")));
 
         assertThat(servicio.mios(USUARIO).get(0).cantidadFotos()).isEqualTo(2);
+    }
+
+    // --- Conversación ---
+
+    @Test
+    void quienReclamaSigueAportandoMientrasEsteAbierto() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.EN_REVISION)));
+
+        var m = servicio.escribir(USUARIO, 7L, new EscribirMensajeRequest("  Se me olvido decir algo  "));
+
+        assertThat(m.esAdmin()).isFalse();
+        // Se guarda sin los espacios de los costados, como el resto de los textos.
+        assertThat(m.cuerpo()).isEqualTo("Se me olvido decir algo");
+        verify(mensajes).save(any());
+    }
+
+    @Test
+    void unTerceroNoEscribeEnLaConversacionDeOtro() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.NUEVO)));
+
+        assertThatThrownBy(() -> servicio.escribir(99L, 7L, new EscribirMensajeRequest("hola")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("403");
+
+        verify(mensajes, never()).save(any());
+    }
+
+    @Test
+    void unTerceroTampocoLeeLaConversacionDeOtro() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.NUEVO)));
+
+        assertThatThrownBy(() -> servicio.mensajesDe(99L, 7L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("403");
+    }
+
+    /** Un reclamo resuelto se lee, no se escribe. */
+    @Test
+    void unReclamoResueltoYaNoAceptaMensajes() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.RESUELTO)));
+
+        assertThatThrownBy(() -> servicio.escribir(USUARIO, 7L, new EscribirMensajeRequest("una cosa mas")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("cerrado");
+
+        verify(mensajes, never()).save(any());
+    }
+
+    @Test
+    void elAdminTampocoEscribeEnUnoResuelto() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.RESUELTO)));
+
+        assertThatThrownBy(() -> servicio.escribirComoAdmin(ADMIN, 7L, new EscribirMensajeRequest("otra cosa")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("cerrado");
+    }
+
+    /**
+     * Si el admin ya está escribiendo, el reclamo dejó de estar sin mirar: si
+     * siguiera NUEVO seguiría contando como el más viejo sin tocar del panel.
+     */
+    @Test
+    void escribirComoAdminTomaElReclamoNuevo() {
+        TicketSoporte t = ticket(EstadoTicket.NUEVO);
+        when(tickets.findById(7L)).thenReturn(Optional.of(t));
+
+        var m = servicio.escribirComoAdmin(ADMIN, 7L, new EscribirMensajeRequest("Necesito la boleta"));
+
+        assertThat(m.esAdmin()).isTrue();
+        assertThat(m.autor()).isEqualTo("Soporte ChasquiYa!");
+        assertThat(t.getEstado()).isEqualTo(EstadoTicket.EN_REVISION);
+    }
+
+    /** El admin lee cualquier hilo: es quien tiene que resolverlo. */
+    @Test
+    void elAdminLeeLaConversacionSinSerElAutor() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.NUEVO)));
+        when(mensajes.findByTicketIdOrderByFechaCreacionAsc(7L))
+                .thenReturn(List.of(new MensajeTicket(7L, USUARIO, false, "hola"),
+                        new MensajeTicket(7L, ADMIN, true, "te leemos")));
+
+        var hilo = servicio.mensajesComoAdmin(7L);
+
+        assertThat(hilo).hasSize(2);
+        assertThat(hilo.get(1).autor()).isEqualTo("Soporte ChasquiYa!");
     }
 }

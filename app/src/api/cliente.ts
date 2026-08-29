@@ -19,6 +19,7 @@ import {
   MaestroCercano,
   MaestroPublico,
   Mensaje,
+  MensajeTicket,
   Oficio,
   Pago,
   PerfilMaestroData,
@@ -346,6 +347,15 @@ export const api = {
     crear: (token: string, datos: CrearTicketData) =>
       pedir<Ticket>('/soporte/reclamos', { method: 'POST', body: JSON.stringify(datos) }, token),
     mios: (token: string) => pedir<Ticket[]>('/soporte/reclamos', {}, token),
+    /** La conversación del reclamo, mientras siga abierto. */
+    mensajes: (token: string, ticketId: number) =>
+      pedir<MensajeTicket[]>(`/soporte/reclamos/${ticketId}/mensajes`, {}, token),
+    escribir: (token: string, ticketId: number, cuerpo: string) =>
+      pedir<MensajeTicket>(
+        `/soporte/reclamos/${ticketId}/mensajes`,
+        { method: 'POST', body: JSON.stringify({ cuerpo }) },
+        token,
+      ),
     /** Evidencias del reclamo. Mismo trato que las fotos de una solicitud. */
     fotos: {
       listar: (token: string, ticketId: number) =>

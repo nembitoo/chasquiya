@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import cl.chasquiya.maestros.soporte.dto.CrearTicketRequest;
+import cl.chasquiya.maestros.soporte.dto.EscribirMensajeRequest;
+import cl.chasquiya.maestros.soporte.dto.MensajeTicketResponse;
 import cl.chasquiya.maestros.soporte.dto.ResponderTicketRequest;
 import cl.chasquiya.maestros.soporte.dto.TicketResponse;
 import cl.chasquiya.maestros.usuarios.UsuarioRepository;
@@ -43,6 +45,18 @@ public class SoporteController {
         return servicio.mios(idAutenticado(auth));
     }
 
+    @GetMapping("/reclamos/{id}/mensajes")
+    public List<MensajeTicketResponse> mensajes(Authentication auth, @PathVariable Long id) {
+        return servicio.mensajesDe(idAutenticado(auth), id);
+    }
+
+    @PostMapping("/reclamos/{id}/mensajes")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MensajeTicketResponse escribir(Authentication auth, @PathVariable Long id,
+                                          @Valid @RequestBody EscribirMensajeRequest req) {
+        return servicio.escribir(idAutenticado(auth), id, req);
+    }
+
     private Long idAutenticado(Authentication auth) {
         return usuarios.findByEmail(auth.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"))
@@ -56,9 +70,11 @@ public class SoporteController {
 class AdminSoporteController {
 
     private final SoporteService servicio;
+    private final UsuarioRepository usuarios;
 
-    AdminSoporteController(SoporteService servicio) {
+    AdminSoporteController(SoporteService servicio, UsuarioRepository usuarios) {
         this.servicio = servicio;
+        this.usuarios = usuarios;
     }
 
     @GetMapping
@@ -67,7 +83,27 @@ class AdminSoporteController {
     }
 
     @PostMapping("/{id}")
-    public TicketResponse responder(@PathVariable Long id, @Valid @RequestBody ResponderTicketRequest req) {
-        return servicio.responder(id, req);
+    public TicketResponse responder(Authentication auth, @PathVariable Long id,
+                                    @Valid @RequestBody ResponderTicketRequest req) {
+        return servicio.responder(idAutenticado(auth), id, req);
+    }
+
+    @GetMapping("/{id}/mensajes")
+    public List<MensajeTicketResponse> mensajes(@PathVariable Long id) {
+        return servicio.mensajesComoAdmin(id);
+    }
+
+    @PostMapping("/{id}/mensajes")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MensajeTicketResponse escribir(Authentication auth, @PathVariable Long id,
+                                          @Valid @RequestBody EscribirMensajeRequest req) {
+        return servicio.escribirComoAdmin(idAutenticado(auth), id, req);
+    }
+
+    /** Queda registrado qué admin escribió: hoy solo se guarda, aún no se muestra. */
+    private Long idAutenticado(Authentication auth) {
+        return usuarios.findByEmail(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"))
+                .getId();
     }
 }

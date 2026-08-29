@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { CategoriaTicket, Solicitud, Ticket } from '../api/tipos';
+import { CategoriaTicket, MensajeTicket, Solicitud, Ticket } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { Icono } from '../componentes/base/Icono';
@@ -60,6 +60,11 @@ export function AyudaScreen({ navigation }: Props) {
   const [servicios, setServicios] = useState<Solicitud[]>([]);
   const [servicioId, setServicioId] = useState<number | null>(null);
   const [fotos, setFotos] = useState<FotoElegida[]>([]);
+  const [abierto, setAbierto] = useState<number | null>(null);
+  const [hilo, setHilo] = useState<MensajeTicket[]>([]);
+  const [cargandoHilo, setCargandoHilo] = useState(false);
+  const [borrador, setBorrador] = useState('');
+  const [enviandoMensaje, setEnviandoMensaje] = useState(false);
   const [asunto, setAsunto] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -99,6 +104,44 @@ export function AyudaScreen({ navigation }: Props) {
       cargarServicios();
     }, [cargar, cargarServicios]),
   );
+
+  /*
+   * La conversación se pide al abrirla, no al listar los reclamos: la mayoría
+   * se miran sin entrar al hilo.
+   */
+  async function alternarHilo(ticketId: number) {
+    if (abierto === ticketId) {
+      setAbierto(null);
+      return;
+    }
+    setAbierto(ticketId);
+    setBorrador('');
+    setHilo([]);
+    setCargandoHilo(true);
+    try {
+      setHilo(await api.soporte.mensajes(token, ticketId));
+    } catch {
+      /* el hilo sale vacío; el reclamo se sigue viendo */
+    } finally {
+      setCargandoHilo(false);
+    }
+  }
+
+  async function enviarMensaje(ticketId: number) {
+    if (!borrador.trim()) return;
+    try {
+      setEnviandoMensaje(true);
+      const m = await api.soporte.escribir(token, ticketId, borrador.trim());
+      setHilo((prev) => [...prev, m]);
+      setBorrador('');
+      // El contador del reclamo vive en la lista, no en el hilo.
+      await cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo enviar tu mensaje.');
+    } finally {
+      setEnviandoMensaje(false);
+    }
+  }
 
   async function elegirFotos() {
     setError('');
@@ -336,10 +379,68 @@ export function AyudaScreen({ navigation }: Props) {
                   urlDe={(fotoId) => api.soporte.fotos.url(r.id, fotoId)}
                   etiqueta="Ver evidencia del reclamo"
                 />
-                {!!r.respuesta && (
+                {/* Con el hilo abierto la respuesta ya se ve dentro: aquí solo
+                    resume mientras está cerrado. */}
+                {!!r.respuesta && abierto !== r.id && (
                   <View style={styles.respuesta}>
                     <Text style={styles.respuestaTitulo}>Respuesta de ChasquiYa!</Text>
                     <Text style={t.pequeno}>{r.respuesta}</Text>
+                  </View>
+                )}
+
+                <Pressable onPress={() => alternarHilo(r.id)} style={styles.verHilo} hitSlop={6}>
+                  <Icono
+                    nombre={abierto === r.id ? 'chevron-up' : 'chatbubble-ellipses-outline'}
+                    tamano="sm"
+                    color={colores.primario}
+                  />
+                  <Text style={styles.verHiloTexto}>
+                    {abierto === r.id
+                      ? 'Ocultar conversación'
+                      : r.cantidadMensajes > 0
+                        ? `Ver conversación (${r.cantidadMensajes})`
+                        : 'Agregar información'}
+                  </Text>
+                </Pressable>
+
+                {abierto === r.id && (
+                  <View style={styles.hilo}>
+                    {cargandoHilo && <Text style={styles.fecha}>Cargando conversación…</Text>}
+                    {!cargandoHilo && hilo.length === 0 && (
+                      <Text style={styles.fecha}>Todavía no hay respuestas.</Text>
+                    )}
+                    {hilo.map((m) => (
+                      <View
+                        key={m.id}
+                        style={[styles.burbuja, m.esAdmin ? styles.burbujaSoporte : styles.burbujaMia]}>
+                        <Text style={styles.burbujaAutor}>{m.esAdmin ? m.autor : 'Tú'}</Text>
+                        <Text style={t.pequeno}>{m.cuerpo}</Text>
+                        <Text style={styles.burbujaFecha}>{tiempoRelativo(m.fechaCreacion)}</Text>
+                      </View>
+                    ))}
+
+                    {r.estado === 'RESUELTO' ? (
+                      <Text style={styles.cerrado}>
+                        Este reclamo está cerrado. Si sigues con el problema, abre uno nuevo.
+                      </Text>
+                    ) : (
+                      <>
+                        <CampoTexto
+                          etiqueta="Agregar información"
+                          value={borrador}
+                          onChangeText={setBorrador}
+                          multiline
+                          numberOfLines={3}
+                          style={styles.borrador}
+                          maxLength={2000}
+                        />
+                        <Boton
+                          titulo="Enviar"
+                          onPress={() => enviarMensaje(r.id)}
+                          cargando={enviandoMensaje}
+                        />
+                      </>
+                    )}
                   </View>
                 )}
               </View>
@@ -438,4 +539,15 @@ const styles = StyleSheet.create({
     borderColor: colores.borde,
   },
   respuestaTitulo: { ...t.pequenoFuerte, color: colores.primario, marginBottom: 2 },
+  verHilo: { flexDirection: 'row', alignItems: 'center', gap: espacio.xxs, marginTop: espacio.sm },
+  verHiloTexto: { ...t.pequenoFuerte, color: colores.primario },
+  hilo: { marginTop: espacio.sm, gap: espacio.xs },
+  burbuja: { padding: espacio.sm, borderRadius: radio.md, maxWidth: '90%' },
+  /* Soporte a la izquierda y yo a la derecha, como en cualquier conversación. */
+  burbujaSoporte: { backgroundColor: colores.fondo, alignSelf: 'flex-start' },
+  burbujaMia: { backgroundColor: colores.primarioSuave, alignSelf: 'flex-end' },
+  burbujaAutor: { ...t.etiqueta, color: colores.textoSuave, fontWeight: '700', marginBottom: 2 },
+  burbujaFecha: { ...t.etiqueta, color: colores.textoTenue, marginTop: 2 },
+  borrador: { height: 80, textAlignVertical: 'top' },
+  cerrado: { ...t.pequeno, color: colores.textoSuave, fontStyle: 'italic' },
 });

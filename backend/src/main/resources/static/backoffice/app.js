@@ -831,6 +831,39 @@ async function verEvidencias(ticketId) {
   }
 }
 
+async function verConversacion(ticketId) {
+  const caja = document.getElementById('hilo-' + ticketId);
+  caja.innerHTML = '<p class="vacio">Cargando conversacion…</p>';
+  try {
+    const hilo = await api(`/admin/reclamos/${ticketId}/mensajes`);
+    caja.innerHTML = hilo.length === 0
+      ? '<p class="vacio">Nadie ha escrito todavia.</p>'
+      : hilo.map((m) => `
+          <div class="burbuja ${m.esAdmin ? 'burbuja-soporte' : 'burbuja-usuario'}">
+            <div class="burbuja-autor">${txt(m.autor)} · ${fecha(m.fechaCreacion)}</div>
+            <div>${txt(m.cuerpo)}</div>
+          </div>`).join('');
+  } catch (e) {
+    caja.innerHTML = `<p class="vacio">${txt(e.message)}</p>`;
+  }
+}
+
+/*
+ * Escribir no cierra el reclamo: sirve para pedir un dato que falta y seguir.
+ * Si estaba NUEVO, el backend lo pasa a EN_REVISION solo.
+ */
+async function escribirEnReclamo(id) {
+  try {
+    const campo = document.getElementById('respuesta-' + id);
+    const cuerpo = campo.value.trim();
+    if (!cuerpo) return;
+    await api(`/admin/reclamos/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) });
+    campo.value = '';
+    await cargarReclamos();
+    await verConversacion(id);
+  } catch (e) { mostrarError(e); }
+}
+
 async function cargarReclamos() {
   // Se repinta entero: las imagenes que habia cargadas ya no estan en el DOM.
   urlsReclamos.forEach((u) => URL.revokeObjectURL(u));
@@ -908,9 +941,17 @@ function pintarReclamos(lista) {
           </button>
         </div>` : ''}
       ${r.respuesta ? `<div class="respuesta-caja"><strong>Respuesta:</strong> ${txt(r.respuesta)}</div>` : ''}
+      <div class="reclamo-hilo" id="hilo-${r.id}">
+        <button class="btn btn-mini btn-secundario" onclick="verConversacion(${r.id})">
+          ${r.cantidadMensajes > 0
+            ? `Ver conversacion (${r.cantidadMensajes})`
+            : 'Ver conversacion'}
+        </button>
+      </div>
       ${r.estado === 'RESUELTO' ? '' : `
         <div class="fila-form">
-          <input id="respuesta-${r.id}" placeholder="Respuesta al usuario (obligatoria para cerrar)" />
+          <input id="respuesta-${r.id}" placeholder="Escribe al usuario (obligatorio para cerrar)" />
+          <button class="btn btn-mini btn-secundario" onclick="escribirEnReclamo(${r.id})">Responder</button>
           ${r.estado === 'NUEVO'
             ? `<button class="btn btn-mini btn-secundario" onclick="responderReclamo(${r.id}, 'EN_REVISION')">Tomar</button>`
             : ''}

@@ -354,8 +354,20 @@ export type Ticket = {
   servicioFecha: string | null;
   /** Evidencias adjuntas; el contenido se pide aparte. */
   cantidadFotos: number;
+  /** Mensajes del hilo, sin contar el texto con que nació el reclamo. */
+  cantidadMensajes: number;
   fechaCreacion: string;
   fechaActualizacion: string;
+};
+
+/** Un mensaje del hilo de un reclamo. */
+export type MensajeTicket = {
+  id: number;
+  /** De qué lado viene: define de qué lado se pinta la burbuja. */
+  esAdmin: boolean;
+  autor: string;
+  cuerpo: string;
+  fechaCreacion: string;
 };
 
 export type CrearTicketData = {

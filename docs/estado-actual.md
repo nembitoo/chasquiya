@@ -18,6 +18,9 @@ Reglas permanentes de trabajo: `CLAUDE.md`.
 
 ## Stack y cómo levantarlo
 
+**Repositorio:** https://github.com/nembitoo/chasquiya (privado).
+En un PC nuevo, `docs/instalacion.md` va desde cero hasta la app corriendo.
+
 - `app/` — React Native + Expo SDK 54 + TypeScript
 - `backend/` — Spring Boot 4 + Java 21 + Maven (`cl.chasquiya.maestros`)
 - PostgreSQL 16 + PostGIS · Flyway · MinIO · Mailpit
@@ -45,7 +48,7 @@ historial con "volver a contratar", direcciones guardadas.
 
 **Fase 2 (legal y robustez):** Ley 21.719 (exportar datos y eliminar cuenta por
 anonimización), términos y privacidad, recuperar contraseña por correo, centro
-de notificaciones in-app, Swagger, CI escrito, dashboard con períodos y
+de notificaciones in-app, Swagger, CI, dashboard con períodos y
 gráficos.
 
 **Fase 3 (cerrar el diseño original):** fotos del problema, resumen antes de
@@ -108,6 +111,15 @@ eran un hito, no cuatro arreglos. Se hizo en cuatro cortes, uno por commit:
   escribiendo mientras el reclamo esté abierto; al resolverse queda para leer.
 - **Avisos** (`46e6f14`): `RECLAMO_RESPONDIDO` cuando el admin escribe o cierra
   con respuesta.
+
+**GitHub y CI (agosto 2026).** El repo dejó de ser solo local: vive privado en
+`nembitoo/chasquiya`. Con eso `.github/workflows/ci.yml` **corre de verdad por
+primera vez** en cada push a `main`, y levanta su propio Postgres+PostGIS, MinIO
+y Mailpit con `docker compose`, así que los 190 tests se verifican en un entorno
+limpio y no solo contra la base local.
+
+La primera corrida falló y valió la pena: `backend/mvnw` estaba commiteado sin
+bit de ejecución (ver los gotchas), algo que en Windows no se puede notar.
 
 ## Decisiones que NO hay que romper
 
@@ -228,10 +240,10 @@ sobre el código y **los tiene que probar Kevin**:
 
 1. **Revisión legal** de `app/src/datos/textosLegales.ts` — es un BORRADOR, lo
    debe revisar un abogado/a antes de operar con usuarios reales.
-2. **Subir el repo a GitHub** — `.github/workflows/ci.yml` está escrito y
-   esperando; hoy no corre porque el repo es solo local.
-3. **Development build de Expo** — desbloquea notificaciones push reales.
-4. **API key de Google Maps** — necesaria solo al publicar un APK de Android.
+2. **Development build de Expo** — desbloquea notificaciones push reales.
+3. **API key de Google Maps** — necesaria solo al publicar un APK de Android.
+
+*(Subir el repo a GitHub estaba acá y ya está hecho: agosto 2026.)*
 
 ## Gotchas del entorno (Windows)
 
@@ -258,6 +270,11 @@ sobre el código y **los tiene que probar Kevin**:
   `netstat -ano | grep ":8080 "`. Salida: levantar el backend en otro puerto
   (`--server.port=8090`) y apuntar `app/src/api/config.ts` ahí **temporalmente**.
   `config.ts` tiene que quedar siempre en 8080 al commitear.
+- **Git en Windows no guarda el bit de ejecución.** Un script commiteado acá
+  llega a Linux como `100644` y el CI muere con `Permission denied` (exit 126),
+  sin que en local se note nada. Ya pasó con `backend/mvnw`. Si agregas un
+  script nuevo: `git update-index --chmod=+x <archivo>`, que marca el modo en el
+  índice sin depender del sistema de archivos.
 - `curl` en Git Bash rompe UTF-8: usar ASCII en los cuerpos JSON de prueba.
 - **`curl -F "archivo=@..."` no entiende las rutas estilo msys**: con
   `/c/Users/...` falla con `curl: (26) Failed to open/read local data`, porque

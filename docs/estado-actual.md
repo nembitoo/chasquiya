@@ -4,7 +4,7 @@
 > conversación nueva: esto es lo que hay, lo que falta y lo que **no** hay que
 > romper.
 >
-> Última actualización: agosto 2026 · 21 migraciones · 161 tests verdes.
+> Última actualización: agosto 2026 · 24 migraciones · 190 tests verdes.
 
 ## Qué es
 
@@ -95,6 +95,20 @@ problemas que Kevin encontró probando la app. Se resolvió por cortes:
   filtra de verdad, los maestros a menos de 50 m dicen "muy cerca" en vez de
   quedarse sin distancia, y la fila de píldoras respira.
 
+**Reclamos 2.0 (agosto 2026).** Los puntos 3, 8, 9 y 11 de la lista de Kevin
+eran un hito, no cuatro arreglos. Se hizo en cuatro cortes, uno por commit:
+
+- **Contexto** (`52c6f17`): el reclamo puede colgar de un servicio propio, y la
+  ficha del admin muestra oficio, maestro, fecha, estado y descripción. La
+  columna `solicitud_id` existía desde V17 sin que nadie la llenara **ni la
+  validara**: ahora solo se acepta un servicio del que uno es parte.
+- **Evidencias** (`8ec800d`): hasta 5 fotos por reclamo, mismos topes que las
+  del problema. Las ve quien reclama y el admin.
+- **Conversación** (`1b53dc8`): tabla `mensajes_ticket`. Las dos partes siguen
+  escribiendo mientras el reclamo esté abierto; al resolverse queda para leer.
+- **Avisos** (`46e6f14`): `RECLAMO_RESPONDIDO` cuando el admin escribe o cierra
+  con respuesta.
+
 ## Decisiones que NO hay que romper
 
 Estas se tomaron por razones legales o de producto. Cambiarlas sin entenderlas
@@ -127,7 +141,16 @@ penaliza rechazar trabajos, no fija tarifas. Por eso:
   costo de visita vive EN la cotización, no aparece después.
 - El precio no cambia por decisión de una sola parte: el ajuste requiere
   aprobación explícita del cliente y el trabajo queda detenido mientras tanto.
-- Un reclamo no se puede cerrar sin escribir una respuesta.
+- Un reclamo no se puede cerrar sin escribir una respuesta. Con la conversación
+  la regla no se ablandó, se hizo más útil: vale haberle escrito antes en el
+  hilo, en vez de obligar al admin a repetirse en el campo del cierre. Cerrar
+  en silencio sigue siendo imposible.
+- **Un reclamo resuelto se lee, no se escribe.** Ni el usuario ni el admin
+  agregan mensajes ni cambian evidencias después del cierre: alterarían aquello
+  sobre lo que el admin ya se pronunció.
+- **Un reclamo solo puede colgar de un servicio propio.** Si no, cualquiera
+  pondría el servicio de otro —y su descripción y su maestro— en la bandeja del
+  admin.
 
 **Ley 21.719 — datos personales.**
 - Eliminar cuenta **anonimiza**, no borra: se conservan los pagos por
@@ -135,6 +158,12 @@ penaliza rechazar trabajos, no fija tarifas. Por eso:
 - Se borran fotos, notificaciones, direcciones y favoritos.
 - El mapa **nunca publica la coordenada exacta** del maestro: se difumina a una
   grilla de ~500 m (`UbicacionAproximada.java`), porque suele ser su casa.
+
+**Ruteo de avisos.** El destino se decide por **tipo**, no por si trae
+`solicitudId` (`3f403db`). Por eso `RECLAMO_RESPONDIDO` se guarda **sin**
+`solicitudId` aunque el reclamo cuelgue de un servicio, y su caso va antes que
+el de la solicitud en `NotificacionesScreen`: si no, el aviso de un reclamo
+aterrizaría en la lista de solicitudes.
 
 **Pago simulado.** No hay pasarela ni se almacenan datos de tarjeta. Nunca.
 
@@ -161,28 +190,22 @@ atajos.
 - **`fecha_preferida` se guarda como texto**, no como fecha. Por eso la agenda
   interpreta cadenas y no se puede filtrar por fecha en la base.
 
-### Lo próximo acordado: Reclamos 2.0
+### Lo que quedó abierto de Reclamos 2.0
 
-Es lo que sigue en el plan. Son cuatro puntos de la lista de Kevin (3, 8, 9 y
-11) que en realidad son **un hito**, no cuatro arreglos.
+El hito está hecho, pero con dos huecos conocidos que se dejaron a la vista en
+vez de taparlos a medias:
 
-Hoy `TicketSoporte` tiene un solo campo `respuesta`: una respuesta y se acabó.
-Ya trae `solicitudId` opcional, pero la app no lo ofrece al crear el reclamo.
+1. **Cerrar sin escribir nada no avisa.** Si el admin ya respondió en el hilo y
+   después cierra sin texto nuevo, el usuario no se entera de que su reclamo
+   quedó cerrado. Falta un tipo `RECLAMO_RESUELTO`.
+2. **Al admin no le avisa nada cuando el usuario responde.** La alerta del
+   dashboard cuenta NUEVO + EN_REVISION, así que un reclamo ya tomado donde el
+   usuario aporta un dato nuevo no mueve ningún número. Es el hueco más real.
 
-Falta:
-
-1. **Contexto**: elegir de qué servicio es el reclamo, y que el backoffice
-   muestre el servicio, el maestro y la fecha. Hoy el admin lee un texto suelto
-   sin saber de qué habla.
-2. **Evidencias**: fotos adjuntas (la infraestructura de MinIO ya existe, ver
-   `FotoSolicitudService`).
-3. **Conversación**: tabla nueva de mensajes del ticket, para seguir aportando
-   información mientras el reclamo esté abierto.
-4. **Avisos**: notificar cuando el admin responde (tipo nuevo en
-   `TipoNotificacion`).
-
-Lleva migración propia. La regla de la Ley 19.496 que ya está y hay que
-mantener: **un reclamo no se cierra sin respuesta escrita**.
+También quedó una deuda menor: `TicketSoporte.respuesta` convive con el hilo
+(es "la última palabra del admin" y además entra como mensaje). Se mantuvo a
+propósito para no tocar el backoffice y el dashboard en el mismo corte. El día
+que se retire, hay que actualizar los dos.
 
 ### Agujeros de seguridad detectados (sin arreglar)
 
@@ -236,6 +259,12 @@ sobre el código y **los tiene que probar Kevin**:
   (`--server.port=8090`) y apuntar `app/src/api/config.ts` ahí **temporalmente**.
   `config.ts` tiene que quedar siempre en 8080 al commitear.
 - `curl` en Git Bash rompe UTF-8: usar ASCII en los cuerpos JSON de prueba.
+- **`curl -F "archivo=@..."` no entiende las rutas estilo msys**: con
+  `/c/Users/...` falla con `curl: (26) Failed to open/read local data`, porque
+  el `curl` que corre es el de Windows. Hay que pasarle `C:/Users/...`.
+- Para probar la API sin pelear por el 8080, levantar en otro puerto con
+  `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8091`. No
+  hace falta tocar `app/src/api/config.ts` si solo se prueba con `curl`.
 
 ## Datos de prueba
 

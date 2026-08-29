@@ -214,7 +214,12 @@ export function MisSolicitudesScreen({ navigation }: Props) {
               {!!s.fechaPreferida && (
                 <Dato icono="calendar-outline" texto={formatearFechaHoraTexto(s.fechaPreferida)} />
               )}
-              <GaleriaFotos solicitudId={s.id} cantidad={s.cantidadFotos} />
+              <GaleriaFotos
+                  cantidad={s.cantidadFotos}
+                  listar={() => api.fotos.listar(token, s.id)}
+                  urlDe={(fotoId) => api.fotos.url(s.id, fotoId)}
+                  etiqueta="Ver foto del problema"
+                />
               <LineaTiempo estado={s.estado} />
 
               {/* Abierta: lo que importa es cuántas ofertas llegaron, no una sola. */}

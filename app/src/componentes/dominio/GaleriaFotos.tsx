@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { api } from '../../api/cliente';
 import { useAuth } from '../../estado/AuthContext';
 import { colores, espacio, radio, texto as t } from '../../tema/tema';
 import { Icono } from '../base/Icono';
 
 type Props = {
-  solicitudId: number;
-  /** Viene en la solicitud; si es 0 no se pide nada al servidor. */
+  /** Viene en la solicitud o en el reclamo; si es 0 no se pide nada al servidor. */
   cantidad: number;
+  /** Ids de las fotos. Cambia según de qué cuelguen: una solicitud o un reclamo. */
+  listar: () => Promise<number[]>;
+  urlDe: (fotoId: number) => string;
+  etiqueta?: string;
 };
 
 /**
- * Fotos del problema. Miniaturas en fila y, al tocar una, se ve completa.
- * Las sirve el backend con permisos, así que van con el token en la cabecera.
+ * Miniaturas en fila y, al tocar una, se ve completa. Las sirve el backend con
+ * permisos, así que van con el token en la cabecera.
+ *
+ * De dónde salen las fotos lo decide quien la usa: sirve igual para las del
+ * problema de una solicitud que para las evidencias de un reclamo.
  */
-export function GaleriaFotos({ solicitudId, cantidad }: Props) {
+export function GaleriaFotos({ cantidad, listar, urlDe, etiqueta = 'Ver foto' }: Props) {
   const { sesion } = useAuth();
   const token = sesion?.token ?? '';
   const [ids, setIds] = useState<number[]>([]);
@@ -28,8 +33,7 @@ export function GaleriaFotos({ solicitudId, cantidad }: Props) {
       return;
     }
     let vigente = true;
-    api.fotos
-      .listar(token, solicitudId)
+    listar()
       .then((lista) => {
         if (vigente) setIds(lista);
       })
@@ -37,7 +41,9 @@ export function GaleriaFotos({ solicitudId, cantidad }: Props) {
     return () => {
       vigente = false;
     };
-  }, [token, solicitudId, cantidad]);
+    // listar viene inline de cada pantalla: se re-pide cuando cambia la cantidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cantidad]);
 
   if (cantidad === 0 || ids.length === 0) {
     return null;
@@ -53,9 +59,9 @@ export function GaleriaFotos({ solicitudId, cantidad }: Props) {
             key={id}
             onPress={() => setAbierta(id)}
             accessibilityRole="button"
-            accessibilityLabel="Ver foto del problema">
+            accessibilityLabel={etiqueta}>
             <Image
-              source={{ uri: api.fotos.url(solicitudId, id), headers: cabecera }}
+              source={{ uri: urlDe(id), headers: cabecera }}
               style={styles.miniatura}
             />
           </Pressable>
@@ -66,7 +72,7 @@ export function GaleriaFotos({ solicitudId, cantidad }: Props) {
         <Pressable style={styles.fondo} onPress={() => setAbierta(null)}>
           {abierta !== null && (
             <Image
-              source={{ uri: api.fotos.url(solicitudId, abierta), headers: cabecera }}
+              source={{ uri: urlDe(abierta), headers: cabecera }}
               style={styles.completa}
               resizeMode="contain"
             />

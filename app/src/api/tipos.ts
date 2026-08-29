@@ -352,6 +352,8 @@ export type Ticket = {
   servicioEstado: EstadoServicio | null;
   servicioMaestro: string | null;
   servicioFecha: string | null;
+  /** Evidencias adjuntas; el contenido se pide aparte. */
+  cantidadFotos: number;
   fechaCreacion: string;
   fechaActualizacion: string;
 };

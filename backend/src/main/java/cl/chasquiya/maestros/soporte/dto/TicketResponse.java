@@ -3,11 +3,11 @@ package cl.chasquiya.maestros.soporte.dto;
 import java.time.Instant;
 
 import cl.chasquiya.maestros.perfiles.Oficio;
+import cl.chasquiya.maestros.solicitudes.EstadoServicio;
+import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.soporte.CategoriaTicket;
 import cl.chasquiya.maestros.soporte.EstadoTicket;
 import cl.chasquiya.maestros.soporte.TicketSoporte;
-import cl.chasquiya.maestros.solicitudes.EstadoServicio;
-import cl.chasquiya.maestros.solicitudes.Solicitud;
 
 public record TicketResponse(
         Long id,
@@ -30,16 +30,13 @@ public record TicketResponse(
         EstadoServicio servicioEstado,
         String servicioMaestro,
         Instant servicioFecha,
+        /** Evidencias adjuntas; el contenido se pide aparte. */
+        long cantidadFotos,
         Instant fechaCreacion,
         Instant fechaActualizacion) {
 
-    public static TicketResponse de(TicketSoporte t, String nombre, String email) {
-        return conServicio(t, nombre, email, null, null);
-    }
-
-    /** Con el servicio resuelto, para que quien lee el reclamo sepa de qué habla. */
-    public static TicketResponse conServicio(TicketSoporte t, String nombre, String email,
-                                             Solicitud s, String maestro) {
+    public static TicketResponse de(TicketSoporte t, String nombre, String email,
+                                    Solicitud s, String maestro, long cantidadFotos) {
         return new TicketResponse(t.getId(), t.getUsuarioId(), nombre, email, t.getCategoria(),
                 t.getAsunto(), t.getMensaje(), t.getEstado(), t.getRespuesta(), t.getSolicitudId(),
                 s == null ? null : s.getOficio(),
@@ -47,6 +44,7 @@ public record TicketResponse(
                 s == null ? null : s.getEstado(),
                 s == null ? null : maestro,
                 s == null ? null : s.getFechaCreacion(),
+                cantidadFotos,
                 t.getFechaCreacion(), t.getFechaActualizacion());
     }
 }

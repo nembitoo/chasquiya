@@ -1,6 +1,7 @@
 package cl.chasquiya.maestros.soporte;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,12 +40,14 @@ public class SoporteService {
     private final TicketSoporteRepository tickets;
     private final UsuarioRepository usuarios;
     private final SolicitudRepository solicitudes;
+    private final FotoTicketRepository fotos;
 
     public SoporteService(TicketSoporteRepository tickets, UsuarioRepository usuarios,
-                          SolicitudRepository solicitudes) {
+                          SolicitudRepository solicitudes, FotoTicketRepository fotos) {
         this.tickets = tickets;
         this.usuarios = usuarios;
         this.solicitudes = solicitudes;
+        this.fotos = fotos;
     }
 
     // --- Usuario ---
@@ -61,7 +64,8 @@ public class SoporteService {
         TicketSoporte t = new TicketSoporte(usuarioId, req.categoria(), req.asunto().trim(),
                 req.mensaje().trim(), req.solicitudId());
         tickets.save(t);
-        return TicketResponse.conServicio(t, null, null, servicio, maestroDe(servicio));
+        // Sin fotos todavía: se suben después, cuando el reclamo ya existe.
+        return TicketResponse.de(t, null, null, servicio, maestroDe(servicio), 0);
     }
 
     public List<TicketResponse> mios(Long usuarioId) {
@@ -136,6 +140,10 @@ public class SoporteService {
                         .distinct().toList()).stream()
                 .collect(Collectors.toMap(Solicitud::getId, Function.identity()));
 
+        Map<Long, Long> fotosPorTicket = new HashMap<>();
+        fotos.findByTicketIdIn(lista.stream().map(TicketSoporte::getId).toList())
+                .forEach(f -> fotosPorTicket.merge(f.getTicketId(), 1L, Long::sum));
+
         // Autores y maestros salen del mismo lote: todos son usuarios.
         Stream<Long> autores = conAutor ? lista.stream().map(TicketSoporte::getUsuarioId) : Stream.<Long>empty();
         Map<Long, Usuario> personas = usuarios.findAllById(
@@ -152,10 +160,10 @@ public class SoporteService {
                     String maestro = s == null || s.getMaestroId() == null
                             ? null
                             : nombreDe(personas.get(s.getMaestroId()));
-                    return TicketResponse.conServicio(t,
+                    return TicketResponse.de(t,
                             conAutor ? nombreDe(autor) : null,
                             conAutor ? (autor == null ? "—" : autor.getEmail()) : null,
-                            s, maestro);
+                            s, maestro, fotosPorTicket.getOrDefault(t.getId(), 0L));
                 })
                 .toList();
     }

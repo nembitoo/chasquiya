@@ -32,7 +32,8 @@ class SoporteServiceTest {
     private final TicketSoporteRepository tickets = mock(TicketSoporteRepository.class);
     private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
     private final SolicitudRepository solicitudes = mock(SolicitudRepository.class);
-    private final SoporteService servicio = new SoporteService(tickets, usuarios, solicitudes);
+    private final FotoTicketRepository fotos = mock(FotoTicketRepository.class);
+    private final SoporteService servicio = new SoporteService(tickets, usuarios, solicitudes, fotos);
 
     private TicketSoporte ticket(EstadoTicket estado) {
         TicketSoporte t = new TicketSoporte(USUARIO, CategoriaTicket.PAGO, "Cobro raro", "Me cobraron de mas", null);
@@ -199,5 +200,17 @@ class SoporteServiceTest {
         assertThat(r.servicioOficio()).isEqualTo(Oficio.GASFITERIA);
         // Quien reclama ya sabe quien es: ese dato es solo de la vista del admin.
         assertThat(r.usuarioNombre()).isNull();
+    }
+
+    /** La tarjeta del reclamo necesita saber si trae evidencias sin pedirlas. */
+    @Test
+    void elReclamoDiceCuantasEvidenciasTrae() {
+        TicketSoporte t = ticket(EstadoTicket.NUEVO);
+        when(tickets.findByUsuarioIdOrderByFechaCreacionDesc(USUARIO)).thenReturn(List.of(t));
+        when(fotos.findByTicketIdIn(List.of(7L))).thenReturn(List.of(
+                new FotoTicket(7L, "reclamos/7/a", "image/jpeg"),
+                new FotoTicket(7L, "reclamos/7/b", "image/jpeg")));
+
+        assertThat(servicio.mios(USUARIO).get(0).cantidadFotos()).isEqualTo(2);
     }
 }

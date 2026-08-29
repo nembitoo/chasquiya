@@ -354,6 +354,8 @@ tr:last-child td { border-bottom: none; }
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   font-weight: 600; color: var(--texto); margin-bottom: 2px;
 }
+/* Evidencias del reclamo: se cargan al tocar el boton. */
+.reclamo-evidencias { margin-top: 10px; }
 .disputa-caja {
   background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px;
   padding: 18px; margin-bottom: 14px; box-shadow: var(--sombra);

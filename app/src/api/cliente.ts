@@ -346,6 +346,17 @@ export const api = {
     crear: (token: string, datos: CrearTicketData) =>
       pedir<Ticket>('/soporte/reclamos', { method: 'POST', body: JSON.stringify(datos) }, token),
     mios: (token: string) => pedir<Ticket[]>('/soporte/reclamos', {}, token),
+    /** Evidencias del reclamo. Mismo trato que las fotos de una solicitud. */
+    fotos: {
+      listar: (token: string, ticketId: number) =>
+        pedir<number[]>(`/soporte/reclamos/${ticketId}/fotos`, {}, token),
+      subir: (token: string, ticketId: number, uri: string, nombre: string, tipo: string) =>
+        subirArchivo<{ id: number }>(`/soporte/reclamos/${ticketId}/fotos`, token, uri, nombre, tipo),
+      eliminar: (token: string, ticketId: number, fotoId: number) =>
+        pedir<null>(`/soporte/reclamos/${ticketId}/fotos/${fotoId}`, { method: 'DELETE' }, token),
+      url: (ticketId: number, fotoId: number) =>
+        `${API_URL}/soporte/reclamos/${ticketId}/fotos/${fotoId}/contenido`,
+    },
   },
 
   fotos: {

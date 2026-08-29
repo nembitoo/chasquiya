@@ -543,11 +543,11 @@ let urlsFicha = [];
  * fetch y se envuelve en un blob local. Las URLs creadas hay que liberarlas al
  * cerrar o se van acumulando en memoria.
  */
-async function urlImagen(ruta) {
+async function urlImagen(ruta, destino) {
   const res = await fetch(ruta, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('No se pudo cargar la imagen');
   const url = URL.createObjectURL(await res.blob());
-  urlsFicha.push(url);
+  (destino || urlsFicha).push(url);
   return url;
 }
 
@@ -804,7 +804,37 @@ const ETIQUETA_CATEGORIA = {
 };
 const COLOR_TICKET = { NUEVO: 'badge-rojo', EN_REVISION: 'badge-amarillo', RESUELTO: 'badge-verde' };
 
+/*
+ * Las evidencias se piden al tocarlas, no al abrir la pestana: bajar todas las
+ * imagenes de todos los reclamos para mirar uno seria descargar de mas.
+ */
+let urlsReclamos = [];
+
+async function verEvidencias(ticketId) {
+  const caja = document.getElementById('evidencias-' + ticketId);
+  caja.innerHTML = '<p class="vacio">Cargando evidencias…</p>';
+  try {
+    const ids = await api(`/admin/reclamos/${ticketId}/fotos`);
+    const partes = await Promise.all(ids.map(async (id) => {
+      try {
+        const url = await urlImagen(`/admin/reclamos/${ticketId}/fotos/${id}/contenido`, urlsReclamos);
+        return `<figure class="ficha-doc">
+                  <img src="${url}" alt="Evidencia del reclamo" onclick="window.open('${url}', '_blank')" />
+                </figure>`;
+      } catch (_) {
+        return '<figure class="ficha-doc"><span>No se pudo cargar</span></figure>';
+      }
+    }));
+    caja.innerHTML = `<div class="ficha-docs">${partes.join('')}</div>`;
+  } catch (e) {
+    caja.innerHTML = `<p class="vacio">${txt(e.message)}</p>`;
+  }
+}
+
 async function cargarReclamos() {
+  // Se repinta entero: las imagenes que habia cargadas ya no estan en el DOM.
+  urlsReclamos.forEach((u) => URL.revokeObjectURL(u));
+  urlsReclamos = [];
   const lista = await api('/admin/reclamos');
   listado({
     id: 'reclamos',
@@ -871,6 +901,12 @@ function pintarReclamos(lista) {
       </div>
       <div class="disputa-motivo">${txt(r.mensaje)}</div>
       ${contextoDelReclamo(r)}
+      ${r.cantidadFotos > 0 ? `
+        <div class="reclamo-evidencias" id="evidencias-${r.id}">
+          <button class="btn btn-mini btn-secundario" onclick="verEvidencias(${r.id})">
+            Ver ${r.cantidadFotos} foto${r.cantidadFotos > 1 ? 's' : ''} adjunta${r.cantidadFotos > 1 ? 's' : ''}
+          </button>
+        </div>` : ''}
       ${r.respuesta ? `<div class="respuesta-caja"><strong>Respuesta:</strong> ${txt(r.respuesta)}</div>` : ''}
       ${r.estado === 'RESUELTO' ? '' : `
         <div class="fila-form">

@@ -221,7 +221,12 @@ export function SolicitudesRecibidasScreen({ navigation }: Props) {
                 {!!s.fechaPreferida && (
                   <Dato icono="calendar-outline" texto={formatearFechaHoraTexto(s.fechaPreferida)} />
                 )}
-                <GaleriaFotos solicitudId={s.id} cantidad={s.cantidadFotos} />
+                <GaleriaFotos
+                  cantidad={s.cantidadFotos}
+                  listar={() => api.fotos.listar(token, s.id)}
+                  urlDe={(fotoId) => api.fotos.url(s.id, fotoId)}
+                  etiqueta="Ver foto del problema"
+                />
                 <LineaTiempo estado={s.estado} />
                 {s.presupuestoEstimado != null && (
                   <Text style={styles.dato}>

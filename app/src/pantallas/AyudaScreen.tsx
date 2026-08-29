@@ -1,7 +1,17 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
@@ -10,6 +20,7 @@ import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { Icono } from '../componentes/base/Icono';
 import { Segmentos } from '../componentes/base/Segmentos';
+import { GaleriaFotos } from '../componentes/dominio/GaleriaFotos';
 import { EmptyState } from '../componentes/feedback/EmptyState';
 import { NOMBRE_OFICIO } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
@@ -28,6 +39,12 @@ const CATEGORIAS: { valor: CategoriaTicket; etiqueta: string }[] = [
   { valor: 'OTRO', etiqueta: 'Otro' },
 ];
 
+/** Evidencia elegida en el teléfono, todavía sin subir. */
+type FotoElegida = { uri: string; nombre: string; tipo: string };
+
+/** Mismo tope que aplica el backend. */
+const MAX_FOTOS = 5;
+
 const ETIQUETA_ESTADO: Record<string, string> = {
   NUEVO: 'Recibido',
   EN_REVISION: 'En revisión',
@@ -42,6 +59,7 @@ export function AyudaScreen({ navigation }: Props) {
   const [categoria, setCategoria] = useState<CategoriaTicket>('SERVICIO');
   const [servicios, setServicios] = useState<Solicitud[]>([]);
   const [servicioId, setServicioId] = useState<number | null>(null);
+  const [fotos, setFotos] = useState<FotoElegida[]>([]);
   const [asunto, setAsunto] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -82,6 +100,29 @@ export function AyudaScreen({ navigation }: Props) {
     }, [cargar, cargarServicios]),
   );
 
+  async function elegirFotos() {
+    setError('');
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      setError('Necesito permiso para acceder a tus fotos.');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_FOTOS - fotos.length,
+      quality: 0.6,
+    });
+    if (res.canceled) return;
+
+    const nuevas = res.assets.map((a, i) => ({
+      uri: a.uri,
+      nombre: a.fileName ?? `evidencia-${Date.now()}-${i}.jpg`,
+      tipo: a.mimeType ?? 'image/jpeg',
+    }));
+    setFotos((prev) => [...prev, ...nuevas].slice(0, MAX_FOTOS));
+  }
+
   /** Con quién fue el trabajo: el maestro si soy cliente, y al revés. */
   function otraParte(s: Solicitud) {
     return sesion?.rol === 'MAESTRO' ? s.clienteNombre : s.maestroNombre;
@@ -100,16 +141,33 @@ export function AyudaScreen({ navigation }: Props) {
     }
     try {
       setEnviando(true);
-      await api.soporte.crear(token, {
+      const creado = await api.soporte.crear(token, {
         categoria,
         asunto: asunto.trim(),
         mensaje: mensaje.trim(),
         solicitudId: servicioId,
       });
+
+      // Las evidencias van después: recién ahora existe el reclamo del que
+      // cuelgan. Si alguna falla no se pierde el reclamo, que es lo importante.
+      let fallidas = 0;
+      for (const f of fotos) {
+        try {
+          await api.soporte.fotos.subir(token, creado.id, f.uri, f.nombre, f.tipo);
+        } catch {
+          fallidas += 1;
+        }
+      }
+
       setAsunto('');
       setMensaje('');
       setServicioId(null);
-      setExito('Recibimos tu mensaje. Te responderemos por acá.');
+      setFotos([]);
+      setExito(
+        fallidas > 0
+          ? `Recibimos tu mensaje, pero ${fallidas} foto(s) no se pudieron subir.`
+          : 'Recibimos tu mensaje. Te responderemos por acá.',
+      );
       await cargar();
       setVista('mios');
     } catch (e) {
@@ -206,6 +264,32 @@ export function AyudaScreen({ navigation }: Props) {
               maxLength={2000}
             />
 
+            <Text style={styles.etiqueta}>Fotos (opcional)</Text>
+            <Text style={styles.ayudaFotos}>
+              Una foto de la boleta o del trabajo mal hecho vale más que una explicación larga.
+            </Text>
+            <View style={styles.fotos}>
+              {fotos.map((f, i) => (
+                <View key={f.uri + i} style={styles.miniatura}>
+                  <Image source={{ uri: f.uri }} style={styles.miniaturaImagen} />
+                  <Pressable
+                    onPress={() => setFotos((prev) => prev.filter((_, j) => j !== i))}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Quitar foto ${i + 1}`}
+                    style={styles.quitarFoto}>
+                    <Icono nombre="close" tamano="sm" color={colores.textoInverso} />
+                  </Pressable>
+                </View>
+              ))}
+              {fotos.length < MAX_FOTOS && (
+                <Pressable onPress={elegirFotos} style={styles.agregarFoto} accessibilityRole="button">
+                  <Icono nombre="camera-outline" tamano="lg" color={colores.primario} />
+                  <Text style={styles.agregarFotoTexto}>Agregar</Text>
+                </Pressable>
+              )}
+            </View>
+
             {!!error && <Text style={styles.error}>{error}</Text>}
             {!!exito && <Text style={styles.exito}>{exito}</Text>}
 
@@ -246,6 +330,12 @@ export function AyudaScreen({ navigation }: Props) {
                   </View>
                 )}
                 <Text style={t.pequeno}>{r.mensaje}</Text>
+                <GaleriaFotos
+                  cantidad={r.cantidadFotos}
+                  listar={() => api.soporte.fotos.listar(token, r.id)}
+                  urlDe={(fotoId) => api.soporte.fotos.url(r.id, fotoId)}
+                  etiqueta="Ver evidencia del reclamo"
+                />
                 {!!r.respuesta && (
                   <View style={styles.respuesta}>
                     <Text style={styles.respuestaTitulo}>Respuesta de ChasquiYa!</Text>
@@ -290,6 +380,33 @@ const styles = StyleSheet.create({
   servicioTag: { flexDirection: 'row', alignItems: 'center', gap: espacio.xxs, marginBottom: espacio.xxs },
   servicioTexto: { ...t.etiqueta, color: colores.textoSuave, flex: 1 },
   multilinea: { height: 130, textAlignVertical: 'top' },
+  ayudaFotos: { ...t.pequeno, color: colores.textoSuave, marginBottom: espacio.sm },
+  fotos: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.xs, marginBottom: espacio.md },
+  miniatura: { width: 84, height: 84, borderRadius: radio.sm, overflow: 'visible' },
+  miniaturaImagen: { width: 84, height: 84, borderRadius: radio.sm },
+  quitarFoto: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colores.texto,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  agregarFoto: {
+    width: 84,
+    height: 84,
+    borderRadius: radio.sm,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colores.primario,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  agregarFotoTexto: { ...t.etiqueta, color: colores.primario, fontWeight: '600' },
   error: { ...t.pequeno, color: colores.error, marginBottom: espacio.sm },
   exito: { ...t.pequeno, color: colores.exito, marginBottom: espacio.sm },
   tarjeta: {

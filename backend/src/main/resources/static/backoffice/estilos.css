@@ -344,6 +344,16 @@ tr:last-child td { border-bottom: none; }
   background: var(--primario-suave); color: var(--primario);
   padding: 9px 12px; border-radius: 8px; margin: 8px 0; font-size: 14px;
 }
+/* Contexto del reclamo: de que servicio habla. */
+.reclamo-servicio {
+  margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+  background: var(--superficie-2); border: 1px solid var(--borde);
+  font-size: 14px; color: var(--texto-suave);
+}
+.reclamo-servicio-titulo {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-weight: 600; color: var(--texto); margin-bottom: 2px;
+}
 .disputa-caja {
   background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px;
   padding: 18px; margin-bottom: 14px; box-shadow: var(--sombra);

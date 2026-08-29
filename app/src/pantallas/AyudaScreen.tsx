@@ -5,12 +5,13 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '../api/cliente';
-import { CategoriaTicket, Ticket } from '../api/tipos';
+import { CategoriaTicket, Solicitud, Ticket } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { Icono } from '../componentes/base/Icono';
 import { Segmentos } from '../componentes/base/Segmentos';
 import { EmptyState } from '../componentes/feedback/EmptyState';
+import { NOMBRE_OFICIO } from '../datos/oficios';
 import { useAuth } from '../estado/AuthContext';
 import { RootStackParamList } from '../navegacion/Navegacion';
 import { colores, espacio, margenPantalla, radio, texto as t } from '../tema/tema';
@@ -39,6 +40,8 @@ export function AyudaScreen({ navigation }: Props) {
 
   const [vista, setVista] = useState<'nuevo' | 'mios'>('nuevo');
   const [categoria, setCategoria] = useState<CategoriaTicket>('SERVICIO');
+  const [servicios, setServicios] = useState<Solicitud[]>([]);
+  const [servicioId, setServicioId] = useState<number | null>(null);
   const [asunto, setAsunto] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -54,11 +57,35 @@ export function AyudaScreen({ navigation }: Props) {
     }
   }, [token]);
 
+  /*
+   * Los servicios propios, para poder decir de cuál es el reclamo. El maestro
+   * ve los trabajos que le llegaron y el cliente los que pidió; el admin no
+   * tiene servicios, así que el selector no aparece.
+   */
+  const cargarServicios = useCallback(async () => {
+    if (sesion?.rol !== 'CLIENTE' && sesion?.rol !== 'MAESTRO') return;
+    try {
+      setServicios(
+        sesion.rol === 'CLIENTE'
+          ? await api.solicitudes.mias(token)
+          : await api.solicitudes.recibidas(token),
+      );
+    } catch {
+      /* sin servicios el reclamo igual se puede enviar: el campo es opcional */
+    }
+  }, [token, sesion?.rol]);
+
   useFocusEffect(
     useCallback(() => {
       cargar();
-    }, [cargar]),
+      cargarServicios();
+    }, [cargar, cargarServicios]),
   );
+
+  /** Con quién fue el trabajo: el maestro si soy cliente, y al revés. */
+  function otraParte(s: Solicitud) {
+    return sesion?.rol === 'MAESTRO' ? s.clienteNombre : s.maestroNombre;
+  }
 
   async function enviar() {
     setError('');
@@ -73,9 +100,15 @@ export function AyudaScreen({ navigation }: Props) {
     }
     try {
       setEnviando(true);
-      await api.soporte.crear(token, { categoria, asunto: asunto.trim(), mensaje: mensaje.trim() });
+      await api.soporte.crear(token, {
+        categoria,
+        asunto: asunto.trim(),
+        mensaje: mensaje.trim(),
+        solicitudId: servicioId,
+      });
       setAsunto('');
       setMensaje('');
+      setServicioId(null);
       setExito('Recibimos tu mensaje. Te responderemos por acá.');
       await cargar();
       setVista('mios');
@@ -129,6 +162,39 @@ export function AyudaScreen({ navigation }: Props) {
               ))}
             </View>
 
+            {servicios.length > 0 && (
+              <View style={styles.bloqueServicios}>
+                <Text style={styles.etiqueta}>¿Es sobre un servicio? (opcional)</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filaServicios}>
+                  <Pressable
+                    onPress={() => setServicioId(null)}
+                    style={[styles.pildora, servicioId === null && styles.pildoraActiva]}>
+                    <Text style={[styles.pildoraTexto, servicioId === null && styles.pildoraTextoActivo]}>
+                      Ninguno
+                    </Text>
+                  </Pressable>
+                  {servicios.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => setServicioId(s.id)}
+                      style={[styles.pildora, styles.pildoraServicio, servicioId === s.id && styles.pildoraActiva]}>
+                      <Text
+                        style={[styles.pildoraTexto, servicioId === s.id && styles.pildoraTextoActivo]}
+                        numberOfLines={1}>
+                        {NOMBRE_OFICIO[s.oficio] ?? s.oficio}
+                      </Text>
+                      <Text style={styles.pildoraDetalle} numberOfLines={1}>
+                        {otraParte(s)} · {tiempoRelativo(s.fechaCreacion)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             <CampoTexto etiqueta="Asunto" value={asunto} onChangeText={setAsunto} maxLength={120} />
             <CampoTexto
               etiqueta="Cuéntanos qué pasó"
@@ -167,6 +233,18 @@ export function AyudaScreen({ navigation }: Props) {
                   </View>
                 </View>
                 <Text style={styles.fecha}>{tiempoRelativo(r.fechaCreacion)}</Text>
+                {!!r.solicitudId && (
+                  <View style={styles.servicioTag}>
+                    <Icono nombre="construct-outline" tamano="sm" color={colores.textoSuave} />
+                    <Text style={styles.servicioTexto} numberOfLines={1}>
+                      {r.servicioOficio
+                        ? `${NOMBRE_OFICIO[r.servicioOficio] ?? r.servicioOficio}${
+                            r.servicioMaestro ? ` · ${r.servicioMaestro}` : ''
+                          }`
+                        : `Servicio #${r.solicitudId}`}
+                    </Text>
+                  </View>
+                )}
                 <Text style={t.pequeno}>{r.mensaje}</Text>
                 {!!r.respuesta && (
                   <View style={styles.respuesta}>
@@ -204,6 +282,13 @@ const styles = StyleSheet.create({
   pildoraActiva: { borderColor: colores.primario, backgroundColor: colores.primarioSuave },
   pildoraTexto: { ...t.pequeno },
   pildoraTextoActivo: { color: colores.primario, fontWeight: '700' },
+  bloqueServicios: { marginBottom: espacio.md },
+  filaServicios: { gap: espacio.xs, paddingRight: espacio.md },
+  /* Acotado: si no, un nombre largo estira la píldora fuera de la pantalla. */
+  pildoraServicio: { maxWidth: 210 },
+  pildoraDetalle: { ...t.etiqueta, color: colores.textoTenue },
+  servicioTag: { flexDirection: 'row', alignItems: 'center', gap: espacio.xxs, marginBottom: espacio.xxs },
+  servicioTexto: { ...t.etiqueta, color: colores.textoSuave, flex: 1 },
   multilinea: { height: 130, textAlignVertical: 'top' },
   error: { ...t.pequeno, color: colores.error, marginBottom: espacio.sm },
   exito: { ...t.pequeno, color: colores.exito, marginBottom: espacio.sm },

@@ -343,6 +343,15 @@ export type Ticket = {
   estado: EstadoTicket;
   respuesta: string | null;
   solicitudId: number | null;
+  /**
+   * De qué servicio habla el reclamo. Lo resuelve el backend a partir de
+   * solicitudId; queda null si no eligió ninguno o si el servicio ya no existe.
+   */
+  servicioOficio: Oficio | null;
+  servicioDescripcion: string | null;
+  servicioEstado: EstadoServicio | null;
+  servicioMaestro: string | null;
+  servicioFecha: string | null;
   fechaCreacion: string;
   fechaActualizacion: string;
 };

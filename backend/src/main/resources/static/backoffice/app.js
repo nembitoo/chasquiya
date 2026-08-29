@@ -812,7 +812,8 @@ async function cargarReclamos() {
     datos: lista,
     placeholder: 'Buscar por asunto, mensaje, usuario o correo…',
     vacio: 'No hay reclamos 🎉',
-    buscarEn: (r) => `${r.id} ${r.asunto} ${r.mensaje} ${r.usuarioNombre} ${r.usuarioEmail}`,
+    buscarEn: (r) => `${r.id} ${r.asunto} ${r.mensaje} ${r.usuarioNombre} ${r.usuarioEmail}`
+      + ` ${r.solicitudId || ''} ${r.servicioDescripcion || ''} ${r.servicioMaestro || ''}`,
     filtros: [
       {
         clave: 'estado', etiqueta: 'Estado', de: (r) => r.estado,
@@ -835,6 +836,28 @@ async function cargarReclamos() {
   });
 }
 
+/*
+ * De que servicio habla el reclamo. Antes aqui solo decia "servicio #12" y el
+ * admin tenia que irse a otra pantalla a buscar de que le estaban hablando.
+ */
+function contextoDelReclamo(r) {
+  if (!r.solicitudId) return '';
+  // El servicio pudo borrarse: el reclamo sobrevive con el id a secas.
+  if (!r.servicioOficio) {
+    return `<div class="reclamo-servicio">Servicio #${r.solicitudId} · ya no existe</div>`;
+  }
+  const partes = [ETIQUETA_OFICIO[r.servicioOficio] || r.servicioOficio, r.servicioMaestro]
+    .filter(Boolean).map(txt).join(' · ');
+  return `
+    <div class="reclamo-servicio">
+      <div class="reclamo-servicio-titulo">
+        Servicio #${r.solicitudId} · ${partes} · ${fecha(r.servicioFecha)}
+        ${badge(r.servicioEstado)}
+      </div>
+      <div>${txt(r.servicioDescripcion)}</div>
+    </div>`;
+}
+
 function pintarReclamos(lista) {
   return lista.map((r) => `
     <div class="disputa-caja">
@@ -845,9 +868,9 @@ function pintarReclamos(lista) {
       </div>
       <div style="color:#6B7280;margin-top:4px">
         ${txt(r.usuarioNombre)} · ${txt(r.usuarioEmail)} · ${fecha(r.fechaCreacion)}
-        ${r.solicitudId ? ` · servicio #${r.solicitudId}` : ''}
       </div>
       <div class="disputa-motivo">${txt(r.mensaje)}</div>
+      ${contextoDelReclamo(r)}
       ${r.respuesta ? `<div class="respuesta-caja"><strong>Respuesta:</strong> ${txt(r.respuesta)}</div>` : ''}
       ${r.estado === 'RESUELTO' ? '' : `
         <div class="fila-form">

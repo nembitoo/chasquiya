@@ -32,6 +32,7 @@ const ESTILO: Record<TipoNotificacion, { icono: NombreIcono; color: string }> = 
   SERVICIO_CANCELADO: { icono: 'ban', color: colores.error },
   VERIFICACION_APROBADA: { icono: 'shield-checkmark', color: colores.exito },
   VERIFICACION_RECHAZADA: { icono: 'alert-circle', color: colores.error },
+  RECLAMO_RESPONDIDO: { icono: 'chatbubble-ellipses', color: colores.primario },
 };
 
 export function NotificacionesScreen({ navigation }: Props) {
@@ -89,6 +90,12 @@ export function NotificacionesScreen({ navigation }: Props) {
     }
     if (n.tipo === 'VERIFICACION_APROBADA' || n.tipo === 'VERIFICACION_RECHAZADA') {
       navigation.navigate('PerfilMaestro');
+      return;
+    }
+    // Antes que el caso de la solicitud: un reclamo puede colgar de un servicio,
+    // pero de lo que habla el aviso es del reclamo.
+    if (n.tipo === 'RECLAMO_RESPONDIDO') {
+      navigation.navigate('Ayuda');
       return;
     }
     if (n.solicitudId) {

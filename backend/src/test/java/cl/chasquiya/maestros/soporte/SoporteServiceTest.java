@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.notificaciones.NotificacionService;
+import cl.chasquiya.maestros.notificaciones.TipoNotificacion;
 import cl.chasquiya.maestros.perfiles.Oficio;
 import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
@@ -36,8 +39,9 @@ class SoporteServiceTest {
     private final SolicitudRepository solicitudes = mock(SolicitudRepository.class);
     private final FotoTicketRepository fotos = mock(FotoTicketRepository.class);
     private final MensajeTicketRepository mensajes = mock(MensajeTicketRepository.class);
+    private final NotificacionService notificaciones = mock(NotificacionService.class);
     private final SoporteService servicio =
-            new SoporteService(tickets, usuarios, solicitudes, fotos, mensajes);
+            new SoporteService(tickets, usuarios, solicitudes, fotos, mensajes, notificaciones);
 
     private TicketSoporte ticket(EstadoTicket estado) {
         TicketSoporte t = new TicketSoporte(USUARIO, CategoriaTicket.PAGO, "Cobro raro", "Me cobraron de mas", null);
@@ -324,5 +328,39 @@ class SoporteServiceTest {
 
         assertThat(hilo).hasSize(2);
         assertThat(hilo.get(1).autor()).isEqualTo("Soporte ChasquiYa!");
+    }
+
+    // --- Avisos ---
+
+    /**
+     * Sin solicitudId a proposito: la app rutea por tipo, y con una solicitud
+     * encima este aviso aterrizaria en la lista de solicitudes, no en el reclamo.
+     */
+    @Test
+    void escribirComoAdminAvisaAQuienReclamo() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.EN_REVISION)));
+
+        servicio.escribirComoAdmin(ADMIN, 7L, new EscribirMensajeRequest("Necesito la boleta"));
+
+        verify(notificaciones).avisar(USUARIO, TipoNotificacion.RECLAMO_RESPONDIDO, null, "Cobro raro");
+    }
+
+    @Test
+    void cerrarConRespuestaTambienAvisa() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.EN_REVISION)));
+
+        servicio.responder(ADMIN, 7L, new ResponderTicketRequest(EstadoTicket.RESUELTO, "Se devolvio todo"));
+
+        verify(notificaciones).avisar(USUARIO, TipoNotificacion.RECLAMO_RESPONDIDO, null, "Cobro raro");
+    }
+
+    /** Escribir el propio usuario no se avisa a si mismo. */
+    @Test
+    void elMensajeDelUsuarioNoGeneraAviso() {
+        when(tickets.findById(7L)).thenReturn(Optional.of(ticket(EstadoTicket.EN_REVISION)));
+
+        servicio.escribir(USUARIO, 7L, new EscribirMensajeRequest("Ahi va la boleta"));
+
+        verifyNoInteractions(notificaciones);
     }
 }

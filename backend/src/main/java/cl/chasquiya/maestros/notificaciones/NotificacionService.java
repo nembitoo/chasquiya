@@ -113,6 +113,7 @@ public class NotificacionService {
             case SERVICIO_CANCELADO -> "Servicio cancelado";
             case VERIFICACION_APROBADA -> "Tu perfil fue aprobado";
             case VERIFICACION_RECHAZADA -> "Tu perfil necesita cambios";
+            case RECLAMO_RESPONDIDO -> "Soporte respondió tu reclamo";
         };
     }
 
@@ -147,6 +148,9 @@ public class NotificacionService {
                     "Ya apareces en las búsquedas y puedes recibir solicitudes de clientes.";
             case VERIFICACION_RECHAZADA ->
                     "Revisa tus documentos y vuelve a enviarlos para que podamos aprobarte.";
+            // Aquí el detalle es el asunto del reclamo, no el nombre de nadie.
+            case RECLAMO_RESPONDIDO ->
+                    "Tienes una respuesta en tu reclamo \"" + quien + "\". Puedes seguir la conversación desde Ayuda.";
         };
     }
 }

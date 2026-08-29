@@ -18,5 +18,11 @@ public enum TipoNotificacion {
     CALIFICACION_RECIBIDA,
     SERVICIO_CANCELADO,
     VERIFICACION_APROBADA,
-    VERIFICACION_RECHAZADA
+    VERIFICACION_RECHAZADA,
+    /**
+     * Soporte escribió en un reclamo. Va a la pantalla de Ayuda, no a la de
+     * solicitudes: el reclamo puede colgar de un servicio, pero de lo que habla
+     * el aviso es del reclamo.
+     */
+    RECLAMO_RESPONDIDO
 }

@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import cl.chasquiya.maestros.notificaciones.NotificacionService;
+import cl.chasquiya.maestros.notificaciones.TipoNotificacion;
 import cl.chasquiya.maestros.solicitudes.Solicitud;
 import cl.chasquiya.maestros.solicitudes.SolicitudRepository;
 import cl.chasquiya.maestros.soporte.dto.CrearTicketRequest;
@@ -47,15 +49,17 @@ public class SoporteService {
     private final SolicitudRepository solicitudes;
     private final FotoTicketRepository fotos;
     private final MensajeTicketRepository mensajes;
+    private final NotificacionService notificaciones;
 
     public SoporteService(TicketSoporteRepository tickets, UsuarioRepository usuarios,
                           SolicitudRepository solicitudes, FotoTicketRepository fotos,
-                          MensajeTicketRepository mensajes) {
+                          MensajeTicketRepository mensajes, NotificacionService notificaciones) {
         this.tickets = tickets;
         this.usuarios = usuarios;
         this.solicitudes = solicitudes;
         this.fotos = fotos;
         this.mensajes = mensajes;
+        this.notificaciones = notificaciones;
     }
 
     // --- Usuario ---
@@ -134,6 +138,7 @@ public class SoporteService {
             // para que la conversación quede completa.
             t.setRespuesta(req.respuesta().trim());
             mensajes.save(new MensajeTicket(ticketId, adminId, true, req.respuesta().trim()));
+            avisarAlAutor(t);
         }
         t.setEstado(req.estado());
         tickets.save(t);
@@ -164,6 +169,7 @@ public class SoporteService {
         TicketSoporte t = buscar(ticketId);
         exigirReclamoAbierto(t);
         MensajeTicketResponse m = guardar(t, adminId, true, req.cuerpo());
+        avisarAlAutor(t);
         // Si el admin ya está escribiendo, el reclamo dejó de estar sin mirar.
         // Sin esto seguiría contando como el más viejo sin tocar en el panel.
         if (t.getEstado() == EstadoTicket.NUEVO) {
@@ -177,6 +183,17 @@ public class SoporteService {
         MensajeTicket m = new MensajeTicket(t.getId(), autorId, esAdmin, cuerpo.trim());
         mensajes.save(m);
         return MensajeTicketResponse.de(m, esAdmin ? SOPORTE : nombreDe(usuarios.findById(autorId).orElse(null)));
+    }
+
+    /**
+     * Avisa a quien reclamó que soporte le escribió.
+     *
+     * <p>Va <b>sin solicitudId a propósito</b>, aunque el reclamo cuelgue de un
+     * servicio: la app decide el destino por tipo, y con una solicitud encima
+     * este aviso aterrizaría en la lista de solicitudes en vez de en el reclamo.
+     */
+    private void avisarAlAutor(TicketSoporte t) {
+        notificaciones.avisar(t.getUsuarioId(), TipoNotificacion.RECLAMO_RESPONDIDO, null, t.getAsunto());
     }
 
     private List<MensajeTicketResponse> hilo(Long ticketId) {

@@ -430,7 +430,8 @@ export type TipoNotificacion =
   | 'CALIFICACION_RECIBIDA'
   | 'SERVICIO_CANCELADO'
   | 'VERIFICACION_APROBADA'
-  | 'VERIFICACION_RECHAZADA';
+  | 'VERIFICACION_RECHAZADA'
+  | 'RECLAMO_RESPONDIDO';
 
 export type Notificacion = {
   id: number;

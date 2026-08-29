@@ -19,6 +19,10 @@ descubrimiento, confianza y transacción, y cobra una comisión.
 - [Node.js 20 LTS](https://nodejs.org/)
 - App **Expo Go** en el teléfono (para probar la app)
 
+> ¿PC nuevo, sin nada instalado? [`docs/instalacion.md`](docs/instalacion.md)
+> lleva paso a paso desde cero: qué instalar con `winget`, `JAVA_HOME`, el
+> `.env`, y qué hacer cuando algo falla.
+
 ## Cómo arrancar
 
 **1. Configurar variables de entorno** (una sola vez):
